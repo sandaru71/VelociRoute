@@ -45,7 +45,7 @@ export default function SigninPage() {
             type="submit"
             className={`w-full h-12 rounded-full text-base cursor-pointer shadow-md font-bold ${
               isHovered
-                ? "bg-neutral-900 text-neutral-200"
+                ? "bg-primary-600 text-neutral-900"
                 : "bg-white text-neutral-900"
             }`}
             onMouseEnter={() => setIsHovered(true)}
