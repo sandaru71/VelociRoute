@@ -18,12 +18,12 @@ const Start = () => {
         Lorem, ipsum dolor sit amet consectetur adipisicing elit.blaaaaaaaaaaaaaaaaaaaa blaaaaaaaaaaa .
       </Text>
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>Login</Text>
+        <TouchableOpacity style={styles.loginButton}>
+          <Text style={styles.loginButtonText}>Login</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>Sign-up</Text>
+        <TouchableOpacity style={styles.loginButton}>
+          <Text style={styles.signupButtonText}>Sign-up</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -65,22 +65,39 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     marginTop: 90,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#FEBE15', // Correct color formatting
-    width: '100%',
-    justifyContent: 'space-around', // Ensures space between buttons
-    paddingHorizontal: 10, // Optional padding to prevent buttons from touching edges
+    width: '80%',
+    height: '8%',    
+    
+    borderRadius:100,// Optional padding to prevent buttons from touching edges
   },
-  button: {
-    backgroundColor: '#FEBE15',  // Set the button background color
-    paddingVertical: 10,         // Vertical padding for button size
-    paddingHorizontal: 20,       // Horizontal padding for button size
-    borderRadius: 5,             // Rounded corners for the button
+  
+  loginButton:{
+    justifyContent:"center",
+    alignItems:"center",
+    backgroundColor:"#FEBE15",
+    padding:10,
+    borderRadius:100,
+    width:"50%",
+    
   },
-  buttonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    color: '#FFFFFF',           // Button text color
+  loginButtonText:{
+    color:"#FFFFFF",
+    flex:1,
+    fontSize:20,
+    fontWeight:"bold",
+
+  },
+  signupButtonText:{
+    color:"#031C30",
+    flex:1,
+    fontSize:20,
+    fontWeight:"bold",
+    textAlign:"center",
+    
+    backgroundColor:"#FFFFFF",
+
   }
+
 });
