@@ -18,11 +18,13 @@ const Start = () => {
         Lorem, ipsum dolor sit amet consectetur adipisicing elit.blaaaaaaaaaaaaaaaaaaaa blaaaaaaaaaaa .
       </Text>
       <View style={styles.buttonContainer}>
+        {/* Login Button */}
         <TouchableOpacity style={styles.loginButton}>
           <Text style={styles.loginButtonText}>Login</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.loginButton}>
+        {/* Sign-up Button */}
+        <TouchableOpacity style={styles.signupButton}>
           <Text style={styles.signupButtonText}>Sign-up</Text>
         </TouchableOpacity>
       </View>
@@ -41,19 +43,19 @@ const styles = StyleSheet.create({
     paddingTop: 20, // Adds some top padding to the container for better spacing
   },
   logo: {
-    width: 150,           // Adjust the width as needed
-    height: 100,          // Adjust the height as needed
-    marginBottom: 0,      // No gap below logo, reduces space
+    width: 150,           
+    height: 100,          
+    marginBottom: 0,      
   },
   cycling1: {
-    width: 2000,          // Adjusted width to a more reasonable size
-    height: 300,        // Adjust the height as needed
-    marginTop: 0,         // No gap above the cycling image
+    width: 2000,         
+    height: 300,       
+    marginTop: 0,        
   },
   title: {
-    fontSize: 32,         // Adjust the font size as needed
-    fontWeight: 'bold',   // Makes the text bold
-    textAlign: 'center',  // Centers the text horizontally
+    fontSize: 32,        
+    fontWeight: 'bold',  
+    textAlign: 'center', 
     marginVertical: 20,
     marginTop: 50,
   },
@@ -66,38 +68,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginTop: 90,
     borderWidth: 2,
-    borderColor: '#FEBE15', // Correct color formatting
+    borderColor: '#FEBE15',
     width: '80%',
     height: '8%',    
-    
-    borderRadius:100,// Optional padding to prevent buttons from touching edges
+    borderRadius: 100,
   },
   
-  loginButton:{
-    justifyContent:"center",
-    alignItems:"center",
-    backgroundColor:"#FEBE15",
-    padding:10,
-    borderRadius:100,
-    width:"50%",
-    
+  loginButton: {
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FEBE15",  // Yellow background for login button
+    padding: 10,
+    borderRadius: 100,
+    width: "50%",
   },
-  loginButtonText:{
-    color:"#FFFFFF",
-    flex:1,
-    fontSize:20,
-    fontWeight:"bold",
-
+  loginButtonText: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "bold",
   },
-  signupButtonText:{
-    color:"#031C30",
-    flex:1,
-    fontSize:20,
-    fontWeight:"bold",
-    textAlign:"center",
-    
-    backgroundColor:"#FFFFFF",
 
-  }
-
+  signupButton: {
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF", // White background for signup button
+    padding: 10,
+    borderRadius: 100,
+    width: "50%",
+  },
+  signupButtonText: {
+    color: "#031C30",
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
 });
