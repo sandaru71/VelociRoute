@@ -7,6 +7,9 @@ const Start = () => {
   const handleLogin = () => {
     navigation.navigate('Login'); // Navigates to the Login screen
   };
+  const handleSignUp = () => {
+    navigation.navigate('SignUp'); // Navigates to the SignUpscreen
+  };
 
   return (
     <View style={styles.container}>
@@ -31,7 +34,7 @@ const Start = () => {
         </TouchableOpacity>
 
         {/* Sign-up Button */}
-        <TouchableOpacity style={styles.signupButton}>
+        <TouchableOpacity style={styles.signupButton}onPress={handleSignUp}>
           <Text style={styles.signupButtonText}>Sign-up</Text>
         </TouchableOpacity>
       </View>

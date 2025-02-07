@@ -6,19 +6,18 @@ import Fontisto from '@expo/vector-icons/Fontisto';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import AntDesign from '@expo/vector-icons/AntDesign'; // ✅ Import AntDesign
+import AntDesign from '@expo/vector-icons/AntDesign';
 import { useNavigation } from 'expo-router';
 
-const Login = () => {
+const SignUp = () => {
   const [secureEntry, setSecureEntry] = useState(true);
   const [rememberMe, setRememberMe] = useState(false);
   const navigation = useNavigation ();
   const handleGoBack = () =>{
     navigation.goBack();
-
   };
-  const handleSignUp = () => {
-    navigation.navigate("SignUp");
+  const handleLogin = () => {
+    navigation.navigate("Login");
 
   };
 
@@ -29,23 +28,26 @@ const Login = () => {
 
   return (
     <View style={styles.container}>
-      
       {/* Logo */}
       <Image
         source={require('../../assets/images/logo.png')}
         style={styles.logo}
         resizeMode="contain"
       />
-       {/* Back Button */}
+
+      {/* Back Button */}
       <TouchableOpacity style={styles.arrowButton} onPress={handleGoBack}>
         <AntDesign name="arrowleft" size={30} color="black" />
       </TouchableOpacity>
 
       {/* Heading */}
-      <Text style={styles.heading}>Log in</Text>
+      <Text style={styles.heading}>Sign Up</Text>
 
       {/* Form */}
       <View style={styles.formContainer}>
+        {/* Username Input */}
+       
+
         {/* Email Input */}
         <View style={styles.inputContainer}>
           <Fontisto name="email" size={20} color="black" />
@@ -65,6 +67,25 @@ const Login = () => {
             placeholderTextColor="#777"
             secureTextEntry={secureEntry}
           />
+          
+          {/* Toggle Password Visibility */}
+          <TouchableOpacity onPress={togglePasswordVisibility}>
+            <Ionicons
+              name={secureEntry ? 'eye-off' : 'eye'}
+              size={20}
+              color="black"
+            />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.inputContainer}>
+          <MaterialIcons name="lock" size={20} color="black" />
+          <TextInput
+            style={styles.textInput}
+            placeholder=" confirmed password"
+            placeholderTextColor="#777"
+            secureTextEntry={secureEntry}
+          />
+          
           {/* Toggle Password Visibility */}
           <TouchableOpacity onPress={togglePasswordVisibility}>
             <Ionicons
@@ -75,20 +96,9 @@ const Login = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Remember Me & Forgot Password */}
-        <View style={styles.optionsContainer}>
-          <TouchableOpacity onPress={() => setRememberMe(!rememberMe)} style={styles.checkboxContainer}>
-            <View style={[styles.checkbox, rememberMe && styles.checked]} />
-            <Text style={styles.rememberText}>Remember me</Text>
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Text style={styles.forgotPassword}>Forgot Password?</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Login Button */}
         <TouchableOpacity style={styles.loginButton}>
-          <Text style={styles.loginText}>Log in</Text>
+          <Text style={styles.loginText}>Sign Up</Text>
         </TouchableOpacity>
 
         {/* Social Login Buttons */}
@@ -98,7 +108,7 @@ const Login = () => {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.socialButton}>
-        <Image 
+          <Image 
             source={require('../../assets/images/facebook.jpeg')} 
             style={styles.fbImage} 
           />
@@ -113,11 +123,11 @@ const Login = () => {
           <Text style={styles.socialText}>Continue with Google</Text>
         </TouchableOpacity>
 
-        {/* Sign Up Link */}
         <Text style={styles.signupText}>
-  New to VelociRoute? 
-  <TouchableOpacity onPress={handleSignUp}>
-    <Text style={styles.signupLink}> Sign up</Text>
+  Already have an account?
+  <TouchableOpacity onPress={handleLogin
+  }>
+    <Text style={styles.signupLink}> Log in</Text>
   </TouchableOpacity>
 </Text>
 
@@ -126,7 +136,7 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default SignUp;
 
 const styles = StyleSheet.create({
   container: {
@@ -139,7 +149,7 @@ const styles = StyleSheet.create({
     height: 80,
     alignSelf: 'center',
   },
-    arrowButton: {
+  arrowButton: {
     height: 50, 
     width: 50, 
     backgroundColor: '#FEBE10',
@@ -151,10 +161,10 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 32,
     fontWeight: 'bold',
-    marginVertical: 20, // Removed redundant marginBottom
+    marginVertical: 20,
   },
   formContainer: {
-    marginTop: 20,
+    marginTop: 0,
   },
   inputContainer: {
     borderWidth: 1,
@@ -163,7 +173,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 15,
   },
   textInput: {
     flex: 1,
@@ -190,14 +200,7 @@ const styles = StyleSheet.create({
   checked: {
     backgroundColor: '#FEBE15',
   },
-  rememberText: {
-    color: 'black',
-    fontSize: 16,
-  },
-  forgotPassword: {
-    color: 'black',
-    fontSize: 16,
-  },
+  
   loginButton: {
     backgroundColor: '#FEBE15',
     borderRadius: 30,
@@ -225,13 +228,13 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     marginRight: 10,
-    alignSelf: 'center', // Ensure it aligns properly in the button
+    alignSelf: 'center',
   },
   fbImage:{
     width: 20,
     height: 20,
     marginRight: 10,
-    alignSelf: 'center', // Ensure it aligns properly in the button
+    alignSelf: 'center',
   },
   socialText: {
     fontSize: 16,
