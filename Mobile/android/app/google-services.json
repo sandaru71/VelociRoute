@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "659018683317",
+    "project_id": "velociroute",
+    "storage_bucket": "velociroute.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:659018683317:android:0038b5bba1ad5d598d7ffc",
+        "android_client_info": {
+          "package_name": "com.VelociRoute.Mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCrXJDPS-yalfc4VNxSWgQ7ApTqdygxZYE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

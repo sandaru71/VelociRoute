@@ -7,12 +7,30 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import AntDesign from '@expo/vector-icons/AntDesign'; // ✅ Import AntDesign
+import Feather from '@expo/vector-icons/Feather'; // ✅ Added for email verification icon
 import { useNavigation } from 'expo-router';
 
 const Login = () => {
   const [secureEntry, setSecureEntry] = useState(true);
   const [rememberMe, setRememberMe] = useState(false);
-  const navigation = useNavigation ();
+  const [email, setemail] = useState('');
+  const [emailError, setemailError] = useState('');
+ 
+  function handleemail(e) {
+    const emailVar = e.nativeEvent.text;
+    setemail(emailVar);
+
+    if (!emailVar.includes('@')) {
+      setemailError('Email must contain @ symbol'); // ❌ Show error message
+    } else if (!/^[\w.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(emailVar)) {
+      setemailError('Invalid email format'); // ❌ Invalid format error
+    } else {
+      setemailError(''); // ✅ Valid email, clear error
+    }
+  }
+
+ 
+  const navigation = useNavigation (); 
   const handleGoBack = () =>{
     navigation.goBack();
 
@@ -53,8 +71,19 @@ const Login = () => {
             style={styles.textInput}
             placeholder="Enter your email"
             placeholderTextColor="#777"
+            onChange={e => handleemail(e)}
           />
+          {email.length > 0 && (
+            emailError ? (
+              <Feather name="x-circle" size={20} color="#FEBE15" />
+            ) : (
+              <Feather name="check-circle" size={20} color="#000000" />
+            )
+          )}
+
         </View>
+        {/* Email Error Message */}
+        {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
         {/* Password Input */}
         <View style={styles.inputContainer}>
@@ -63,6 +92,7 @@ const Login = () => {
             style={styles.textInput}
             placeholder="Enter your password"
             placeholderTextColor="#777"
+            
             secureTextEntry={secureEntry}
           />
           {/* Toggle Password Visibility */}
@@ -146,7 +176,7 @@ const styles = StyleSheet.create({
     borderRadius: 25, // Makes it a perfect circle
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop:-57,
+    marginTop:-56,
   },
   heading: {
     fontSize: 32,
@@ -170,6 +200,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     outlineStyle: 'none', // Prevents outline in web
   },
+  errorText: {
+    color: '#FEBE15',
+    fontSize: 14,
+    marginBottom: 10,
+    marginLeft: 10,
+  },
+
   optionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',

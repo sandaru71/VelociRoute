@@ -1,27 +1,53 @@
 import React, { useState } from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet, Image, TextInput,
+import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput,
 } from 'react-native';
 import Fontisto from '@expo/vector-icons/Fontisto';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import AntDesign from '@expo/vector-icons/AntDesign';
+import Feather from '@expo/vector-icons/Feather';
 import { useNavigation } from 'expo-router';
 
 const SignUp = () => {
   const [secureEntry, setSecureEntry] = useState(true);
-  const [rememberMe, setRememberMe] = useState(false);
-  const navigation = useNavigation ();
-  const handleGoBack = () =>{
-    navigation.goBack();
-  };
-  const handleLogin = () => {
-    navigation.navigate("Login");
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
-  };
+  const navigation = useNavigation();
 
-  // Toggle password visibility
+  function handleEmail(e) {
+    const emailVar = e.nativeEvent.text;
+    setEmail(emailVar);
+
+    if (!emailVar.includes('@')) {
+      setEmailError('Email must contain @ symbol');
+    } else if (!/^[\w.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(emailVar)) {
+      setEmailError('Invalid email format');
+    } else {
+      setEmailError('');
+    }
+  }
+
+  function handlePasswordChange(e) {
+    const newPassword = e.nativeEvent.text;
+    setPassword(newPassword);
+  }
+
+  function handleConfirmPasswordChange(e) {
+    const confirmPasswordVar = e.nativeEvent.text;
+    setConfirmPassword(confirmPasswordVar);
+
+    if (confirmPasswordVar !== password) {
+      setPasswordError('Passwords do not match');
+    } else {
+      setPasswordError('');
+    }
+  }
+
   const togglePasswordVisibility = () => {
     setSecureEntry(prevState => !prevState);
   };
@@ -36,7 +62,7 @@ const SignUp = () => {
       />
 
       {/* Back Button */}
-      <TouchableOpacity style={styles.arrowButton} onPress={handleGoBack}>
+      <TouchableOpacity style={styles.arrowButton} onPress={() => navigation.goBack()}>
         <AntDesign name="arrowleft" size={30} color="black" />
       </TouchableOpacity>
 
@@ -45,8 +71,6 @@ const SignUp = () => {
 
       {/* Form */}
       <View style={styles.formContainer}>
-        {/* Username Input */}
-       
 
         {/* Email Input */}
         <View style={styles.inputContainer}>
@@ -55,8 +79,17 @@ const SignUp = () => {
             style={styles.textInput}
             placeholder="Enter your email"
             placeholderTextColor="#777"
+            onChange={handleEmail}
           />
+          {email.length > 0 && (
+            emailError ? (
+              <Feather name="x-circle" size={20} color="#FEBE15" />
+            ) : (
+              <Feather name="check-circle" size={20} color="#000000" />
+            )
+          )}
         </View>
+        {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
         {/* Password Input */}
         <View style={styles.inputContainer}>
@@ -66,37 +99,34 @@ const SignUp = () => {
             placeholder="Enter your password"
             placeholderTextColor="#777"
             secureTextEntry={secureEntry}
+            onChange={handlePasswordChange}
           />
-          
-          {/* Toggle Password Visibility */}
           <TouchableOpacity onPress={togglePasswordVisibility}>
-            <Ionicons
-              name={secureEntry ? 'eye-off' : 'eye'}
-              size={20}
-              color="black"
-            />
+            <Ionicons name={secureEntry ? 'eye-off' : 'eye'} size={20} color="black" />
           </TouchableOpacity>
         </View>
+
+        {/* Confirm Password Input */}
         <View style={styles.inputContainer}>
           <MaterialIcons name="lock" size={20} color="black" />
           <TextInput
             style={styles.textInput}
-            placeholder=" confirmed password"
+            placeholder="Confirm password"
             placeholderTextColor="#777"
             secureTextEntry={secureEntry}
+            onChange={handleConfirmPasswordChange}
           />
-          
-          {/* Toggle Password Visibility */}
-          <TouchableOpacity onPress={togglePasswordVisibility}>
-            <Ionicons
-              name={secureEntry ? 'eye-off' : 'eye'}
-              size={20}
-              color="black"
-            />
-          </TouchableOpacity>
+          {confirmPassword.length > 0 && (
+            passwordError ? (
+              <Feather name="x-circle" size={20} color="#FEBE15" />
+            ) : (
+              <Feather name="check-circle" size={20} color="#000000" />
+            )
+          )}
         </View>
+        {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
 
-        {/* Login Button */}
+        {/* Sign Up Button */}
         <TouchableOpacity style={styles.loginButton}>
           <Text style={styles.loginText}>Sign Up</Text>
         </TouchableOpacity>
@@ -108,28 +138,27 @@ const SignUp = () => {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.socialButton}>
-          <Image 
-            source={require('../../assets/images/facebook.jpeg')} 
-            style={styles.fbImage} 
+          <Image
+            source={require('../../assets/images/facebook.jpeg')}
+            style={styles.fbImage}
           />
           <Text style={styles.socialText}>Continue with Facebook</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.socialButton}>
-          <Image 
-            source={require('../../assets/images/googlee.jpeg')} 
-            style={styles.googleImage} 
+          <Image
+            source={require('../../assets/images/googlee.jpeg')}
+            style={styles.googleImage}
           />
           <Text style={styles.socialText}>Continue with Google</Text>
         </TouchableOpacity>
 
         <Text style={styles.signupText}>
-  Already have an account?
-  <TouchableOpacity onPress={handleLogin
-  }>
-    <Text style={styles.signupLink}> Log in</Text>
-  </TouchableOpacity>
-</Text>
+          Already have an account?
+          <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+            <Text style={styles.signupLink}> Log in</Text>
+          </TouchableOpacity>
+        </Text>
 
       </View>
     </View>
@@ -150,13 +179,13 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   arrowButton: {
-    height: 36, 
-    width: 44, 
+    height: 36,
+    width: 44,
     backgroundColor: '#FEBE10',
-    borderRadius: 30, // Makes it a perfect circle
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop:-57,
+    marginTop: -56,
   },
   heading: {
     fontSize: 32,
@@ -178,29 +207,14 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     paddingHorizontal: 10,
-    outlineStyle: 'none', // Prevents outline in web
+    outlineStyle: 'none',
   },
-  optionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
+  errorText: {
+    color: '#FEBE15',
+    fontSize: 14,
+    marginBottom: 10,
+    marginLeft: 10,
   },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderWidth: 1,
-    borderRadius: 4,
-    marginRight: 5,
-  },
-  checked: {
-    backgroundColor: '#FEBE15',
-  },
-  
   loginButton: {
     backgroundColor: '#FEBE15',
     borderRadius: 30,
@@ -222,7 +236,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 5,
     marginTop: 15,
-    paddingHorizontal: 10, // Added padding for better alignment
+    paddingHorizontal: 10,
   },
   googleImage: {
     width: 20,
@@ -230,7 +244,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
     alignSelf: 'center',
   },
-  fbImage:{
+  fbImage: {
     width: 20,
     height: 20,
     marginRight: 10,
