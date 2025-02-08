@@ -15,7 +15,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.anonymous.Mobile"
     },
     "web": {
       "bundler": "metro",
@@ -24,6 +25,13 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsDownloadToken": "sk.eyJ1Ijoic2FuZGFydTcxIiwiYSI6ImNtNnZta3E4YjA2eGkybHNkaDIzdGdjbHIifQ.jm1K2zCXqZXzdKbDZgSaLQ",
+          "RNMapboxMapsVersion": "11.0.0"
+        }
+      ],
       [
         "expo-splash-screen",
         {
