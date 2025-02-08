@@ -140,13 +140,13 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
     arrowButton: {
-    height: 50, 
-    width: 50, 
+    height: 36, 
+    width: 44, 
     backgroundColor: '#FEBE10',
     borderRadius: 25, // Makes it a perfect circle
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop:-62,
+    marginTop:-57,
   },
   heading: {
     fontSize: 32,
