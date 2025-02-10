@@ -17,6 +17,8 @@ const SignUp = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
+  
+
   const navigation = useNavigation();
 
   function handleEmail(e) {
@@ -83,7 +85,7 @@ const SignUp = () => {
           />
           {email.length > 0 && (
             emailError ? (
-              <Feather name="x-circle" size={20} color="#FEBE15" />
+              <Feather name="x-circle" size={20} color="red" />
             ) : (
               <Feather name="check-circle" size={20} color="#000000" />
             )
@@ -118,7 +120,7 @@ const SignUp = () => {
           />
           {confirmPassword.length > 0 && (
             passwordError ? (
-              <Feather name="x-circle" size={20} color="#FEBE15" />
+              <Feather name="x-circle" size={20} color="red" />
             ) : (
               <Feather name="check-circle" size={20} color="#000000" />
             )
@@ -210,7 +212,7 @@ const styles = StyleSheet.create({
     outlineStyle: 'none',
   },
   errorText: {
-    color: '#FEBE15',
+    color: 'red',
     fontSize: 14,
     marginBottom: 10,
     marginLeft: 10,

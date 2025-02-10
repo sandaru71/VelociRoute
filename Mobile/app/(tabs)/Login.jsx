@@ -28,6 +28,14 @@ const Login = () => {
       setemailError(''); // ✅ Valid email, clear error
     }
   }
+  function validatePassword(password) {
+    const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;
+    if (!regex.test(password)) {
+      return "Password must be at least 8 characters, include 1 uppercase letter, 1 number, and 1 special character (!@#$%^&*)";
+    }
+    return ""; // Valid password
+  }
+  
 
  
   const navigation = useNavigation (); 
@@ -75,7 +83,7 @@ const Login = () => {
           />
           {email.length > 0 && (
             emailError ? (
-              <Feather name="x-circle" size={20} color="#FEBE15" />
+              <Feather name="x-circle" size={20} color="red" />
             ) : (
               <Feather name="check-circle" size={20} color="#000000" />
             )
@@ -201,7 +209,7 @@ const styles = StyleSheet.create({
     outlineStyle: 'none', // Prevents outline in web
   },
   errorText: {
-    color: '#FEBE15',
+    color: 'red',
     fontSize: 14,
     marginBottom: 10,
     marginLeft: 10,
