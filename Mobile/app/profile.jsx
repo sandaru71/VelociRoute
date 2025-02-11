@@ -312,7 +312,7 @@ const Profile = () => {
                 textAlign: "center",
                 fontWeight: "bold",
                 marginBottom: 10,
-                fontFamily:'Arial'
+                fontFamily:'Arial',
               }}
             >
               Activity Calendar
