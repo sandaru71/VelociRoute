@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     padding: 10, 
     borderWidth: 1, 
     borderColor: '#ccc', 
-    borderRadius: 8, 
+    borderRadius: 15, 
     fontSize: 16, 
     width: '100%',
   },
@@ -113,13 +113,13 @@ const styles = StyleSheet.create({
   filterContainer: { padding: 15 },
   dropdown: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ccc' },
   filterRow: { flexDirection: 'row', justifyContent: 'space-around', marginVertical: 5 },
-  filterButton: { padding: 12, backgroundColor: '#fbc02d', borderRadius: 8, width: width * 0.4, alignItems: 'center' },
+  filterButton: { padding: 12, backgroundColor: '#fbc02d', borderRadius: 15, width: width * 0.4, alignItems: 'center' },
   filterText: { fontSize: 16, color: '#fff', fontWeight: 'bold' },
-  clearButton: { marginTop: 10, padding: 10, backgroundColor: '#ff5252', borderRadius: 8, alignItems: 'center' },
+  clearButton: { marginTop: 10, padding: 10, backgroundColor: '#ff5252', borderRadius: 15, alignItems: 'center' },
   clearText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 
   // Image
-  image: { width: '100%', height: 200, resizeMode: 'cover', borderRadius: 10 },
+  image: { width: '100%', height: 200, resizeMode: 'cover', borderRadius: 15 },
 
   // Route Info
   routeInfo: { padding: 15, backgroundColor: '#fff' },
@@ -129,8 +129,8 @@ const styles = StyleSheet.create({
 
   // Buttons
   buttonsContainer: { flexDirection: 'row', justifyContent: 'space-around', marginVertical: 10 },
-  viewMapButton: { padding: 12, backgroundColor: '#ddd', borderRadius: 8, width: width * 0.4, alignItems: 'center' },
-  startRideButton: { padding: 12, backgroundColor: '#fbc02d', borderRadius: 8, width: width * 0.4, alignItems: 'center' },
+  viewMapButton: { padding: 12, backgroundColor: '#ddd', borderRadius: 15, width: width * 0.4, alignItems: 'center' },
+  startRideButton: { padding: 12, backgroundColor: '#fbc02d', borderRadius: 15, width: width * 0.4, alignItems: 'center' },
   buttonText: { fontSize: 16, fontWeight: 'bold' },
 
   // Pagination
