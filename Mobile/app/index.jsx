@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, Dimensions, TextInput } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 
 const { width } = Dimensions.get('window'); // Get screen width
@@ -14,6 +14,9 @@ const DashboardScreen = () => {
     { label: 'Expert', value: 'expert' }
   ]);
 
+  // Search bar state
+  const [searchText, setSearchText] = useState('');
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Navbar */}
@@ -22,6 +25,16 @@ const DashboardScreen = () => {
         <TouchableOpacity style={styles.menuButton}>
           <Text style={styles.menuText}>☰</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search location"
+          value={searchText}
+          onChangeText={setSearchText}
+        />
       </View>
 
       {/* Filters */}
@@ -72,19 +85,29 @@ const DashboardScreen = () => {
         <TouchableOpacity><Text style={styles.paginationText}>{"<"}</Text></TouchableOpacity>
         <TouchableOpacity><Text style={styles.paginationText}>{">"}</Text></TouchableOpacity>
       </View>
-
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  
+
   // Navbar
   navbar: { flexDirection: 'row', justifyContent: 'space-between', padding: 15, backgroundColor: '#fbc02d', alignItems: 'center' },
   logo: { fontSize: 22, fontWeight: 'bold', color: '#fff' },
   menuButton: { padding: 10, backgroundColor: '#fff', borderRadius: 5 },
   menuText: { fontSize: 20, fontWeight: 'bold', color: '#000' },
+
+  // Search Bar
+  searchContainer: { padding: 15, backgroundColor: '#fff' },
+  searchInput: { 
+    padding: 10, 
+    borderWidth: 1, 
+    borderColor: '#ccc', 
+    borderRadius: 8, 
+    fontSize: 16, 
+    width: '100%',
+  },
 
   // Filters
   filterContainer: { padding: 15 },
