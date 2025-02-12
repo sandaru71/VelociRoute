@@ -73,10 +73,6 @@ const DashboardScreen = () => {
         <TouchableOpacity><Text style={styles.paginationText}>{">"}</Text></TouchableOpacity>
       </View>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>About Us</Text>
-      </View>
     </ScrollView>
   );
 };
@@ -118,9 +114,6 @@ const styles = StyleSheet.create({
   pagination: { flexDirection: 'row', justifyContent: 'space-between', padding: 15 },
   paginationText: { fontSize: 20, fontWeight: 'bold' },
 
-  // Footer
-  footer: { backgroundColor: '#fbc02d', padding: 20, alignItems: 'center' },
-  footerText: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
 });
 
 export default DashboardScreen;
