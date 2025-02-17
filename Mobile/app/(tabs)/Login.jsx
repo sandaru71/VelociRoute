@@ -29,13 +29,13 @@ const Login = () => {
     }
   }
   function validatePassword(password) {
-    const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;
-    if (!regex.test(password)) {
-      return "Password must be at least 8 characters, include 1 uppercase letter, 1 number, and 1 special character (!@#$%^&*)";
-    }
-    return ""; // Valid password
+  const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;
+  if (!regex.test(password)) {
+    return "Password must be at least 8 characters, include 1 uppercase letter, 1 number, and 1 special character (!@#$%^&*)";
   }
-  
+  return ""; // Valid password
+}
+
 
  
   const navigation = useNavigation (); 
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
   },
   signupText: {
     textAlign: 'center',
-    marginTop: 30,
+    marginTop: 60,
     fontSize: 16,
   },
   signupLink: {

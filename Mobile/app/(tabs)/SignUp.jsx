@@ -17,8 +17,6 @@ const SignUp = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
-  
-
   const navigation = useNavigation();
 
   function handleEmail(e) {
@@ -258,7 +256,7 @@ const styles = StyleSheet.create({
   },
   signupText: {
     textAlign: 'center',
-    marginTop: 30,
+    marginTop: 60,
     fontSize: 16,
   },
   signupLink: {
