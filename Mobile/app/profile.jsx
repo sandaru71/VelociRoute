@@ -107,7 +107,7 @@ const Profile = () => {
                   color: COLORS.black,
                 }}
               >
-                10
+                3
               </Text>
               <Text
                 style={{
@@ -116,7 +116,7 @@ const Profile = () => {
                   fontWeight:'bold',
                 }}
               >
-                Followers
+                Following
               </Text>
             </View>
 
@@ -134,7 +134,7 @@ const Profile = () => {
                   color: COLORS.black,
                 }}
               >
-                6
+                5
               </Text>
               <Text
                 style={{
@@ -143,7 +143,7 @@ const Profile = () => {
                   fontWeight:'bold',
                 }}
               >
-                Followings
+                Followers
               </Text>
             </View>
 
@@ -161,7 +161,7 @@ const Profile = () => {
                   color: COLORS.black,
                 }}
               >
-                5
+                2
               </Text>
               <Text
                 style={{
@@ -217,7 +217,7 @@ const Profile = () => {
                   fontWeight: "bold",
                 }}
               >
-                Add Friend
+                Share Profile
               </Text>
             </TouchableOpacity>
           </View>
