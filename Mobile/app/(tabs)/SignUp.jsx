@@ -8,6 +8,13 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Feather from '@expo/vector-icons/Feather';
 import { useNavigation } from 'expo-router';
+import { auth } from '../../firebase'; // Adjust the path if needed
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword } from 'firebase/auth'; // Import the specific function from 'firebase/auth'
+
+
+
+
 
 const SignUp = () => {
   const [secureEntry, setSecureEntry] = useState(true);
@@ -18,11 +25,19 @@ const SignUp = () => {
   const [passwordError, setPasswordError] = useState('');
 
   const navigation = useNavigation();
-
+  const handleSignUp = () => {
+    auth
+      .createUserWithEmailAndPassword(email, password)
+      .then(userCredentials => {
+        const user = userCredentials.user;
+        console.log( user.email);
+      })
+      .catch(error => alert(error.message))
+  }
   function handleEmail(e) {
-    const emailVar = e.nativeEvent.text;
+    const emailVar = e.nativeEvent.text || '';  // Ensure it's always a string
     setEmail(emailVar);
-
+  
     if (!emailVar.includes('@')) {
       setEmailError('Email must contain @ symbol');
     } else if (!/^[\w.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(emailVar)) {
@@ -31,22 +46,23 @@ const SignUp = () => {
       setEmailError('');
     }
   }
-
+  
   function handlePasswordChange(e) {
-    const newPassword = e.nativeEvent.text;
+    const newPassword = e.nativeEvent.text || '';  // Ensure it's always a string
     setPassword(newPassword);
   }
-
+  
   function handleConfirmPasswordChange(e) {
-    const confirmPasswordVar = e.nativeEvent.text;
+    const confirmPasswordVar = e.nativeEvent.text || '';  // Ensure it's always a string
     setConfirmPassword(confirmPasswordVar);
-
+  
     if (confirmPasswordVar !== password) {
       setPasswordError('Passwords do not match');
     } else {
       setPasswordError('');
     }
   }
+  
 
   const togglePasswordVisibility = () => {
     setSecureEntry(prevState => !prevState);
@@ -127,9 +143,11 @@ const SignUp = () => {
         {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
 
         {/* Sign Up Button */}
-        <TouchableOpacity style={styles.loginButton}>
-          <Text style={styles.loginText}>Sign Up</Text>
-        </TouchableOpacity>
+       {/* Sign Up Button */}
+<TouchableOpacity style={styles.loginButton} onPress={handleSignUp}>
+  <Text style={styles.loginText}>Sign Up</Text>
+</TouchableOpacity>
+
 
         {/* Social Login Buttons */}
         <TouchableOpacity style={styles.socialButton}>
