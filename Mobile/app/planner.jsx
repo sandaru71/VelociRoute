@@ -5,7 +5,6 @@ import * as Location from "expo-location";
 import MapViewDirections from "react-native-maps-directions";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import { GOOGLE_MAPS_API_KEY } from "@env";
-
 const Planner = () => {
   const [location, setLocation] = useState(null);
   const [region, setRegion] = useState(null);
@@ -24,6 +23,10 @@ const Planner = () => {
       }
       let userLocation = await Location.getCurrentPositionAsync({});
       setLocation(userLocation.coords);
+      setStartLocation({
+        latitude: userLocation.coords.latitude,
+        longitude: userLocation.coords.longitude,
+      });
       setRegion({
         latitude: userLocation.coords.latitude,
         longitude: userLocation.coords.longitude,
@@ -38,19 +41,24 @@ const Planner = () => {
       {/* Google Places Search Bar */}
       <View style={styles.searchContainer}>
         <GooglePlacesAutocomplete
-          placeholder="Where are you going?"
+          placeholder="Enter your destination"
           onPress={(data, details = null) => {
-            setDestination({
-              latitude: details.geometry.location.lat,
-              longitude: details.geometry.location.lng,
-            });
+            if (details) {
+              setDestination({
+                latitude: details.geometry.location.lat,
+                longitude: details.geometry.location.lng,
+              });
+            }
           }}
           query={{
             key: GOOGLE_MAPS_API_KEY,
             language: "en",
           }}
           fetchDetails={true}
-          styles={styles.searchBox}
+          styles={{
+            textInput: styles.searchBox,
+            listView: styles.listView,
+          }}
         />
       </View>
 
@@ -58,22 +66,11 @@ const Planner = () => {
       <MapView
         ref={mapRef}
         style={styles.map}
-        initialRegion={region}
+        region={region}
         showsUserLocation={true}
         followsUserLocation={true}
       >
         {/* User's current location */}
-        {location && (
-          <Marker
-            coordinate={{
-              latitude: location.latitude,
-              longitude: location.longitude,
-            }}
-            title="You are here"
-          />
-        )}
-
-        {/* Start Location Marker */}
         {startLocation && (
           <Marker coordinate={startLocation} pinColor="green" title="Start" />
         )}
@@ -82,16 +79,6 @@ const Planner = () => {
         {destination && (
           <Marker coordinate={destination} pinColor="red" title="Destination" />
         )}
-
-        {/* Waypoints Markers */}
-        {waypoints.map((point, index) => (
-          <Marker
-            key={index}
-            coordinate={point}
-            pinColor="blue"
-            title={`Waypoint ${index + 1}`}
-          />
-        ))}
 
         {/* Route from Start to Destination */}
         {startLocation && destination && (
@@ -128,13 +115,20 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.2,
     shadowOffset: { width: 0, height: 2 },
+    zIndex: 1, // Ensures search bar appears above the map
   },
   searchBox: {
-    textInput: {
-      height: 40,
-      color: "#5d5d5d",
-      fontSize: 16,
-    },
+    height: 40,
+    color: "#5d5d5d",
+    fontSize: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ccc",
+  },
+  listView: {
+    position: "absolute",
+    top: 50,
+    backgroundColor: "white",
+    zIndex: 2,
   },
   startButton: {
     position: "absolute",
