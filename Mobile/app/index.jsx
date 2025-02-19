@@ -1,4 +1,5 @@
 import { View, Text } from 'react-native'
+import 'react-native-get-random-values';
 import React from 'react'
 import ColorList from '@/components/ColorList'
 
