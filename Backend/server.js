@@ -2,6 +2,7 @@ const express = require("express");
 require("dotenv/config");
 const morgan = require("morgan");
 const bodyParser = require("body-parser");
+const connectDB = require('./src/Infrastructure/db');
 
 
 const app = express();
@@ -15,9 +16,17 @@ app.use(
   })
 );
 
-app.get("/", (req, res, next) => {
-    res.send("Hello World!");
-  });
+let db; // Store database instance
+
+// Connect to MongoDB
+connectDB().then(database => {
+  db = database;
+  console.log("🚀 Database Ready!");
+}).catch(err => console.error(err));
+
+app.get('/', (req, res) => {
+  res.send("MongoDB Node.js Driver is running!");
+});
 
 const port = process.env.APP_PORT;
 
