@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Modal, FlatList, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Modal, FlatList, StyleSheet, Image } from 'react-native';
 import { FontAwesome5, Feather } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 
 const SaveActivityScreen = () => {
   const [selectedActivityType, setSelectedActivityType] = useState(null);
@@ -9,10 +10,31 @@ const SaveActivityScreen = () => {
   const [isActivityTypeModalVisible, setIsActivityTypeModalVisible] = useState(false);
   const [isRatingModalVisible, setIsRatingModalVisible] = useState(false);
   const [isDifficultyModalVisible, setIsDifficultyModalVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   const activityTypes = ['Running', 'Walking', 'Cycling', 'Hiking'];
   const activityRatings = ['Great', 'Good', 'Average', 'Poor'];
   const difficultyLevels = ['Easy', 'Medium', 'Hard'];
+
+  const activityIcons = {
+    Running: 'running',
+    Walking: 'walking',
+    Cycling: 'bicycle',
+    Hiking: 'hiking',
+  };
+  
+  const ratingIcons = {
+    Great: 'smile-beam',
+    Good: 'smile',
+    Average: 'meh',
+    Poor: 'frown',
+  };
+  
+  const difficultyIcons = {
+    Easy: 'flag',
+    Medium: 'flag-checkered',
+    Hard: 'mountain',
+  };
 
   const toggleActivityTypeModal = () => {
     setIsActivityTypeModalVisible(!isActivityTypeModalVisible);
@@ -41,6 +63,23 @@ const SaveActivityScreen = () => {
     toggleDifficultyModal();
   };
 
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        setSelectedImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.log('Error picking image:', error);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -57,9 +96,15 @@ const SaveActivityScreen = () => {
         <View style={styles.mapPlaceholder}>
           <Text style={styles.mapText}>This is a sample map. You'll see your activity map after saving.</Text>
         </View>
-        <TouchableOpacity style={styles.photoUpload}>
-          <FontAwesome5 name="image" size={24} color="black" />
-          <Text style={styles.photoText}>Add Photos/Video</Text>
+        <TouchableOpacity style={styles.photoUpload} onPress={pickImage}>
+          {selectedImage ? (
+            <Image source={{ uri: selectedImage }} style={styles.selectedImage} />
+          ) : (
+            <>
+              <FontAwesome5 name="image" size={24} color="black" />
+              <Text style={styles.photoText}>Add Photos/Video</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
       
@@ -71,32 +116,55 @@ const SaveActivityScreen = () => {
         multiline
       />
 
-
       {/* Activity Type */}
       <TouchableOpacity style={styles.dropdown} onPress={toggleActivityTypeModal}>
-        <FontAwesome5 name="running" size={18} color="white" />
+        <FontAwesome5 name="running" size={18} color="black" />
         <Text style={styles.dropdownText}>
           {selectedActivityType ? selectedActivityType : 'Select Activity Type'}
         </Text>
-        <Feather name="chevron-down" size={20} color="white" style={styles.chevron} />
+        {selectedActivityType && (
+          <FontAwesome5
+            name={activityIcons[selectedActivityType]}
+            size={18}
+            color="blue"
+            style={styles.iconAfterText}
+          />
+        )}
+        <Feather name="chevron-down" size={20} color="black" style={styles.chevron} />
       </TouchableOpacity>
 
-      {/* Rate the Activity */}
+      {/* Activity Rating */}
       <TouchableOpacity style={styles.dropdown} onPress={toggleRatingModal}>
-        <FontAwesome5 name="smile" size={18} color="white" />
+        <FontAwesome5 name="smile" size={18} color="black" />
         <Text style={styles.dropdownText}>
           {selectedActivityRating ? selectedActivityRating : 'Rate the activity'}
         </Text>
-        <Feather name="chevron-down" size={20} color="white" style={styles.chevron} />
+        {selectedActivityRating && (
+          <FontAwesome5
+            name={ratingIcons[selectedActivityRating]}
+            size={18}
+            color="gold"
+            style={styles.iconAfterText}
+          />
+        )}
+        <Feather name="chevron-down" size={20} color="black" style={styles.chevron} />
       </TouchableOpacity>
 
       {/* Difficulty Level */}
       <TouchableOpacity style={styles.dropdown} onPress={toggleDifficultyModal}>
-        <FontAwesome5 name="trophy" size={18} color="white" />
+        <FontAwesome5 name="trophy" size={18} color="black" />
         <Text style={styles.dropdownText}>
           {selectedDifficulty ? selectedDifficulty : 'Select Difficulty'}
         </Text>
-        <Feather name="chevron-down" size={20} color="white" style={styles.chevron} />
+        {selectedDifficulty && (
+          <FontAwesome5
+            name={difficultyIcons[selectedDifficulty]}
+            size={18}
+            color="red"
+            style={styles.iconAfterText}
+          />
+        )}
+        <Feather name="chevron-down" size={20} color="black" style={styles.chevron} />
       </TouchableOpacity>
 
       {/* Modal for Activity Type */}
@@ -111,6 +179,12 @@ const SaveActivityScreen = () => {
                   style={styles.modalOption}
                   onPress={() => handleSelectActivityType(item)}
                 >
+                  <FontAwesome5 
+                    name={activityIcons[item]} 
+                    size={18} 
+                    color="black" 
+                    style={styles.modalIcon}
+                  />
                   <Text style={styles.modalOptionText}>{item}</Text>
                 </TouchableOpacity>
               )}
@@ -134,6 +208,12 @@ const SaveActivityScreen = () => {
                   style={styles.modalOption}
                   onPress={() => handleSelectActivityRating(item)}
                 >
+                  <FontAwesome5 
+                    name={ratingIcons[item]} 
+                    size={18} 
+                    color="gold" 
+                    style={styles.modalIcon}
+                  />
                   <Text style={styles.modalOptionText}>{item}</Text>
                 </TouchableOpacity>
               )}
@@ -157,6 +237,12 @@ const SaveActivityScreen = () => {
                   style={styles.modalOption}
                   onPress={() => handleSelectDifficulty(item)}
                 >
+                  <FontAwesome5 
+                    name={difficultyIcons[item]} 
+                    size={18} 
+                    color="red" 
+                    style={styles.modalIcon}
+                  />
                   <Text style={styles.modalOptionText}>{item}</Text>
                 </TouchableOpacity>
               )}
@@ -200,8 +286,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#e8e8e8',
     padding: 15,
     borderRadius: 8,
-    marginBottom: 20,
-    marginTop: 30,
+    marginBottom: 25,
+    marginTop: 20,
   },
   description: {
     height: 80,
@@ -213,17 +299,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#e8e8e8',
     padding: 15,
     borderRadius: 8,
-    
-    marginTop:20,
+    marginBottom: 10,
+    marginTop: 10,
   },
-  box: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#e8e8e8',
-    padding: 15,
-    borderRadius: 8,
-    marginTop: 15,
-    marginBottom: -20,
+  iconAfterText: {
+    marginLeft: 10,
   },
   dropdownText: {
     color: 'grey',
@@ -261,18 +341,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 8,
+    overflow: 'hidden',
   },
   photoText: {
     color: 'black',
     marginTop: 10,
     fontSize: 12,
   },
+  selectedImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+  },
   saveButton: {
     backgroundColor: '#FEBE15',
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 60,
+    marginTop: 30,
   },
   saveButtonText: {
     color: 'white',
@@ -295,6 +381,11 @@ const styles = StyleSheet.create({
     padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalIcon: {
+    marginRight: 10,
   },
   modalOptionText: {
     fontSize: 16,
