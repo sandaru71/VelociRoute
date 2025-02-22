@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Modal, FlatList, StyleSheet } from 'react-native';
 import { FontAwesome5, Feather } from '@expo/vector-icons';
+import Icon from 'react-native-vector-icons/Ionicons';
+
 
 const SaveActivityScreen = () => {
   const [selectedActivityType, setSelectedActivityType] = useState(null);
@@ -13,6 +15,26 @@ const SaveActivityScreen = () => {
   const activityTypes = ['Running', 'Walking', 'Cycling', 'Hiking'];
   const activityRatings = ['Great', 'Good', 'Average', 'Poor'];
   const difficultyLevels = ['Easy', 'Medium', 'Hard'];
+
+  const activityIcons = {
+    Running: 'running',
+    Walking: 'walking',
+    Cycling: 'bicycle',
+    Hiking: 'hiking',
+  };
+  
+  const ratingIcons = {
+    Great: 'smile-beam',
+    Good: 'smile',
+    Average: 'meh',
+    Poor: 'frown',
+  };
+  
+  const difficultyIcons = {
+    Easy: 'flag',
+    Medium: 'flag-checkered',
+    Hard: 'mountain',
+  };
 
   const toggleActivityTypeModal = () => {
     setIsActivityTypeModalVisible(!isActivityTypeModalVisible);
@@ -71,32 +93,55 @@ const SaveActivityScreen = () => {
         multiline
       />
 
-
       {/* Activity Type */}
       <TouchableOpacity style={styles.dropdown} onPress={toggleActivityTypeModal}>
-        <FontAwesome5 name="running" size={18} color="white" />
+        <FontAwesome5 name="running" size={18} color="black" />
         <Text style={styles.dropdownText}>
           {selectedActivityType ? selectedActivityType : 'Select Activity Type'}
         </Text>
-        <Feather name="chevron-down" size={20} color="white" style={styles.chevron} />
+        {selectedActivityType && (
+          <FontAwesome5
+            name={activityIcons[selectedActivityType]}
+            size={18}
+            color="blue"
+            style={styles.iconAfterText}
+          />
+        )}
+        <Feather name="chevron-down" size={20} color="black" style={styles.chevron} />
       </TouchableOpacity>
 
-      {/* Rate the Activity */}
+      {/* Activity Rating */}
       <TouchableOpacity style={styles.dropdown} onPress={toggleRatingModal}>
-        <FontAwesome5 name="smile" size={18} color="white" />
+        <FontAwesome5 name="smile" size={18} color="black" />
         <Text style={styles.dropdownText}>
           {selectedActivityRating ? selectedActivityRating : 'Rate the activity'}
         </Text>
-        <Feather name="chevron-down" size={20} color="white" style={styles.chevron} />
+        {selectedActivityRating && (
+          <FontAwesome5
+            name={ratingIcons[selectedActivityRating]}
+            size={18}
+            color="gold"
+            style={styles.iconAfterText}
+          />
+        )}
+        <Feather name="chevron-down" size={20} color="black" style={styles.chevron} />
       </TouchableOpacity>
 
       {/* Difficulty Level */}
       <TouchableOpacity style={styles.dropdown} onPress={toggleDifficultyModal}>
-        <FontAwesome5 name="trophy" size={18} color="white" />
+        <FontAwesome5 name="trophy" size={18} color="black" />
         <Text style={styles.dropdownText}>
           {selectedDifficulty ? selectedDifficulty : 'Select Difficulty'}
         </Text>
-        <Feather name="chevron-down" size={20} color="white" style={styles.chevron} />
+        {selectedDifficulty && (
+          <FontAwesome5
+            name={difficultyIcons[selectedDifficulty]}
+            size={18}
+            color="red"
+            style={styles.iconAfterText}
+          />
+        )}
+        <Feather name="chevron-down" size={20} color="black" style={styles.chevron} />
       </TouchableOpacity>
 
       {/* Modal for Activity Type */}
@@ -200,8 +245,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#e8e8e8',
     padding: 15,
     borderRadius: 8,
-    marginBottom: 20,
-    marginTop: 30,
+    marginBottom: 25,
+    marginTop: 20,
   },
   description: {
     height: 80,
@@ -213,17 +258,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#e8e8e8',
     padding: 15,
     borderRadius: 8,
-    
-    marginTop:20,
+    marginBottom: 10,
+    marginTop: 10,
   },
-  box: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#e8e8e8',
-    padding: 15,
-    borderRadius: 8,
-    marginTop: 15,
-    marginBottom: -20,
+  iconAfterText: {
+    marginLeft: 10,
   },
   dropdownText: {
     color: 'grey',
@@ -272,7 +311,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 60,
+    marginTop: 30,
   },
   saveButtonText: {
     color: 'white',
@@ -313,4 +352,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SaveActivityScreen;
+export default SaveActivityScreen; 
