@@ -10,8 +10,14 @@ const uploadRoutes = require('./src/Routes/uploadRoutes');
 
 const app = express();
 
-// Enable CORS
-app.use(cors());
+// Enable CORS with specific options
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 200
+}));
 
 app.use(morgan("dev"));
 app.use(bodyParser.json({ limit: "5mb" }));
@@ -24,6 +30,12 @@ app.use(
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Add request logging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
 
 // Connect to MongoDB and store connection in app.locals
 connectDB().then(database => {
@@ -42,9 +54,18 @@ app.get('/', (req, res) => {
   res.send("MongoDB Node.js Driver is running!");
 });
 
-const port = process.env.APP_PORT || 3000;
+// Add error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({ error: 'Internal Server Error', message: err.message });
+});
 
-app.listen(port, () => {
-  console.log(`Server started on port ${port}`);
-  console.log(`Upload test form available at: http://localhost:${port}/upload-test.html`);
+const port = process.env.APP_PORT || 3000;
+const host = '0.0.0.0'; // Listen on all network interfaces
+
+app.listen(port, host, () => {
+  console.log(`Server started on http://${host}:${port}`);
+  console.log('Local: http://localhost:3000');
+  console.log('On Your Network: http://192.168.8.112:3000');
+  console.log('Upload test form available at: http://localhost:3000/upload-test.html');
 });
