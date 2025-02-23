@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Modal, FlatList, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Modal, FlatList, StyleSheet, Image } from 'react-native';
 import { FontAwesome5, Feather } from '@expo/vector-icons';
 import Icon from 'react-native-vector-icons/Ionicons';
-
+import * as ImagePicker from 'expo-image-picker';
 
 const SaveActivityScreen = () => {
   const [selectedActivityType, setSelectedActivityType] = useState(null);
@@ -11,6 +11,7 @@ const SaveActivityScreen = () => {
   const [isActivityTypeModalVisible, setIsActivityTypeModalVisible] = useState(false);
   const [isRatingModalVisible, setIsRatingModalVisible] = useState(false);
   const [isDifficultyModalVisible, setIsDifficultyModalVisible] = useState(false);
+  const [selectedImages, setSelectedImages] = useState([]);
 
   const activityTypes = ['Running', 'Walking', 'Cycling', 'Hiking'];
   const activityRatings = ['Great', 'Good', 'Average', 'Poor'];
@@ -63,12 +64,41 @@ const SaveActivityScreen = () => {
     toggleDifficultyModal();
   };
 
+  const pickImage = async () => {
+    try {
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Sorry, we need camera roll permissions to make this work!');
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        setSelectedImages(prevImages => [...prevImages, ...result.assets]);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      alert('Error picking image');
+    }
+  };
+
+  const removeImage = (index) => {
+    setSelectedImages(prevImages => prevImages.filter((_, i) => i !== index));
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.resumeText}>Resume</Text>
-        <Text style={styles.saveText}>Save Activity</Text>
+        
       </View>
 
       {/* Activity Name */}
@@ -79,68 +109,110 @@ const SaveActivityScreen = () => {
         <View style={styles.mapPlaceholder}>
           <Text style={styles.mapText}>This is a sample map. You'll see your activity map after saving.</Text>
         </View>
-        <TouchableOpacity style={styles.photoUpload}>
-          <FontAwesome5 name="image" size={24} color="black" />
-          <Text style={styles.photoText}>Add Photos/Video</Text>
+        
+        <TouchableOpacity style={styles.photoUpload} onPress={pickImage}>
+          {selectedImages.length > 0 ? (
+            <View style={{ width: '100%', height: '100%', position: 'relative' }}>
+              <Image 
+                source={{ uri: selectedImages[0].uri }} 
+                style={{ width: '100%', height: '100%' }} 
+                resizeMode="cover"
+              />
+              <TouchableOpacity
+                style={[styles.removeButton, { top: 5, right: 5 }]}
+                onPress={() => {
+                  setSelectedImages([]);
+                }}
+              >
+                <FontAwesome5 name="times-circle" size={20} color="red" />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              <FontAwesome5 name="image" size={24} color="black" />
+              <Text style={styles.photoText}>Add Photos/Video</Text>
+            </>
+          )}
         </TouchableOpacity>
+
+        {selectedImages.length > 1 && (
+          <FlatList
+            data={selectedImages.slice(1)}
+            horizontal
+            style={styles.imageList}
+            renderItem={({ item, index }) => (
+              <View style={styles.imageContainer}>
+                <Image source={{ uri: item.uri }} style={styles.selectedImage} />
+                <TouchableOpacity
+                  style={styles.removeButton}
+                  onPress={() => removeImage(index + 1)}
+                >
+                  <FontAwesome5 name="times-circle" size={20} color="red" />
+                </TouchableOpacity>
+              </View>
+            )}
+            keyExtractor={(item, index) => index.toString()}
+          />
+        )}
       </View>
       
       {/* Activity Description */}
       <TextInput
         style={[styles.input, styles.description]}
-        placeholder="How did it go? Share more about your activity. Use @ to tag someone."
+        placeholder="How did it go? Share more about your activity.
+         "
         placeholderTextColor="grey"
-        multiline
+        
       />
 
       {/* Activity Type */}
       <TouchableOpacity style={styles.dropdown} onPress={toggleActivityTypeModal}>
-        <FontAwesome5 name="running" size={18} color="black" />
-        <Text style={styles.dropdownText}>
-          {selectedActivityType ? selectedActivityType : 'Select Activity Type'}
-        </Text>
-        {selectedActivityType && (
+      {selectedActivityType && (
           <FontAwesome5
             name={activityIcons[selectedActivityType]}
             size={18}
-            color="blue"
+            color="black"
             style={styles.iconAfterText}
           />
         )}
+        <Text style={styles.dropdownText}>
+          {selectedActivityType ? selectedActivityType : 'Select Activity Type'}
+        </Text>
+        
         <Feather name="chevron-down" size={20} color="black" style={styles.chevron} />
       </TouchableOpacity>
 
       {/* Activity Rating */}
       <TouchableOpacity style={styles.dropdown} onPress={toggleRatingModal}>
-        <FontAwesome5 name="smile" size={18} color="black" />
-        <Text style={styles.dropdownText}>
-          {selectedActivityRating ? selectedActivityRating : 'Rate the activity'}
-        </Text>
-        {selectedActivityRating && (
+      {selectedActivityRating && (
           <FontAwesome5
             name={ratingIcons[selectedActivityRating]}
             size={18}
-            color="gold"
+            color="black"
             style={styles.iconAfterText}
           />
         )}
+        <Text style={styles.dropdownText}>
+          {selectedActivityRating ? selectedActivityRating : 'Rate the activity'}
+        </Text>
+        
         <Feather name="chevron-down" size={20} color="black" style={styles.chevron} />
       </TouchableOpacity>
 
       {/* Difficulty Level */}
       <TouchableOpacity style={styles.dropdown} onPress={toggleDifficultyModal}>
-        <FontAwesome5 name="trophy" size={18} color="black" />
-        <Text style={styles.dropdownText}>
-          {selectedDifficulty ? selectedDifficulty : 'Select Difficulty'}
-        </Text>
-        {selectedDifficulty && (
+      {selectedDifficulty && (
           <FontAwesome5
             name={difficultyIcons[selectedDifficulty]}
             size={18}
-            color="red"
+            color="black"
             style={styles.iconAfterText}
           />
         )}
+        <Text style={styles.dropdownText}>
+          {selectedDifficulty ? selectedDifficulty : 'Select Difficulty'}
+        </Text>
+        
         <Feather name="chevron-down" size={20} color="black" style={styles.chevron} />
       </TouchableOpacity>
 
@@ -350,6 +422,25 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
   },
+  imageList: {
+    marginTop: 10,
+  },
+  imageContainer: {
+    marginRight: 10,
+    position: 'relative',
+  },
+  selectedImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+  },
+  removeButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: 'white',
+    borderRadius: 10,
+  },
 });
 
-export default SaveActivityScreen; 
+export default SaveActivityScreen;
