@@ -4,19 +4,18 @@ import MapView, {Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 
 const styles = StyleSheet.create({
-  container: {
-    ...StyleSheet.absoluteFillObject,
-    // flex: 1,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  map: {
-    ...StyleSheet.absoluteFillObject,
-  },
- });
+    container: {
+      ...StyleSheet.absoluteFillObject,
+      flex: 1,
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+    },
+    map: {
+      ...StyleSheet.absoluteFillObject,
+    },
+   });
 
-
-export default function Record(){
+export default function RecordPage(){
   const [markersList, setMarkersList] = useState([
     {
       id:1,
@@ -40,20 +39,20 @@ export default function Record(){
        provider={PROVIDER_GOOGLE} // remove if not using Google Maps
        style={styles.map}
        region={{
-         latitude: 24.833368,
-         longitude: 67.048489,
+         latitude: 37.78825,
+         longitude: -122.4324,
          latitudeDelta: 0.015,
          longitudeDelta: 0.0121,
        }}
      >
       {
-        markersList.map((marker)=>{
+        markersList.map((Marker)=>{
           return(
             <Marker
-                key={marker.id}
-                coordinate={{latitude:marker.latitude, longitude: marker.longitude}}
-                title={marker.title}
-                description={marker.description}
+                key={Marker.id}
+                coordinate={{latitude:Marker.latitude, longitude: Marker.longitude}}
+                title={Marker.title}
+                description={Marker.description}
             />
           )
         }) 
@@ -62,5 +61,3 @@ export default function Record(){
    </View>
   );
 } 
-
-
