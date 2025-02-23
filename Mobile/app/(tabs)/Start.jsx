@@ -25,7 +25,7 @@ const Start = () => {
       />
       <Text style={styles.title}>Welcome to VelociRoute</Text>
       <Text style={styles.subtitle}>
-      Plan your perfect ride, hike, or exploration with AI-powered route optimization.🌍 Discover. 🚵‍♀️ Ride. 📍 Explore.Let’s get started! 🚀
+      Plan your perfect ride, hike, or exploration with AI-powered route optimization. Discover. Ride. Explore.Let’s get started! 🚀
       </Text>
       <View style={styles.buttonContainer}>
         {/* Login Button */}
