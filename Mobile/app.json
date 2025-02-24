@@ -33,10 +33,18 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ] 
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow VelociRoute to use your location."
+        }
+      ]
+    ]
   }
 }
