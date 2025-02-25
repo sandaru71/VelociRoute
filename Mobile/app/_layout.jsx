@@ -1,45 +1,14 @@
-import { View, Text } from 'react-native'
-import React from 'react'
-import { Tabs } from 'expo-router'
-import TabBar from '../components/TabBar'
+import { View } from 'react-native';
+import { Stack, Slot } from 'expo-router';
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
 
-const _layout = () => {
+export default function RootLayout() {
   return (
-    <Tabs
-        tabBar={props=> <TabBar {...props} />}
-    >
-        <Tabs.Screen
-            name="index"
-            options={{
-                title: "Home"
-            }}
-        />
-        <Tabs.Screen
-            name="planner"
-            options={{
-                title: "Planner"
-            }}
-        />
-        <Tabs.Screen
-            name="record"
-            options={{
-                title: "Record"
-            }}
-        />
-        <Tabs.Screen
-            name="feed"
-            options={{
-                title: "Feed"
-            }}
-        />
-        <Tabs.Screen
-            name="profile"
-            options={{
-                title: "Profile"
-            }}
-        />
-    </Tabs>
-  )
+    <AuthProvider>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="auth" />
+        <Stack.Screen name="(tabs)" />
+      </Stack>
+    </AuthProvider>
+  );
 }
-
-export default _layout
