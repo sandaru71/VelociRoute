@@ -1,9 +1,15 @@
-const cloudinary = require("cloudinary").v2;
+const axios = require("axios");
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+module.exports = {
+  uploadImage: async (imagePath) => {
+  const data = new FormData();
+  const filename = imageUri.split("/").pop();
+  const match = /\.(\w+)$/.exec(filename);
+  const type = match ? `image/${match[1]}` : `image`;
 
-module.exports = cloudinary;
+  data.append("file", { uri: imageUri, name: filename, type });
+  data.append("upload_preset", "your_upload_preset"); // Replace with your Cloudinary upload preset
+
+  const res = await axios.post("https://api.cloudinary.com/v1_1/your_cloud_name/image/upload", data);
+  return res.data.secure_url; // Return the image URL
+};

@@ -1,81 +1,74 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { StatusBar } from "expo-status-bar";
-import { MaterialIcons } from "@expo/vector-icons";
-import { Calendar } from "react-native-calendars";
-import { COLORS, FONTS, SIZES } from "../constants";
+import { View, Text, Image, ActivityIndicator, StyleSheet } from "react-native";
 import axios from "axios";
 
 const Profile = () => {
-  const [user, setUser] = useState(null);
+  const userEmail = "user@example.com"; // Replace with actual user email (from Firebase Auth)
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get("http://your-server-ip:5000/api/users/user123")
-      .then((response) => {
-        setUser(response.data);
+    const fetchProfile = async () => {
+      try {
+        const response = await axios.get(`http://localhost:5000/api/users/profile/${userEmail}`);
+        setProfile(response.data);
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+      } finally {
         setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error fetching user data:", error);
-        setLoading(false);
-      });
+      }
+    };
+
+    fetchProfile();
   }, []);
 
   if (loading) {
-    return (
-      <SafeAreaView style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </SafeAreaView>
-    );
+    return <ActivityIndicator size="large" color="#0000ff" />;
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
-      <StatusBar backgroundColor={COLORS.gray} />
-      <ScrollView contentContainerStyle={{ padding: 12 }}>
-        {/* Cover Image */}
-        <View style={{ width: "100%" }}>
-          <Image
-            source={{ uri: user.backgroundImage }}
-            resizeMode="cover"
-            style={{ height: 228, width: "100%" }}
-          />
-        </View>
-
-        {/* Profile Section */}
-        <View style={{ flex: 1, alignItems: "center" }}>
-          <Image
-            source={{ uri: user.profileImage }}
-            resizeMode="cover"
-            style={{
-              height: 155,
-              width: 155,
-              borderRadius: 999,
-              borderColor: COLORS.primary,
-              borderWidth: 2,
-              marginTop: -90,
-            }}
-          />
-          <Text style={{ ...FONTS.h3, color: COLORS.black, marginVertical: 8, fontWeight: "bold" }}>
-            {user.name}
-          </Text>
-          <Text style={{ color: COLORS.black, ...FONTS.body4, fontFamily: "Arial" }}>
-            {user.sport}
-          </Text>
-
-          {/* Location */}
-          <View style={{ flexDirection: "row", marginVertical: 6, alignItems: "center" }}>
-            <MaterialIcons name="location-on" size={24} color="black" />
-            <Text style={{ ...FONTS.body4, marginLeft: 4, fontFamily: "Arial" }}>
-              {user.location}
-            </Text>
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <View style={styles.container}>
+      {profile.profileImage ? (
+        <Image source={{ uri: profile.profileImage }} style={styles.profileImage} />
+      ) : (
+        <Text>No Profile Image</Text>
+      )}
+      <Text style={styles.name}>{profile.name || "No Name"}</Text>
+      <Text style={styles.email}>{profile.email}</Text>
+      <Text style={styles.sport}>{profile.sport || "No Sport Selected"}</Text>
+      <Text style={styles.location}>{profile.location || "No Location"}</Text>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  profileImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    marginBottom: 10,
+  },
+  name: {
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  email: {
+    fontSize: 16,
+    color: "gray",
+  },
+  sport: {
+    fontSize: 18,
+    marginTop: 10,
+  },
+  location: {
+    fontSize: 18,
+  },
+});
 
 export default Profile;

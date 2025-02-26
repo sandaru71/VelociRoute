@@ -1,30 +1,19 @@
-// const path = require('path');
-const express = require("express");
-// const {cloudinary} = require(path.join(__dirname, 'src', 'Infrastructure', 'cloudinary'));
-const cloudinary = require("../Infrastructure/cloudinary");
-const upload = require("../Middleware/multer");
-
+const express = require('express');
+const upload = require('../Infrastructure/multerConfig');
 const router = express.Router();
 
-router.post("/upload", upload.single("image"), async (req, res) => {
+router.post('/upload', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
+      return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Upload to Cloudinary
-    const result = await cloudinary.uploader.upload_stream(
-      { folder: "profile_images" }, 
-      (error, uploadResult) => {
-        if (error) {
-          return res.status(500).json({ error: "Cloudinary upload failed" });
-        }
-        res.json({ imageUrl: uploadResult.secure_url });
-      }
-    ).end(req.file.buffer);
-    
+    const imageUrl = req.file.path; // Cloudinary URL
+
+    res.status(200).json({ message: 'Image uploaded successfully', imageUrl });
   } catch (error) {
-    res.status(500).json({ error: "Server error" });
+    console.error(error);
+    res.status(500).json({ error: 'Image upload failed' });
   }
 });
 
