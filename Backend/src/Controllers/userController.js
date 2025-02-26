@@ -4,13 +4,23 @@ const userService = require("../Services/userService");
 const getUserProfile = async (req, res) => {
   try {
     const { userId } = req.params;
-    const user = await userService.getUserProfile(userId);
+    
+    // Temporary: Return dummy data for testing
+    const dummyUser = {
+      id: userId,
+      name: "Test User",
+      sport: "Running & Cycling",
+      location: "New York",
+      profileImage: null,
+      backgroundImage: null,
+      stats: {
+        activities: 0,
+        distance: "0 km",
+        elevation: "0 m"
+      }
+    };
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.status(200).json(user);
+    res.status(200).json(dummyUser);
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
