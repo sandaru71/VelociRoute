@@ -6,7 +6,6 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as AuthSession from 'expo-auth-session';
 
-
 export default function Record() {
   const [time, setTime] = useState(0);
   const [paused, setPaused] = useState(true);
@@ -16,7 +15,21 @@ export default function Record() {
   const [path, setPath] = useState([]);
   const [locationSubscription, setLocationSubscription] = useState(null);
   const navigation = useNavigation();
+  const STRAVA_CLIENT_ID = "YOUR_CLIENT_ID";
+  const STRAVA_CLIENT_SECRET = "YOUR_CLIENT_SECRET";
+  const STRAVA_REDIRECT_URI = ""
 
+  const [accessToken, setAccessToken] = useState(null);
+
+  const authenticateWithStrava = async () => {
+    const authUrl = '';
+    const result = await AuthSession.startAsycnc({authUrl});
+
+    if (result.type === "success"){
+      const {code} = result.params;
+      excahngeToken(code);
+    }
+  }
   useLayoutEffect(() => {
     navigation.setOptions({
       headerLeft: () => (
