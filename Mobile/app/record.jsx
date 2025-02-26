@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, Button, TouchableOpacity } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import * as AuthSession from 'expo-auth-session';
+
 
 export default function Record() {
   const [time, setTime] = useState(0);
@@ -11,6 +13,8 @@ export default function Record() {
   const [intervalId, setIntervalId] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [path, setPath] = useState([]);
+  const [locationSubscription, setLocationSubscription] = useState(null);
   const navigation = useNavigation();
 
   useLayoutEffect(() => {
@@ -53,15 +57,49 @@ export default function Record() {
     }
   };
 
+  const startTracking = async () => {
+    let {status} = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted'){
+      console.log('Permission to access location not granted.')
+      return;
+    }
+    const subscription = await Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.High,
+        timeInterval: 1000,
+        distanceInterval: 2,
+      },
+      (location) => {
+        const{latitude, longitude} = location.coords;
+        setCurrentLocation({latitude,longitude});
+
+        if(!paused){
+          setPath((prevPath) => [...prevPath, {latitude,longitude}]);
+        }
+      }
+    );
+
+    setLocationSubscription(subscription);
+  };
+
+  const stopTracking = () => {
+    if (locationSubscription) {
+      locationSubscription.remove();
+      setLocationSubscription(null);
+    }
+  };
+
   const toggleTimer = () => {
     if (paused) {
       const newIntervalId = setInterval(() => {
         setTime((prevTime) => prevTime + 1);
       }, 1000);
       setIntervalId(newIntervalId);
+      startTracking();
     } else {
       clearInterval(intervalId);
       setIntervalId(null);
+      stopTracking();
     }
     setPaused(!paused);
   };
@@ -71,6 +109,8 @@ export default function Record() {
     setTime(0);
     setPaused(true);
     setIntervalId(null);
+    stopTracking();
+    setPath([]);
   };
 
   useEffect(() => {
@@ -78,6 +118,7 @@ export default function Record() {
 
     return () => {
       if (intervalId) clearInterval(intervalId);
+      if (locationSubscription) stopTracking();
     };
   }, []);
 
