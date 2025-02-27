@@ -1,16 +1,10 @@
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
-import { useEffect } from 'react';
 
 export default function AuthLayout() {
   const { user } = useAuth();
-  const router = useRouter();
 
-  useEffect(() => {
-    if (user) {
-      router.replace('/(tabs)');
-    }
-  }, [user]);
+  if (user) return null; // Prevent rendering if already logged in
 
   return (
     <Stack
