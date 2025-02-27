@@ -8,7 +8,7 @@ export default function AuthLayout() {
 
   useEffect(() => {
     if (user) {
-      router.replace('/(tabs)');
+      router.replace('/'); // Redirect to the main app when logged in
     }
   }, [user]);
 

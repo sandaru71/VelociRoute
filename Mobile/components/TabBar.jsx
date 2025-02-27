@@ -1,13 +1,19 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
-import React from 'react'
-import { AntDesign, Feather } from '@expo/vector-icons';
+import { View, StyleSheet } from 'react-native';
+import React from 'react';
 import TabBarButton from './TabBarButton';
 
 const TabBar = ({ state, descriptors, navigation }) => {
+  const primaryColor = '#0891b2';
+  const greyColor = '#737373';
 
+  // Get the current route name
+  const currentRoute = state.routes[state.index]?.name;
 
-    const primaryColor = '#0891b2';
-    const greyColor = '#737373';
+  // Hide TabBar on auth pages
+  if (['welcome', 'signup', 'login'].includes(currentRoute)) {
+    return null;
+  }
+
   return (
     <View style={styles.tabbar}>
       {state.routes.map((route, index) => {
@@ -19,7 +25,7 @@ const TabBar = ({ state, descriptors, navigation }) => {
             ? options.title
             : route.name;
 
-        if(['_sitemap', '+not-found'].includes(route.name)) return null;
+        if (['_sitemap', '+not-found'].includes(route.name)) return null;
 
         const isFocused = state.index === index;
 
@@ -43,64 +49,39 @@ const TabBar = ({ state, descriptors, navigation }) => {
         };
 
         return (
-          <TabBarButton 
+          <TabBarButton
             key={route.name}
             style={styles.tabbarItem}
             onPress={onPress}
             onLongPress={onLongPress}
             isFocused={isFocused}
             routeName={route.name}
-            color={isFocused? primaryColor: greyColor}
+            color={isFocused ? primaryColor : greyColor}
             label={label}
           />
-        )
-
-        // return (
-        //   <TouchableOpacity
-        //     key={route.name}
-        //     style={styles.tabbarItem}
-        //     accessibilityRole="button"
-        //     accessibilityState={isFocused ? { selected: true } : {}}
-        //     accessibilityLabel={options.tabBarAccessibilityLabel}
-        //     testID={options.tabBarTestID}
-        //     onPress={onPress}
-        //     onLongPress={onLongPress}
-        //   >
-        //     {
-        //         icons[route.name]({
-        //             color: isFocused? primaryColor: greyColor
-        //         })
-        //     }
-        //     <Text style={{ 
-        //         color: isFocused ? primaryColor : greyColor,
-        //         fontSize: 11
-        //     }}>
-        //       {label}
-        //     </Text>
-        //   </TouchableOpacity>
-        // );
+        );
       })}
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
-    tabbar: {
-        position: 'absolute', 
-        bottom: 25,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: 'white',
-        marginHorizontal: 20,
-        paddingVertical: 15,
-        borderRadius: 25,
-        borderCurve: 'continuous',
-        shadowColor: 'black',
-        shadowOffset: {width: 0, height: 10},
-        shadowRadius: 10,
-        shadowOpacity: 0.1
-    }
-})
+  tabbar: {
+    position: 'absolute',
+    bottom: 25,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    marginHorizontal: 20,
+    paddingVertical: 15,
+    borderRadius: 25,
+    shadowColor: 'black',
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 10,
+    shadowOpacity: 0.1,
+    elevation: 5, // Added for Android shadow
+  },
+});
 
-export default TabBar
+export default TabBar;

@@ -9,49 +9,20 @@ export default function TabsLayout() {
 
   useEffect(() => {
     if (!user) {
-      router.replace('/auth/welcome');
+      router.replace('/auth/welcome'); // Redirect to login if user is not authenticated
     }
   }, [user]);
 
-  if (!user) return null;
-
   return (
     <Tabs
-      tabBar={props => <TabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-      }}
+      tabBar={(props) => <TabBar {...props} />}
+      screenOptions={{ headerShown: false }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Home"
-        }}
-      />
-      <Tabs.Screen
-        name="planner"
-        options={{
-          title: "Planner"
-        }}
-      />
-      <Tabs.Screen
-        name="record"
-        options={{
-          title: "Record"
-        }}
-      />
-      <Tabs.Screen
-        name="feed"
-        options={{
-          title: "Feed"
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile"
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: "Home" }} />
+      <Tabs.Screen name="planner" options={{ title: "Planner" }} />
+      <Tabs.Screen name="record" options={{ title: "Record" }} />
+      <Tabs.Screen name="feed" options={{ title: "Feed" }} />
+      <Tabs.Screen name="profile" options={{ title: "Profile" }} />
     </Tabs>
   );
 }
