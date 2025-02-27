@@ -5,7 +5,11 @@ import { useAuth } from '../../contexts/AuthContext';
 export default function TabsLayout() {
   const { user } = useAuth();
 
-  if (!user) return null; // Prevent rendering when user isn't logged in
+  useEffect(() => {
+    if (!user) {
+      router.replace('/auth/welcome'); // Redirect to login if user is not authenticated
+    }
+  }, [user]);
 
   return (
     <Tabs

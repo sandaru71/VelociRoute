@@ -4,7 +4,11 @@ import { useAuth } from '../../contexts/AuthContext';
 export default function AuthLayout() {
   const { user } = useAuth();
 
-  if (user) return null; // Prevent rendering if already logged in
+  useEffect(() => {
+    if (user) {
+      router.replace('/'); // Redirect to the main app when logged in
+    }
+  }, [user]);
 
   return (
     <Stack

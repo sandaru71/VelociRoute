@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Link } from 'expo-router';
 
 export default function Welcome() {
   const router = useRouter();
@@ -19,14 +20,14 @@ export default function Welcome() {
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={[styles.button, styles.loginButton]}
-            onPress={() => router.push('/auth/login')}
+            onPress={() => router.push('login')}
           >
             <Text style={styles.buttonText}>Login</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
             style={[styles.button, styles.signupButton]}
-            onPress={() => router.push('/auth/signup')}
+            onPress={() => router.push('signup')}
           >
             <Text style={styles.buttonText}>Sign Up</Text>
           </TouchableOpacity>
