@@ -1,5 +1,5 @@
 {
   "dependencies": {
-    "react-native-get-location": "^5.0.0"
+    "geolib": "^3.3.4"
   }
 }

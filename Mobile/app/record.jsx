@@ -4,7 +4,8 @@ import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import * as AuthSession from 'expo-auth-session';
+import { getDistance } from 'geolib';
+
 
 export default function Record() {
   const [time, setTime] = useState(0);
@@ -15,21 +16,10 @@ export default function Record() {
   const [path, setPath] = useState([]);
   const [locationSubscription, setLocationSubscription] = useState(null);
   const navigation = useNavigation();
-  const STRAVA_CLIENT_ID = "YOUR_CLIENT_ID";
-  const STRAVA_CLIENT_SECRET = "YOUR_CLIENT_SECRET";
-  const STRAVA_REDIRECT_URI = ""
+  const [totalDistance, setTotalDistance] = useState(0);
+  const [elevationGain, setElevationGain] = useState(0);
+  const [averageSpeed, setAverageSpeed] = useState(0);
 
-  const [accessToken, setAccessToken] = useState(null);
-
-  const authenticateWithStrava = async () => {
-    const authUrl = '';
-    const result = await AuthSession.startAsycnc({authUrl});
-
-    if (result.type === "success"){
-      const {code} = result.params;
-      excahngeToken(code);
-    }
-  }
   useLayoutEffect(() => {
     navigation.setOptions({
       headerLeft: () => (
@@ -83,11 +73,27 @@ export default function Record() {
         distanceInterval: 2,
       },
       (location) => {
-        const{latitude, longitude} = location.coords;
+        const{latitude, longitude, altitude} = location.coords;
         setCurrentLocation({latitude,longitude});
 
         if(!paused){
-          setPath((prevPath) => [...prevPath, {latitude,longitude}]);
+          setPath((prevPath) => {
+            if(prevPath.length > 0) {
+              const lastPoint = prevPath[prevPath.length - 1];
+              const distance = getDistance(
+                {latitude: lastPoint.latitude, longitude: lastPoint.longitude},
+                {latitude, longitude}
+              );
+              setTotalDistance((prevDistance) => prevDistance + distance);
+
+              const altitudeGain = altitude - lastPoint.altitude;
+
+              if (altitudeGain > 0) {
+                setElevationGain((prevElevation) => prevElevation + altitudeGain);
+              }
+            }
+            return [...prevPath, {latitude,longitude,altitude}];
+          });
         }
       }
     );
@@ -105,7 +111,13 @@ export default function Record() {
   const toggleTimer = () => {
     if (paused) {
       const newIntervalId = setInterval(() => {
-        setTime((prevTime) => prevTime + 1);
+        setTime((prevTime) => {
+          const newTime = prevTime + 1;
+          if (newTime > 0 && totalDistance > 0){
+            setAverageSpeed((totalDistance/newTime) * 3.6);
+          }
+          return newTime;
+        });
       }, 1000);
       setIntervalId(newIntervalId);
       startTracking();
@@ -124,6 +136,10 @@ export default function Record() {
     setIntervalId(null);
     stopTracking();
     setPath([]);
+    setTotalDistance(0);
+    setElevationGain(0);
+    setAverageSpeed(0);
+    setCurrentLocation(null);
   };
 
   useEffect(() => {
@@ -138,8 +154,11 @@ export default function Record() {
   return (
     <View style={styles.container}>
       {/* Timer Display */}
-      <View style={styles.timeContainer}>
-        <Text style={styles.timerText}>Time: {time}s</Text>
+      <View style={styles.statisticsContainer}>
+        <Text style={styles.statisticsText}>Time: {time}s</Text>
+        <Text style={styles.statisticsText}>Distance: {totalDistance.toFixed(2)}m</Text>
+        <Text style={styles.statisticsText}>Elevation Gain: {elevationGain.toFixed(2)}m</Text>
+        <Text style={styles.statisticsText}>Avg speed: {averageSpeed.toFixed(2)}km/h</Text>
       </View>
 
       <MapView
@@ -192,7 +211,7 @@ const styles = StyleSheet.create({
   map: {
     ...StyleSheet.absoluteFillObject,
   },
-  timeContainer: {
+  statisticsContainer: {
     position: 'absolute',
     zIndex: 1,
     top: 40,
@@ -200,7 +219,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
   },
-  timerText: {
+  statisticsText: {
     color: 'black',
     fontSize: 14,
     fontWeight: 'bold',
