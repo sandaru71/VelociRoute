@@ -1,6 +1,8 @@
 import { Stack } from 'expo-router';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ActivityIndicator, View } from 'react-native';
+import { useEffect } from 'react';
+import { useRouter } from 'expo-router';
 
 export default function RootLayout() {
   return (
@@ -12,6 +14,13 @@ export default function RootLayout() {
 
 function MainNavigator() {
   const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/auth/welcome');
+    }
+  }, [loading, user]);
 
   if (loading) {
     return (
@@ -24,7 +33,7 @@ function MainNavigator() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       {!user ? (
-        <Stack.Screen name="auth/welcome" />
+        <Stack.Screen name="auth" />
       ) : (
         <Stack.Screen name="(tabs)" />
       )}

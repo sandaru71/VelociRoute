@@ -50,32 +50,25 @@ export default function SignUp() {
     if (!email.includes('@')) {
       return Alert.alert('Error', 'Please enter a valid email');
     }
-    if (password.length < 6) {
-      return Alert.alert('Error', 'Password must be at least 6 characters');
-    }
     if (password !== confirmPassword) {
       return Alert.alert('Error', 'Passwords do not match');
+    }
+    if (password.length < 6) {
+      return Alert.alert('Error', 'Password must be at least 6 characters');
     }
 
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
-      
       Alert.alert('Success', 'Account created successfully!', [
-        { text: 'OK', onPress: () => router.push('/auth/login') }
+        {
+          text: 'OK',
+          onPress: () => router.replace('/auth/login')
+        }
       ]);
     } catch (error) {
-      const errorMessages = {
-        'auth/email-already-in-use': 'This email is already registered',
-        'auth/invalid-email': 'Invalid email address',
-        'auth/operation-not-allowed': 'Email/password accounts are not enabled',
-        'auth/weak-password': 'Password is too weak',
-        'auth/network-request-failed': 'Network error. Check your connection.',
-        'auth/too-many-requests': 'Too many requests. Try again later.',
-        'auth/user-disabled': 'This account has been disabled.',
-      };
-      Alert.alert('Error', errorMessages[error.code] || 'An error occurred during sign-up');
+      Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
     }

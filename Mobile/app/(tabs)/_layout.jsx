@@ -1,9 +1,11 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import TabBar from '../../components/TabBar';
 import { useAuth } from '../../contexts/AuthContext';
+import { useEffect } from 'react';
 
 export default function TabsLayout() {
   const { user } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     if (!user) {

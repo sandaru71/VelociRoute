@@ -20,14 +20,14 @@ export default function Welcome() {
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={[styles.button, styles.loginButton]}
-            onPress={() => router.push('login')}
+            onPress={() => router.push('/auth/login')}
           >
             <Text style={styles.buttonText}>Login</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
             style={[styles.button, styles.signupButton]}
-            onPress={() => router.push('signup')}
+            onPress={() => router.push('/auth/signup')}
           >
             <Text style={styles.buttonText}>Sign Up</Text>
           </TouchableOpacity>
