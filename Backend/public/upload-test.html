@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route File Upload Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+        }
+        .file-input {
+            display: block;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #response {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background-color: #dff0d8;
+            border: 1px solid #d6e9c6;
+            color: #3c763d;
+        }
+        .error {
+            background-color: #f2dede;
+            border: 1px solid #ebccd1;
+            color: #a94442;
+        }
+        .preview-container {
+            margin-top: 20px;
+        }
+        .image-preview {
+            max-width: 200px;
+            max-height: 200px;
+            margin: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Route File Upload Test</h1>
+        <form id="uploadForm">
+            <div class="form-group">
+                <label>Route Images (up to 5 images):</label>
+                <input type="file" name="images" accept="image/*" multiple class="file-input" id="imageInput">
+                <div id="imagePreview" class="preview-container"></div>
+            </div>
+            <div class="form-group">
+                <label>GPX File:</label>
+                <input type="file" name="gpxFile" accept=".gpx" class="file-input" id="gpxInput">
+                <div id="gpxPreview" class="preview-container"></div>
+            </div>
+            <button type="submit">Upload Files</button>
+        </form>
+        <div id="response"></div>
+    </div>
+
+    <script>
+        // Preview images before upload
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const preview = document.getElementById('imagePreview');
+            preview.innerHTML = '';
+            
+            [...e.target.files].forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'image-preview';
+                    preview.appendChild(img);
+                }
+                reader.readAsDataURL(file);
+            });
+        });
+
+        // Preview GPX file name
+        document.getElementById('gpxInput').addEventListener('change', function(e) {
+            const preview = document.getElementById('gpxPreview');
+            preview.innerHTML = `Selected GPX file: ${e.target.files[0].name}`;
+        });
+
+        // Handle form submission
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            
+            // Add images
+            const imageFiles = document.getElementById('imageInput').files;
+            for (let i = 0; i < imageFiles.length; i++) {
+                formData.append('images', imageFiles[i]);
+            }
+            
+            // Add GPX file
+            const gpxFile = document.getElementById('gpxInput').files[0];
+            if (gpxFile) {
+                formData.append('gpxFile', gpxFile);
+            }
+
+            const responseDiv = document.getElementById('response');
+            responseDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    responseDiv.className = 'success';
+                    responseDiv.innerHTML = `
+                        <h3>Upload Successful!</h3>
+                        <p>Uploaded Files:</p>
+                        <ul>
+                            ${result.files.images.map(url => `
+                                <li>Image: <a href="${url}" target="_blank">${url}</a></li>
+                            `).join('')}
+                            ${result.files.gpxFile ? `
+                                <li>GPX: <a href="${result.files.gpxFile}" target="_blank">${result.files.gpxFile}</a></li>
+                            ` : ''}
+                        </ul>
+                    `;
+                } else {
+                    throw new Error(result.error || 'Upload failed');
+                }
+            } catch (error) {
+                responseDiv.className = 'error';
+                responseDiv.innerHTML = `Upload Error: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>

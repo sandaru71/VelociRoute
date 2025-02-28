@@ -277,14 +277,14 @@ const DashboardScreen = () => {
           if (location) queryParams.append('location', location);
 
           console.log('Fetching routes with params:', queryParams.toString());
-          const response = await axiosInstance.get(/popular-routes?${queryParams});
+          const response = await axiosInstance.get(`popular-routes?${queryParams}`);  
           console.log('Routes fetched successfully:', response.data.length, 'routes');
           setRoutes(response.data);
           setLoading(false);
           return;
         } catch (error) {
           lastError = error;
-          console.log(Attempt ${attempt + 1} failed:, error.message);
+          console.log(`Attempt ${attempt + 1} failed:`, error.message);
           if (attempt < maxRetries - 1) {
             console.log('Waiting before retry...');
             await new Promise(resolve => setTimeout(resolve, 2000)); // Increased to 2 seconds
