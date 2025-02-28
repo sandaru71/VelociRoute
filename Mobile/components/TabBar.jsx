@@ -1,21 +1,30 @@
-import { View, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import React from 'react';
-import TabBarButton from './TabBarButton';
+import { Ionicons } from '@expo/vector-icons';
+
+const getIconName = (routeName) => {
+  switch (routeName) {
+    case 'home':
+      return 'home';
+    case 'planner':
+      return 'calendar';
+    case 'record':
+      return 'recording';
+    case 'feed':
+      return 'list';
+    case 'profile':
+      return 'person';
+    default:
+      return 'help-circle';
+  }
+};
 
 const TabBar = ({ state, descriptors, navigation }) => {
   const primaryColor = '#0891b2';
   const greyColor = '#737373';
 
-  // Get the current route name
-  const currentRoute = state.routes[state.index]?.name;
-
-  // Hide TabBar on auth pages
-  if (['welcome', 'signup', 'login'].includes(currentRoute)) {
-    return null;
-  }
-
   return (
-    <View style={styles.tabbar}>
+    <View style={styles.container}>
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
         const label =
@@ -28,6 +37,7 @@ const TabBar = ({ state, descriptors, navigation }) => {
         if (['_sitemap', '+not-found'].includes(route.name)) return null;
 
         const isFocused = state.index === index;
+        const iconName = getIconName(route.name);
 
         const onPress = () => {
           const event = navigation.emit({
@@ -49,16 +59,21 @@ const TabBar = ({ state, descriptors, navigation }) => {
         };
 
         return (
-          <TabBarButton
-            key={route.name}
-            style={styles.tabbarItem}
+          <TouchableOpacity
+            key={route.key}
             onPress={onPress}
             onLongPress={onLongPress}
-            isFocused={isFocused}
-            routeName={route.name}
-            color={isFocused ? primaryColor : greyColor}
-            label={label}
-          />
+            style={[styles.tabButton, isFocused && styles.focused]}
+          >
+            <Ionicons
+              name={iconName}
+              size={24}
+              color={isFocused ? primaryColor : greyColor}
+            />
+            <Text style={[styles.tabText, isFocused && styles.focusedText]}>
+              {label.charAt(0).toUpperCase() + label.slice(1)}
+            </Text>
+          </TouchableOpacity>
         );
       })}
     </View>
@@ -66,21 +81,30 @@ const TabBar = ({ state, descriptors, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  tabbar: {
-    position: 'absolute',
-    bottom: 25,
+  container: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    backgroundColor: '#ffffff',
+    paddingBottom: 20,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+  },
+  tabButton: {
+    flex: 1,
     alignItems: 'center',
-    backgroundColor: 'white',
-    marginHorizontal: 20,
-    paddingVertical: 15,
-    borderRadius: 25,
-    shadowColor: 'black',
-    shadowOffset: { width: 0, height: 10 },
-    shadowRadius: 10,
-    shadowOpacity: 0.1,
-    elevation: 5, // Added for Android shadow
+    justifyContent: 'center',
+    paddingVertical: 5,
+  },
+  focused: {
+    backgroundColor: '#f1f5f9',
+  },
+  tabText: {
+    fontSize: 12,
+    marginTop: 4,
+    color: '#64748b',
+  },
+  focusedText: {
+    color: '#0891b2',
   },
 });
 

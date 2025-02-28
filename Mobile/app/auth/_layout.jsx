@@ -1,27 +1,38 @@
-import { Stack, useRouter } from 'expo-router';
+import { Stack, Redirect } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
-import { useEffect } from 'react';
 
 export default function AuthLayout() {
   const { user } = useAuth();
-  const router = useRouter();
 
-  useEffect(() => {
-    if (user) {
-      router.replace('/(tabs)'); // Redirect to the main app when logged in
-    }
-  }, [user]);
+  // If user is authenticated, redirect to main app
+  if (user) {
+    return <Redirect href="/(tabs)" />;
+  }
 
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        animation: 'fade',
       }}
     >
-      <Stack.Screen name="welcome" options={{ title: "Welcome" }} />
-      <Stack.Screen name="login" options={{ title: "Login" }} />
-      <Stack.Screen name="signup" options={{ title: "Sign Up" }} />
+      <Stack.Screen 
+        name="welcome"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen 
+        name="login"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen 
+        name="signup"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

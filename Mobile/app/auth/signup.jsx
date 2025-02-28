@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
 import { auth } from '../../config/firebase';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth';
 
 // Reusable Input Component
 const AuthInput = ({ placeholder, value, onChangeText, secureTextEntry, keyboardType }) => (
@@ -61,12 +61,20 @@ export default function SignUp() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
-      Alert.alert('Success', 'Account created successfully!', [
-        {
-          text: 'OK',
-          onPress: () => router.replace('/auth/login')
-        }
-      ]);
+      
+      // Sign out after creating account to force login
+      await signOut(auth);
+      
+      Alert.alert(
+        'Success',
+        'Account created successfully! Please login with your credentials.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.push('/auth/login')
+          }
+        ]
+      );
     } catch (error) {
       Alert.alert('Error', error.message);
     } finally {
