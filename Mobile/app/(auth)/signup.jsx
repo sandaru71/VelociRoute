@@ -1,21 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Image,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+  withSequence,
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../firebase/config';
-import Fontisto from '@expo/vector-icons/Fontisto';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import AntDesign from '@expo/vector-icons/AntDesign';
-import Feather from '@expo/vector-icons/Feather';
+
+const { width, height } = Dimensions.get('window');
+const AnimatedGradient = Animated.createAnimatedComponent(LinearGradient);
 
 const SignUp = () => {
   const [email, setEmail] = useState('');
@@ -27,6 +35,33 @@ const SignUp = () => {
   const [loading, setLoading] = useState(false);
 
   const router = useRouter();
+  const rotation = useSharedValue(0);
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    rotation.value = withRepeat(
+      withTiming(360, { duration: 20000 }),
+      -1,
+      false
+    );
+    scale.value = withRepeat(
+      withSequence(
+        withTiming(1.1, { duration: 3000 }),
+        withTiming(0.9, { duration: 3000 }),
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { rotate: `${rotation.value}deg` },
+        { scale: scale.value },
+      ],
+    };
+  });
 
   const handleEmail = (text) => {
     setEmail(text);
@@ -66,91 +101,103 @@ const SignUp = () => {
     }
   };
 
-  const handleGoBack = () => {
-    router.back();
-  };
-
   return (
     <View style={styles.container}>
-      <Image
-        source={require('../../assets/images/logo.png')}
-        style={styles.logo}
-        resizeMode="contain"
+      {/* Animated Background */}
+      <AnimatedGradient
+        colors={['#FF6B6B', '#FF8E53']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.backgroundGradient, animatedStyle]}
       />
-      <TouchableOpacity style={styles.arrowButton} onPress={handleGoBack}>
-        <AntDesign name="arrowleft" size={30} color="black" />
+      <AnimatedGradient
+        colors={['#4ECDC4', '#2BAE66']}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={[styles.backgroundGradient2, animatedStyle]}
+      />
+
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => router.back()}
+      >
+        <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
       </TouchableOpacity>
 
-      <Text style={styles.heading}>Create Account</Text>
-
-      <View style={styles.formContainer}>
-        <View style={styles.inputContainer}>
-          <Fontisto name="email" size={20} color="black" />
-          <TextInput
-            style={styles.textInput}
-            placeholder="Enter your email"
-            placeholderTextColor="#777"
-            value={email}
-            onChangeText={handleEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          {email.length > 0 && (
-            emailError ? (
-              <Feather name="x-circle" size={20} color="#FEBE15" />
-            ) : (
-              <Feather name="check-circle" size={20} color="#000000" />
-            )
-          )}
-        </View>
-        {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+      <View style={styles.contentContainer}>
+        <MaterialCommunityIcons name="bike-fast" size={60} color="#fff" />
+        <Text style={styles.title}>Create Account</Text>
+        <Text style={styles.subtitle}>Join the cycling community</Text>
 
         <View style={styles.inputContainer}>
-          <MaterialIcons name="lock" size={20} color="black" />
-          <TextInput
-            style={styles.textInput}
-            placeholder="Create password"
-            placeholderTextColor="#777"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={secureEntry}
-          />
-          <TouchableOpacity onPress={() => setSecureEntry(!secureEntry)}>
-            <Ionicons
-              name={secureEntry ? 'eye-off' : 'eye'}
-              size={20}
-              color="black"
+          <View style={styles.inputWrapper}>
+            <MaterialCommunityIcons name="email-outline" size={24} color="#FFFFFF" />
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="#FFFFFF80"
+              value={email}
+              onChangeText={handleEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
             />
-          </TouchableOpacity>
-        </View>
+          </View>
+          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
-        <View style={styles.inputContainer}>
-          <MaterialIcons name="lock" size={20} color="black" />
-          <TextInput
-            style={styles.textInput}
-            placeholder="Confirm password"
-            placeholderTextColor="#777"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry={secureConfirmEntry}
-          />
-          <TouchableOpacity onPress={() => setSecureConfirmEntry(!secureConfirmEntry)}>
-            <Ionicons
-              name={secureConfirmEntry ? 'eye-off' : 'eye'}
-              size={20}
-              color="black"
+          <View style={styles.inputWrapper}>
+            <MaterialCommunityIcons name="lock-outline" size={24} color="#FFFFFF" />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#FFFFFF80"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={secureEntry}
             />
-          </TouchableOpacity>
+            <TouchableOpacity onPress={() => setSecureEntry(!secureEntry)}>
+              <Ionicons
+                name={secureEntry ? 'eye-off' : 'eye'}
+                size={24}
+                color="#FFFFFF"
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.inputWrapper}>
+            <MaterialCommunityIcons name="lock-check-outline" size={24} color="#FFFFFF" />
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm Password"
+              placeholderTextColor="#FFFFFF80"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry={secureConfirmEntry}
+            />
+            <TouchableOpacity onPress={() => setSecureConfirmEntry(!secureConfirmEntry)}>
+              <Ionicons
+                name={secureConfirmEntry ? 'eye-off' : 'eye'}
+                size={24}
+                color="#FFFFFF"
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.signupButton, loading && styles.signupButtonDisabled]}
           onPress={handleSignUp}
           disabled={loading}
         >
-          <Text style={styles.signupButtonText}>
-            {loading ? 'Creating Account...' : 'Create Account'}
-          </Text>
+          <LinearGradient
+            colors={['#4ECDC4', '#2BAE66']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.gradient}
+          >
+            <Text style={styles.buttonText}>
+              {loading ? 'Creating Account...' : 'Create Account'}
+            </Text>
+          </LinearGradient>
         </TouchableOpacity>
 
         <View style={styles.loginContainer}>
@@ -167,77 +214,104 @@ const SignUp = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
-    padding: 30,
+    backgroundColor: '#1A1A1A',
   },
-  logo: {
-    width: 150,
-    height: 80,
-    alignSelf: 'center',
+  backgroundGradient: {
+    position: 'absolute',
+    width: width * 1.5,
+    height: height * 0.6,
+    borderRadius: height * 0.3,
+    top: -height * 0.3,
+    right: -width * 0.25,
+    opacity: 0.3,
   },
-  arrowButton: {
-    height: 36,
-    width: 44,
-    backgroundColor: '#FEBE10',
-    borderRadius: 30,
+  backgroundGradient2: {
+    position: 'absolute',
+    width: width * 1.5,
+    height: height * 0.6,
+    borderRadius: height * 0.3,
+    bottom: -height * 0.3,
+    left: -width * 0.25,
+    opacity: 0.3,
+  },
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    zIndex: 1,
+  },
+  contentContainer: {
+    flex: 1,
+    padding: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: -56,
   },
-  heading: {
+  title: {
     fontSize: 32,
     fontWeight: 'bold',
-    marginVertical: 20,
+    color: '#FFFFFF',
+    marginTop: 20,
+    marginBottom: 10,
   },
-  formContainer: {
-    marginTop: 0,
+  subtitle: {
+    fontSize: 16,
+    color: '#FFFFFF80',
+    marginBottom: 40,
   },
   inputContainer: {
-    borderWidth: 1,
-    borderRadius: 12,
-    height: 56,
-    paddingHorizontal: 20,
+    width: '100%',
+    gap: 20,
+    marginBottom: 30,
+  },
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    backgroundColor: '#FFFFFF15',
+    borderRadius: 15,
+    padding: 15,
+    gap: 10,
   },
-  textInput: {
+  input: {
     flex: 1,
-    paddingHorizontal: 10,
-    outlineStyle: 'none',
+    color: '#FFFFFF',
+    fontSize: 16,
   },
   errorText: {
-    color: '#FEBE15',
-    fontSize: 14,
-    marginBottom: 10,
-    marginLeft: 10,
+    color: '#FF6B6B',
+    marginTop: 5,
+    marginLeft: 15,
   },
   signupButton: {
-    backgroundColor: '#FEBE15',
-    borderRadius: 30,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 15,
+    width: '100%',
+    height: 55,
+    borderRadius: 15,
+    overflow: 'hidden',
+    marginBottom: 20,
   },
   signupButtonDisabled: {
-    backgroundColor: '#ccc',
+    opacity: 0.7,
   },
-  signupButtonText: {
+  gradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
   },
   loginContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
     marginTop: 20,
   },
   loginText: {
+    color: '#FFFFFF80',
     fontSize: 16,
   },
   loginLink: {
+    color: '#FF6B6B',
     fontSize: 16,
-    color: '#FEBE15',
     fontWeight: 'bold',
   },
 });

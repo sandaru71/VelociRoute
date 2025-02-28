@@ -1,15 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Image, TextInput, Alert,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  TextInput,
+  Alert,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import Fontisto from '@expo/vector-icons/Fontisto';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import AntDesign from '@expo/vector-icons/AntDesign';
-import Feather from '@expo/vector-icons/Feather';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+  withSequence,
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../firebase/config';
+
+const { width, height } = Dimensions.get('window');
+
+const AnimatedGradient = Animated.createAnimatedComponent(LinearGradient);
 
 const Login = () => {
   const [secureEntry, setSecureEntry] = useState(true);
@@ -19,6 +34,37 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   
   const router = useRouter();
+  const position = useSharedValue({ x: 0, y: 0 });
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    position.value = withRepeat(
+      withSequence(
+        withTiming({ x: 20, y: 20 }, { duration: 2000 }),
+        withTiming({ x: -20, y: -20 }, { duration: 2000 }),
+      ),
+      -1,
+      true
+    );
+    scale.value = withRepeat(
+      withSequence(
+        withTiming(1.1, { duration: 2000 }),
+        withTiming(0.9, { duration: 2000 }),
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateX: position.value.x },
+        { translateY: position.value.y },
+        { scale: scale.value },
+      ],
+    };
+  });
 
   const handleEmail = (text) => {
     setEmail(text);
@@ -48,81 +94,83 @@ const Login = () => {
     }
   };
 
-  const handleGoBack = () => {
-    router.back();
-  };
-
-  const handleSignUp = () => {
-    router.push('/(auth)/signup');
-  };
-
   return (
     <View style={styles.container}>
-      <Image
-        source={require('../../assets/images/logo.png')}
-        style={styles.logo}
-        resizeMode="contain"
+      {/* Animated Background */}
+      <AnimatedGradient
+        colors={['#4ECDC4', '#2BAE66']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.backgroundGradient, animatedStyle]}
       />
-      <TouchableOpacity style={styles.arrowButton} onPress={handleGoBack}>
-        <AntDesign name="arrowleft" size={30} color="black" />
+
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => router.back()}
+      >
+        <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
       </TouchableOpacity>
 
-      <Text style={styles.heading}>Log in</Text>
-
-      <View style={styles.formContainer}>
-        <View style={styles.inputContainer}>
-          <Fontisto name="email" size={20} color="black" />
-          <TextInput
-            style={styles.textInput}
-            placeholder="Enter your email"
-            placeholderTextColor="#777"
-            value={email}
-            onChangeText={handleEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          {email.length > 0 && (
-            emailError ? (
-              <Feather name="x-circle" size={20} color="#FEBE15" />
-            ) : (
-              <Feather name="check-circle" size={20} color="#000000" />
-            )
-          )}
-        </View>
-        {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+      <View style={styles.contentContainer}>
+        <MaterialCommunityIcons name="bike-fast" size={60} color="#fff" />
+        <Text style={styles.title}>Welcome Back</Text>
+        <Text style={styles.subtitle}>Login to continue your journey</Text>
 
         <View style={styles.inputContainer}>
-          <MaterialIcons name="lock" size={20} color="black" />
-          <TextInput
-            style={styles.textInput}
-            placeholder="Enter your password"
-            placeholderTextColor="#777"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={secureEntry}
-          />
-          <TouchableOpacity onPress={() => setSecureEntry(!secureEntry)}>
-            <Ionicons
-              name={secureEntry ? 'eye-off' : 'eye'}
-              size={20}
-              color="black"
+          <View style={styles.inputWrapper}>
+            <MaterialCommunityIcons name="email-outline" size={24} color="#FFFFFF" />
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="#FFFFFF80"
+              value={email}
+              onChangeText={handleEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
             />
-          </TouchableOpacity>
+          </View>
+          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+
+          <View style={styles.inputWrapper}>
+            <MaterialCommunityIcons name="lock-outline" size={24} color="#FFFFFF" />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#FFFFFF80"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={secureEntry}
+            />
+            <TouchableOpacity onPress={() => setSecureEntry(!secureEntry)}>
+              <Ionicons
+                name={secureEntry ? 'eye-off' : 'eye'}
+                size={24}
+                color="#FFFFFF"
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.loginButton, loading && styles.loginButtonDisabled]}
           onPress={handleLogin}
           disabled={loading}
         >
-          <Text style={styles.loginButtonText}>
-            {loading ? 'Logging in...' : 'Login'}
-          </Text>
+          <LinearGradient
+            colors={['#FF6B6B', '#FF8E53']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.gradient}
+          >
+            <Text style={styles.buttonText}>
+              {loading ? 'Logging in...' : 'Login'}
+            </Text>
+          </LinearGradient>
         </TouchableOpacity>
 
         <View style={styles.signupContainer}>
           <Text style={styles.signupText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={handleSignUp}>
+          <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
             <Text style={styles.signupLink}>Sign up</Text>
           </TouchableOpacity>
         </View>
@@ -134,78 +182,96 @@ const Login = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
-    padding: 30,
+    backgroundColor: '#1A1A1A',
   },
-  logo: {
-    width: 150,
-    height: 80,
-    alignSelf: 'center',
+  backgroundGradient: {
+    position: 'absolute',
+    width: width * 1.5,
+    height: height * 0.8,
+    borderRadius: height * 0.4,
+    top: -height * 0.2,
+    left: -width * 0.25,
+    opacity: 0.3,
   },
-  arrowButton: {
-    height: 36, 
-    width: 44, 
-    backgroundColor: '#FEBE10',
-    borderRadius: 25, // Makes it a perfect circle
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    zIndex: 1,
+  },
+  contentContainer: {
+    flex: 1,
+    padding: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop:-56,
   },
-  heading: {
+  title: {
     fontSize: 32,
     fontWeight: 'bold',
-    marginVertical: 20, // Removed redundant marginBottom
-  },
-  formContainer: {
+    color: '#FFFFFF',
     marginTop: 20,
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#FFFFFF80',
+    marginBottom: 40,
   },
   inputContainer: {
-    borderWidth: 1,
-    borderRadius: 12,
-    height: 56,
-    paddingHorizontal: 20,
+    width: '100%',
+    gap: 20,
+    marginBottom: 30,
+  },
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    backgroundColor: '#FFFFFF15',
+    borderRadius: 15,
+    padding: 15,
+    gap: 10,
   },
-  textInput: {
+  input: {
     flex: 1,
-    paddingHorizontal: 10,
-    outlineStyle: 'none', // Prevents outline in web
+    color: '#FFFFFF',
+    fontSize: 16,
   },
   errorText: {
-    color: '#FEBE15',
-    fontSize: 14,
-    marginBottom: 10,
-    marginLeft: 10,
+    color: '#FF6B6B',
+    marginTop: 5,
+    marginLeft: 15,
   },
   loginButton: {
-    backgroundColor: '#FEBE15',
-    borderRadius: 30,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 15,
+    width: '100%',
+    height: 55,
+    borderRadius: 15,
+    overflow: 'hidden',
+    marginBottom: 20,
   },
   loginButtonDisabled: {
-    backgroundColor: '#ccc',
+    opacity: 0.7,
   },
-  loginButtonText: {
+  gradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
   },
   signupContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
     marginTop: 20,
   },
   signupText: {
+    color: '#FFFFFF80',
     fontSize: 16,
   },
   signupLink: {
+    color: '#4ECDC4',
     fontSize: 16,
-    color: '#FEBE15',
-    marginLeft: 5,
+    fontWeight: 'bold',
   },
 });
 
