@@ -145,7 +145,7 @@ const Start = () => {
         style={[styles.backgroundCircle, animatedStyle1]}
       />
       <AnimatedGradient
-        colors={['#FEBE15', '#FEBE15']}
+        colors={['#45B649', '#DCE35B']}
         start={{ x: 1, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={[styles.backgroundCircle2, animatedStyle2]}
@@ -166,7 +166,7 @@ const Start = () => {
             onPress={() => router.push('/(auth)/login')}
           >
             <LinearGradient
-              colors={['#FF6B6B', '#FEBE15']}
+              colors={['#4ECDC4', '#2BAE66']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.gradient}
@@ -180,7 +180,7 @@ const Start = () => {
             onPress={() => router.push('/(auth)/signup')}
           >
             <LinearGradient
-              colors={['#FF6B6B', '#FEBE15']}
+              colors={['#FF6B6B', '#FF8E53']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.gradient}
@@ -197,7 +197,7 @@ const Start = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111111',
+    backgroundColor: '#1A1A1A',
     alignItems: 'center',
     justifyContent: 'center',
   },
