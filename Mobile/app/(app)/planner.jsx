@@ -1,10 +1,11 @@
 import 'react-native-get-random-values';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Linking, Platform, Alert } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { PROVIDER_GOOGLE, Marker, Polyline } from 'react-native-maps';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import * as Location from 'expo-location';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import polyline from '@mapbox/polyline';
 import { Stack } from 'expo-router';
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyDvP_xQ39yqaHS74Je06nasmvEQ5ctSqK4';
@@ -24,6 +25,8 @@ const Planner = () => {
   const [selectedActivity, setSelectedActivity] = useState('cycling');
   const [showSearchFields, setShowSearchFields] = useState(false);
   const [locationError, setLocationError] = useState(null);
+  const [routeCoordinates, setRouteCoordinates] = useState([]);
+  const [key, setKey] = useState(0);
   const mapRef = useRef(null);
 
   const checkLocationServices = async () => {
@@ -105,6 +108,142 @@ const Planner = () => {
     });
   };
 
+  // Clear route when locations change
+  useEffect(() => {
+    setRouteCoordinates([]);
+  }, [startLocation, endLocation]);
+
+  // Fetch directions when locations are set
+  useEffect(() => {
+    if (startLocation && endLocation) {
+      fetchDirections();
+    }
+  }, [startLocation, endLocation, waypoints, selectedActivity]);
+
+  const fetchDirections = async () => {
+    if (!startLocation || !endLocation) {
+      console.log('Missing start or end location');
+      return;
+    }
+
+    try {
+      console.log('Fetching directions with:');
+      console.log('Start:', startLocation);
+      console.log('End:', endLocation);
+
+      const origin = `${startLocation.latitude},${startLocation.longitude}`;
+      const destination = `${endLocation.latitude},${endLocation.longitude}`;
+      
+      let waypointsString = '';
+      if (waypoints.length > 0) {
+        waypointsString = '&waypoints=' + waypoints
+          .filter(wp => wp.location)
+          .map(wp => `${wp.location.latitude},${wp.location.longitude}`)
+          .join('|');
+      }
+
+      const apiUrl = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}${waypointsString}&mode=driving&key=${GOOGLE_MAPS_API_KEY}`;
+      
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+      
+      if (data.status !== 'OK' || !data.routes || !data.routes[0]) {
+        console.error('Directions API error:', data);
+        Alert.alert('Error', 'Failed to get route directions');
+        return;
+      }
+
+      const route = data.routes[0];
+      // Use mapbox polyline decoder
+      const decodedPoints = polyline.decode(route.overview_polyline.points);
+      
+      // Convert to the format react-native-maps expects
+      const coordinates = decodedPoints.map(point => ({
+        latitude: point[0],
+        longitude: point[1]
+      }));
+
+      console.log('Route coordinates sample:', [
+        coordinates[0],
+        coordinates[Math.floor(coordinates.length / 2)],
+        coordinates[coordinates.length - 1]
+      ]);
+
+      setRouteCoordinates(coordinates);
+
+      // Show route info
+      if (route.legs && route.legs[0]) {
+        const { distance, duration } = route.legs[0];
+        const activityDuration = calculateActivityDuration(
+          distance.value,
+          selectedActivity
+        );
+        
+        Alert.alert(
+          'Route Information',
+          `Distance: ${distance.text}\nEstimated ${selectedActivity} time: ${activityDuration}`
+        );
+      }
+
+      // Fit map to show the entire route
+      if (mapRef.current) {
+        const allCoords = [startLocation, ...coordinates, endLocation];
+        mapRef.current.fitToCoordinates(allCoords, {
+          edgePadding: { top: 100, right: 100, bottom: 100, left: 100 },
+          animated: true
+        });
+      }
+
+    } catch (error) {
+      console.error('Error fetching directions:', error);
+      Alert.alert('Error', 'Failed to process route request');
+    }
+  };
+
+  const calculateActivityDuration = (distanceInMeters, activity) => {
+    const distanceInKm = distanceInMeters / 1000;
+    let speedKmH;
+    
+    // Average speeds
+    if (activity === 'cycling') {
+      speedKmH = 15; // Average cycling speed
+    } else {
+      speedKmH = 5; // Average walking speed
+    }
+
+    const hours = distanceInKm / speedKmH;
+    const hoursInt = Math.floor(hours);
+    const minutes = Math.round((hours - hoursInt) * 60);
+
+    if (hoursInt === 0) {
+      return `${minutes} minutes`;
+    } else if (minutes === 0) {
+      return `${hoursInt} hour${hoursInt > 1 ? 's' : ''}`;
+    } else {
+      return `${hoursInt} hour${hoursInt > 1 ? 's' : ''} ${minutes} minutes`;
+    }
+  };
+
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  const addWaypoint = () => {
+    setWaypoints([...waypoints, { id: Date.now(), location: null }]);
+  };
+
+  const removeWaypoint = (id) => {
+    setWaypoints(waypoints.filter(wp => wp.id !== id));
+  };
+
   useEffect(() => {
     (async () => {
       console.log('Requesting location permission...');
@@ -133,14 +272,6 @@ const Planner = () => {
     })();
   }, []);
 
-  const addWaypoint = () => {
-    setWaypoints([...waypoints, { id: Date.now(), location: null }]);
-  };
-
-  const removeWaypoint = (id) => {
-    setWaypoints(waypoints.filter(wp => wp.id !== id));
-  };
-
   if (!currentLocation) {
     return (
       <View style={styles.loadingContainer}>
@@ -160,7 +291,18 @@ const Planner = () => {
         initialRegion={currentLocation}
         showsUserLocation={true}
         showsMyLocationButton={true}
+        mapType="standard"
+        loadingEnabled={true}
       >
+        {routeCoordinates.length > 0 && (
+          <Polyline
+            coordinates={routeCoordinates}
+            strokeColor="#2563eb"
+            strokeWidth={3}
+            geodesic={true}
+          />
+        )}
+        
         {startLocation && (
           <Marker
             coordinate={startLocation}
@@ -168,6 +310,7 @@ const Planner = () => {
             pinColor="green"
           />
         )}
+        
         {endLocation && (
           <Marker
             coordinate={endLocation}
@@ -175,6 +318,7 @@ const Planner = () => {
             pinColor="red"
           />
         )}
+        
         {waypoints.map((waypoint, index) => (
           waypoint.location && (
             <Marker
@@ -361,6 +505,7 @@ const styles = StyleSheet.create({
   map: {
     width: '100%',
     height: '100%',
+    zIndex: 0,
   },
   loadingContainer: {
     flex: 1,
