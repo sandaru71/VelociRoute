@@ -1,5 +1,5 @@
 import 'react-native-get-random-values';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Linking, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Linking, Platform, Alert } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
@@ -7,10 +7,10 @@ import * as Location from 'expo-location';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 
-const GOOGLE_MAPS_API_KEY = 'AIzaSyB7alGuNMvdyAk8Tb0B2jG3KjnotL4fYqo';
+const GOOGLE_MAPS_API_KEY = 'AIzaSyDvP_xQ39yqaHS74Je06nasmvEQ5ctSqK4';
 
 const DEFAULT_LOCATION = {
-  latitude: 6.9271,  // Default to Sri Lanka coordinates
+  latitude: 6.9271,
   longitude: 79.8612,
   latitudeDelta: 0.0922,
   longitudeDelta: 0.0421,
@@ -29,7 +29,14 @@ const Planner = () => {
     try {
       const enabled = await Location.hasServicesEnabledAsync();
       if (!enabled) {
-        setLocationError('Location services are disabled. Please enable them in your device settings.');
+        Alert.alert(
+          "Location Services Disabled",
+          "Please enable location services to use this feature.",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Open Settings", onPress: openLocationSettings }
+          ]
+        );
         return false;
       }
       return true;
@@ -47,68 +54,81 @@ const Planner = () => {
     }
   };
 
-  useEffect(() => {
-    (async () => {
-      console.log('Requesting location permission...');
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      console.log('Location permission status:', status);
+  const getCurrentLocation = async (retryCount = 0) => {
+    try {
+      console.log('Getting current position...');
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+        maximumAge: 10000,
+      });
       
-      if (status !== 'granted') {
-        setLocationError('Location permission was denied. Please enable it in settings.');
-        setCurrentLocation(DEFAULT_LOCATION);
-        return;
-      }
-
-      const servicesEnabled = await checkLocationServices();
-      if (!servicesEnabled) {
-        setCurrentLocation(DEFAULT_LOCATION);
-        return;
-      }
-
-      try {
-        console.log('Getting current position...');
-        let location = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Low,
-          timeInterval: 5000,
-          distanceInterval: 0,
-        });
-        console.log('Location received:', location);
-        setCurrentLocation({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        });
-        setLocationError(null);
-      } catch (error) {
-        console.error('Error getting location:', error);
-        // Try with mock location for development
-        console.log('Trying to get last known location...');
+      console.log('Location received:', location);
+      setCurrentLocation({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+      });
+      setLocationError(null);
+    } catch (error) {
+      console.error('Error getting location:', error);
+      if (retryCount < 3) {
+        setTimeout(() => getCurrentLocation(retryCount + 1), 2000);
+      } else {
         try {
-          let location = await Location.getLastKnownPositionAsync();
-          if (location) {
-            console.log('Last known location:', location);
+          const lastLocation = await Location.getLastKnownPositionAsync();
+          if (lastLocation) {
             setCurrentLocation({
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
+              latitude: lastLocation.coords.latitude,
+              longitude: lastLocation.coords.longitude,
               latitudeDelta: 0.0922,
               longitudeDelta: 0.0421,
             });
-            setLocationError(null);
             return;
           }
         } catch (e) {
           console.error('Error getting last known location:', e);
         }
-        
         setLocationError('Unable to get your location. Using default location.');
+        setCurrentLocation(DEFAULT_LOCATION);
+      }
+    }
+  };
+
+  useEffect(() => {
+    (async () => {
+      console.log('Requesting location permission...');
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      console.log('Location permission status:', status);
+      
+      if (status !== 'granted') {
+        Alert.alert(
+          "Permission Denied",
+          "Location permission is required for this feature. Please enable it in settings.",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Open Settings", onPress: openLocationSettings }
+          ]
+        );
+        setCurrentLocation(DEFAULT_LOCATION);
+        return;
+      }
+
+      const servicesEnabled = await checkLocationServices();
+      if (servicesEnabled) {
+        getCurrentLocation();
+      } else {
         setCurrentLocation(DEFAULT_LOCATION);
       }
     })();
   }, []);
 
   const addWaypoint = () => {
-    setWaypoints([...waypoints, null]);
+    setWaypoints([...waypoints, { id: Date.now(), location: null }]);
+  };
+
+  const removeWaypoint = (id) => {
+    setWaypoints(waypoints.filter(wp => wp.id !== id));
   };
 
   if (!currentLocation) {
@@ -127,14 +147,9 @@ const Planner = () => {
         provider={PROVIDER_GOOGLE}
         style={styles.map}
         initialRegion={currentLocation}
+        showsUserLocation={true}
+        showsMyLocationButton={true}
       >
-        <Marker
-          coordinate={{
-            latitude: currentLocation.latitude,
-            longitude: currentLocation.longitude,
-          }}
-          title="You are here"
-        />
         {startLocation && (
           <Marker
             coordinate={startLocation}
@@ -149,6 +164,16 @@ const Planner = () => {
             pinColor="red"
           />
         )}
+        {waypoints.map((waypoint, index) => (
+          waypoint.location && (
+            <Marker
+              key={waypoint.id}
+              coordinate={waypoint.location}
+              title={`Waypoint ${index + 1}`}
+              pinColor="blue"
+            />
+          )
+        ))}
       </MapView>
 
       {locationError && (
@@ -161,7 +186,6 @@ const Planner = () => {
         </TouchableOpacity>
       )}
 
-      {/* Search Bar */}
       <View style={styles.searchContainer}>
         {!showSearchFields ? (
           <TouchableOpacity 
@@ -187,54 +211,118 @@ const Planner = () => {
             <GooglePlacesAutocomplete
               placeholder="Starting point"
               onPress={(data, details = null) => {
-                setStartLocation({
-                  latitude: details.geometry.location.lat,
-                  longitude: details.geometry.location.lng,
-                });
+                if (details) {
+                  setStartLocation({
+                    latitude: details.geometry.location.lat,
+                    longitude: details.geometry.location.lng,
+                  });
+                }
               }}
-              styles={autocompleteStyles}
               fetchDetails={true}
               query={{
                 key: GOOGLE_MAPS_API_KEY,
                 language: 'en',
+                components: 'country:lk',
               }}
+              styles={autocompleteStyles}
               enablePoweredByContainer={false}
+              debounce={200}
+              minLength={1}
+              textInputProps={{
+                placeholderTextColor: '#666',
+              }}
+              onFail={error => console.error(error)}
+              keyboardShouldPersistTaps="handled"
+              listViewDisplayed="auto"
             />
             
             <GooglePlacesAutocomplete
-              placeholder="Destination"
+              placeholder="Where to?"
               onPress={(data, details = null) => {
-                setEndLocation({
-                  latitude: details.geometry.location.lat,
-                  longitude: details.geometry.location.lng,
-                });
+                if (details) {
+                  setEndLocation({
+                    latitude: details.geometry.location.lat,
+                    longitude: details.geometry.location.lng,
+                  });
+                }
               }}
-              styles={autocompleteStyles}
               fetchDetails={true}
               query={{
                 key: GOOGLE_MAPS_API_KEY,
                 language: 'en',
+                components: 'country:lk',
               }}
+              styles={autocompleteStyles}
               enablePoweredByContainer={false}
+              debounce={200}
+              minLength={1}
+              textInputProps={{
+                placeholderTextColor: '#666',
+              }}
+              onFail={error => console.error(error)}
+              keyboardShouldPersistTaps="handled"
+              listViewDisplayed="auto"
             />
 
+            {waypoints.map((waypoint, index) => (
+              <View key={waypoint.id} style={styles.waypointContainer}>
+                <View style={styles.waypointAutocompleteContainer}>
+                  <GooglePlacesAutocomplete
+                    placeholder={`Waypoint ${index + 1}`}
+                    onPress={(data, details = null) => {
+                      if (details) {
+                        const newWaypoints = [...waypoints];
+                        newWaypoints[index] = {
+                          ...waypoint,
+                          location: {
+                            latitude: details.geometry.location.lat,
+                            longitude: details.geometry.location.lng,
+                          }
+                        };
+                        setWaypoints(newWaypoints);
+                      }
+                    }}
+                    fetchDetails={true}
+                    query={{
+                      key: GOOGLE_MAPS_API_KEY,
+                      language: 'en',
+                      components: 'country:lk',
+                    }}
+                    styles={{
+                      ...autocompleteStyles,
+                      container: {
+                        ...autocompleteStyles.container,
+                        flex: 1,
+                        marginTop: 0,
+                      },
+                    }}
+                    enablePoweredByContainer={false}
+                    debounce={200}
+                    minLength={1}
+                    textInputProps={{
+                      placeholderTextColor: '#666',
+                    }}
+                    onFail={error => console.error(error)}
+                    keyboardShouldPersistTaps="handled"
+                    listViewDisplayed="auto"
+                  />
+                </View>
+                <TouchableOpacity
+                  style={styles.removeWaypointButton}
+                  onPress={() => removeWaypoint(waypoint.id)}
+                >
+                  <MaterialIcons name="remove-circle" size={24} color="red" />
+                </TouchableOpacity>
+              </View>
+            ))}
+
             <TouchableOpacity style={styles.addWaypointButton} onPress={addWaypoint}>
-              <MaterialIcons name="add" size={24} color="#059669" />
+              <MaterialIcons name="add-circle" size={24} color="#059669" />
+              <Text style={styles.addWaypointText}>Add waypoint</Text>
             </TouchableOpacity>
           </View>
         )}
       </View>
-
-      {/* Save Button */}
-      <TouchableOpacity 
-        style={styles.saveButton}
-        onPress={() => {
-          // TODO: Implement save functionality
-          console.log('Save route');
-        }}
-      >
-        <Text style={styles.saveButtonText}>Save Route</Text>
-      </TouchableOpacity>
     </View>
   );
 };
@@ -243,51 +331,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  map: {
+    width: '100%',
+    height: '100%',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  errorContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#fee2e2',
-    padding: 10,
-    alignItems: 'center',
-    zIndex: 3,
-  },
-  errorText: {
-    color: '#dc2626',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  errorSubtext: {
-    color: '#dc2626',
-    fontSize: 12,
-    marginTop: 2,
-    textDecorationLine: 'underline',
-  },
-  map: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
   searchContainer: {
     position: 'absolute',
     top: 50,
-    left: 0,
-    right: 0,
-    zIndex: 2,
-    paddingHorizontal: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: 'transparent',
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'white',
-    borderRadius: 25,
-    padding: 15,
+    borderRadius: 8,
+    padding: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -304,56 +369,103 @@ const styles = StyleSheet.create({
   },
   searchFieldsContainer: {
     backgroundColor: 'white',
-    borderRadius: 25,
-    padding: 15,
+    borderRadius: 8,
+    padding: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  waypointContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    width: '100%',
+  },
+  waypointAutocompleteContainer: {
+    flex: 1,
+  },
+  removeWaypointButton: {
+    marginLeft: 10,
+    padding: 5,
   },
   addWaypointButton: {
-    alignSelf: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
     padding: 10,
   },
-  saveButton: {
-    position: 'absolute',
-    bottom: 30,
-    right: 20,
-    backgroundColor: '#059669',
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 25,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    zIndex: 2,
-  },
-  saveButtonText: {
-    color: 'white',
+  addWaypointText: {
+    marginLeft: 5,
+    color: '#059669',
     fontSize: 16,
-    fontWeight: 'bold',
+  },
+  errorContainer: {
+    position: 'absolute',
+    top: 120,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(255, 0, 0, 0.8)',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  errorText: {
+    color: 'white',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  errorSubtext: {
+    color: 'white',
+    fontSize: 12,
+    marginTop: 5,
   },
 });
 
 const autocompleteStyles = {
   container: {
     flex: 0,
-    marginBottom: 10,
+    marginTop: 10,
   },
   textInput: {
+    height: 40,
     fontSize: 16,
     backgroundColor: '#f5f5f5',
-    borderRadius: 10,
-    paddingVertical: 8,
+    borderRadius: 8,
     paddingHorizontal: 12,
   },
   listView: {
-    borderRadius: 10,
-    overflow: 'hidden',
-    marginTop: 5,
+    backgroundColor: 'white',
+    borderRadius: 5,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    position: 'absolute',
+    top: 45,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+  },
+  row: {
+    padding: 13,
+    height: 44,
+    flexDirection: 'row',
+  },
+  separator: {
+    height: 0.5,
+    backgroundColor: '#c8c7cc',
+  },
+  description: {
+    fontSize: 15,
+  },
+  loader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    height: 20,
   },
 };
 
