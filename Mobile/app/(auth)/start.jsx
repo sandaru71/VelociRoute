@@ -197,7 +197,7 @@ const Start = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#111111',
     alignItems: 'center',
     justifyContent: 'center',
   },

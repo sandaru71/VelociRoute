@@ -182,7 +182,7 @@ const Login = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#111111',
   },
   backgroundGradient: {
     position: 'absolute',
