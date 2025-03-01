@@ -4,13 +4,13 @@ import { getAuth } from 'firebase/auth';
 // Your web app's Firebase configuration
 // You'll need to replace these with your Firebase project configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyAhSJ1H-oPyhV3n2a0oJFqro8ITZecn7Ro",
-  authDomain: "velociroute-ed68f.firebaseapp.com",
-  projectId: "velociroute-ed68f",
-  storageBucket: "velociroute-ed68f.firebasestorage.app",
-  messagingSenderId: "684138177175",
-  appId: "1:684138177175:web:fc3abbc0e6215705eb7fd2",
-  measurementId: "G-DX86VWRLHL"
+  apiKey: "AIzaSyDTxC8RDOO4V5QjDjK6WhhDJHjRHcbB6c0",
+  authDomain: "velociroute-sdgp-1e385.firebaseapp.com",
+  projectId: "velociroute-sdgp-1e385",
+  storageBucket: "velociroute-sdgp-1e385.firebasestorage.app",
+  messagingSenderId: "525855705120",
+  appId: "1:525855705120:web:fbbf58d0d3ccf43122d445",
+  measurementId: "G-46FZ36WCYQ"
 };
 
 // Initialize Firebase
