@@ -1,6 +1,6 @@
 import 'react-native-get-random-values';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Linking, Platform, Alert } from 'react-native';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import * as Location from 'expo-location';
@@ -24,6 +24,7 @@ const Planner = () => {
   const [selectedActivity, setSelectedActivity] = useState('cycling');
   const [showSearchFields, setShowSearchFields] = useState(false);
   const [locationError, setLocationError] = useState(null);
+  const mapRef = useRef(null);
 
   const checkLocationServices = async () => {
     try {
@@ -95,6 +96,15 @@ const Planner = () => {
     }
   };
 
+  const handleZoom = (zoomIn) => {
+    if (!mapRef.current) return;
+
+    mapRef.current.getCamera().then((camera) => {
+      camera.zoom += zoomIn ? 1 : -1;
+      mapRef.current.animateCamera(camera, { duration: 100 });
+    });
+  };
+
   useEffect(() => {
     (async () => {
       console.log('Requesting location permission...');
@@ -144,6 +154,7 @@ const Planner = () => {
       <Stack.Screen options={{ headerShown: false }} />
       
       <MapView
+        ref={mapRef}
         provider={PROVIDER_GOOGLE}
         style={styles.map}
         initialRegion={currentLocation}
@@ -175,6 +186,22 @@ const Planner = () => {
           )
         ))}
       </MapView>
+
+      {/* Zoom Controls */}
+      <View style={styles.zoomControls}>
+        <TouchableOpacity 
+          style={styles.zoomButton} 
+          onPress={() => handleZoom(true)}
+        >
+          <MaterialIcons name="add" size={24} color="black" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.zoomButton} 
+          onPress={() => handleZoom(false)}
+        >
+          <MaterialIcons name="remove" size={24} color="black" />
+        </TouchableOpacity>
+      </View>
 
       {locationError && (
         <TouchableOpacity 
@@ -421,6 +448,26 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     marginTop: 5,
+  },
+  zoomControls: {
+    position: 'absolute',
+    right: 16,
+    top: '50%',
+    backgroundColor: 'white',
+    borderRadius: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  zoomButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
 });
 
