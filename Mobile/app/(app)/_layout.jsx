@@ -1,5 +1,4 @@
-import { Tabs } from 'expo-router';
-import TabBar from '../../components/TabBar';
+import { Stack } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { Redirect } from 'expo-router';
 
@@ -12,37 +11,25 @@ export default function AppLayout() {
   }
 
   return (
-    <Tabs tabBar={props => <TabBar {...props} />}>
-      <Tabs.Screen
-        name="index"
+    <Stack>
+      <Stack.Screen
+        name="(tabs)"
         options={{
-          title: "Home"
+          headerShown: false,
         }}
       />
-      <Tabs.Screen
-        name="planner"
+      <Stack.Screen
+        name="post"
         options={{
-          title: "Planner"
+          presentation: 'modal',
+          headerShown: true,
+          headerTitle: 'Save Activity',
+          headerStyle: {
+            backgroundColor: '#fff',
+          },
+          headerTintColor: '#000',
         }}
       />
-      <Tabs.Screen
-        name="record"
-        options={{
-          title: "Record"
-        }}
-      />
-      <Tabs.Screen
-        name="feed"
-        options={{
-          title: "Feed"
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile"
-        }}
-      />
-    </Tabs>
+    </Stack>
   );
 }
