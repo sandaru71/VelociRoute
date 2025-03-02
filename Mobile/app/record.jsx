@@ -113,6 +113,14 @@ export default function Record() {
     }
   };
 
+  const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600)/60);
+    const secs = seconds % 60;
+
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2,'0')}`;
+  }
+
   const toggleTimer = () => {
     if (paused) {
       const newIntervalId = setInterval(() => {
@@ -158,9 +166,9 @@ export default function Record() {
 
   return (
     <View style={styles.container}>
-      {/* Timer Display */}
+      {/* Statistics Display */}
       <View style={styles.statisticsContainer}>
-        <Text style={styles.statisticsText}>Time: {time}s</Text>
+        <Text style={styles.statisticsText}>Time: {formatTime(time)}</Text>
         <Text style={styles.statisticsText}>Distance: {totalDistance.toFixed(2)}m</Text>
         <Text style={styles.statisticsText}>Elevation Gain: {elevationGain.toFixed(2)}m</Text>
         <Text style={styles.statisticsText}>Avg speed: {averageSpeed.toFixed(2)}km/h</Text>
@@ -188,20 +196,31 @@ export default function Record() {
         followsUserLocation={true} // Keep map centered on user
       >
         {/* Marker for current location */}
-        {currentLocation && (
+        {/* {currentLocation && (
           <Marker
             coordinate={currentLocation}
             title="Current Location"
             description="This is your current position"
             pinColor="blue"
           />
-        )}
+        )} */}
       </MapView>
 
       {/* Buttons for timer control */}
       <View style={styles.buttonContainer}>
-        <Button title={paused ? 'Start' : 'Pause'} onPress={toggleTimer} />
-        <Button title="Reset" onPress={resetTimer} color="red" />
+          <TouchableOpacity
+            style={[styles.button, {backgroundColor: paused ? 'green' : 'orange', marginRight: 10}]}
+            onPress={toggleTimer}
+          >
+            <Text style={styles.buttonText}>{paused ? 'Start': 'Pause'}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, {backgroundColor: 'red', marginLeft: 10}]}
+            onPress={resetTimer}
+          >
+            <Text style={styles.buttonText}>Reset</Text>
+          </TouchableOpacity>
       </View>
     </View>
   );
@@ -231,20 +250,32 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     position: 'absolute',
-    bottom: 150,
-    backgroundColor: 'black',
+    flexDirection: 'row',
+    bottom: '12%',
+    alignSelf:'center',
     padding: 20,
     zIndex: 1,
-    borderRadius: 5,
   },
   saveButton: {
-    backgroundColor: '#FEBE15',
-    padding: 13,
+    backgroundColor: 'white',
+    padding: 10,
     marginRight: 10,
   },
   saveButtonText: {
-    color: "blue",
+    color: "black",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  button: {
+    padding: 15,
+    width: 150,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
