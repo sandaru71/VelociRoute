@@ -139,13 +139,13 @@ const Start = () => {
     <View style={styles.container}>
       {/* Animated Background Circles */}
       <AnimatedGradient
-        colors={['#FF6B6B', '#4ECDC4']}
+        colors={['#00B4D8', '#90E0EF']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.backgroundCircle, animatedStyle1]}
       />
       <AnimatedGradient
-        colors={['#45B649', '#DCE35B']}
+        colors={['#52B788', '#95D5B2']}
         start={{ x: 1, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={[styles.backgroundCircle2, animatedStyle2]}
@@ -166,7 +166,7 @@ const Start = () => {
             onPress={() => router.push('/(auth)/login')}
           >
             <LinearGradient
-              colors={['#4ECDC4', '#2BAE66']}
+              colors={['#00B4D8', '#90E0EF']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.gradient}
@@ -180,7 +180,7 @@ const Start = () => {
             onPress={() => router.push('/(auth)/signup')}
           >
             <LinearGradient
-              colors={['#FF6B6B', '#FF8E53']}
+              colors={['#52B788', '#95D5B2']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.gradient}
