@@ -1,10 +1,22 @@
 import 'react-native-get-random-values';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Linking, Platform, Alert } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  Dimensions, 
+  Linking, 
+  Platform, 
+  Alert, 
+  ScrollView, 
+  Animated, 
+  PanResponder 
+} from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
 import MapView, { PROVIDER_GOOGLE, Marker, Polyline } from 'react-native-maps';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import * as Location from 'expo-location';
-import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import { MaterialIcons, FontAwesome5, Feather } from '@expo/vector-icons';
 import polyline from '@mapbox/polyline';
 import { Stack } from 'expo-router';
 
@@ -17,6 +29,11 @@ const DEFAULT_LOCATION = {
   longitudeDelta: 0.0421,
 };
 
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const MINIMIZED_HEIGHT = 80;
+const HALF_HEIGHT = SCREEN_HEIGHT * 0.5;
+const FULL_HEIGHT = SCREEN_HEIGHT * 0.9;
+
 const Planner = () => {
   const [currentLocation, setCurrentLocation] = useState(null);
   const [startLocation, setStartLocation] = useState(null);
@@ -26,8 +43,57 @@ const Planner = () => {
   const [showSearchFields, setShowSearchFields] = useState(false);
   const [locationError, setLocationError] = useState(null);
   const [routeCoordinates, setRouteCoordinates] = useState([]);
-  const [key, setKey] = useState(0);
+  const [routeDetails, setRouteDetails] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [isScrollEnabled, setIsScrollEnabled] = useState(false);
+  const [elevationData, setElevationData] = useState(0);
+  const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const lastGestureDy = useRef(0);
   const mapRef = useRef(null);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        translateY.setOffset(lastGestureDy.current);
+        translateY.setValue(0);
+      },
+      onPanResponderMove: (_, { dy }) => {
+        translateY.setValue(dy);
+      },
+      onPanResponderRelease: (_, { dy, vy }) => {
+        translateY.flattenOffset();
+        const currentPosition = lastGestureDy.current + dy;
+
+        // Determine which position to snap to based on velocity and position
+        let snapPoint;
+        if (vy > 0.5) { // Fast downward swipe
+          snapPoint = SCREEN_HEIGHT - MINIMIZED_HEIGHT;
+        } else if (vy < -0.5) { // Fast upward swipe
+          snapPoint = SCREEN_HEIGHT - FULL_HEIGHT;
+        } else {
+          if (currentPosition > SCREEN_HEIGHT - MINIMIZED_HEIGHT - 50) {
+            snapPoint = SCREEN_HEIGHT - MINIMIZED_HEIGHT;
+          } else if (currentPosition > SCREEN_HEIGHT - HALF_HEIGHT) {
+            snapPoint = SCREEN_HEIGHT - HALF_HEIGHT;
+          } else {
+            snapPoint = SCREEN_HEIGHT - FULL_HEIGHT;
+          }
+        }
+
+        lastGestureDy.current = snapPoint;
+        setIsScrollEnabled(snapPoint === SCREEN_HEIGHT - FULL_HEIGHT);
+        setModalVisible(true); // Keep modal visible even when minimized
+
+        Animated.spring(translateY, {
+          toValue: snapPoint,
+          useNativeDriver: true,
+          bounciness: 4,
+        }).start();
+      },
+    })
+  ).current;
 
   const checkLocationServices = async () => {
     try {
@@ -120,6 +186,49 @@ const Planner = () => {
     }
   }, [startLocation, endLocation, waypoints, selectedActivity]);
 
+  const calculateElevationGain = async (coordinates) => {
+    try {
+      // Sample points along the route (max 512 points per API call)
+      const sampledPoints = coordinates.filter((_, index) => index % Math.ceil(coordinates.length / 500) === 0);
+      
+      // Create locations string for API call
+      const locations = sampledPoints
+        .map(coord => `${coord.latitude},${coord.longitude}`)
+        .join('|');
+
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/elevation/json?locations=${locations}&key=${GOOGLE_MAPS_API_KEY}`
+      );
+
+      const data = await response.json();
+
+      if (data.status === 'OK' && data.results) {
+        let totalGain = 0;
+        let prevElevation = data.results[0].elevation;
+
+        // Calculate total elevation gain
+        for (let i = 1; i < data.results.length; i++) {
+          const currentElevation = data.results[i].elevation;
+          const difference = currentElevation - prevElevation;
+          
+          // Only count positive elevation changes (uphill)
+          if (difference > 0) {
+            totalGain += difference;
+          }
+          
+          prevElevation = currentElevation;
+        }
+
+        setElevationData(Math.round(totalGain));
+        return Math.round(totalGain);
+      }
+      return 0;
+    } catch (error) {
+      console.error('Error fetching elevation data:', error);
+      return 0;
+    }
+  };
+
   const fetchDirections = async () => {
     if (!startLocation || !endLocation) {
       console.log('Missing start or end location');
@@ -130,6 +239,7 @@ const Planner = () => {
       console.log('Fetching directions with:');
       console.log('Start:', startLocation);
       console.log('End:', endLocation);
+      console.log('Waypoints:', waypoints);
 
       const origin = `${startLocation.latitude},${startLocation.longitude}`;
       const destination = `${endLocation.latitude},${endLocation.longitude}`;
@@ -142,62 +252,65 @@ const Planner = () => {
           .join('|');
       }
 
-      const apiUrl = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}${waypointsString}&mode=driving&key=${GOOGLE_MAPS_API_KEY}`;
+      const travelMode = selectedActivity === 'cycling' ? 'BICYCLING' : 'WALKING';
+      const apiUrl = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}${waypointsString}&mode=${travelMode}&key=${GOOGLE_MAPS_API_KEY}`;
       
       const response = await fetch(apiUrl);
       const data = await response.json();
       
       if (data.status !== 'OK' || !data.routes || !data.routes[0]) {
         console.error('Directions API error:', data);
-        Alert.alert('Error', 'Failed to get route directions');
+        Alert.alert('Error', 'Failed to get route directions. Please try a different route or mode of transport.');
         return;
       }
 
       const route = data.routes[0];
-      // Use mapbox polyline decoder
       const decodedPoints = polyline.decode(route.overview_polyline.points);
       
-      // Convert to the format react-native-maps expects
       const coordinates = decodedPoints.map(point => ({
         latitude: point[0],
         longitude: point[1]
       }));
 
-      console.log('Route coordinates sample:', [
-        coordinates[0],
-        coordinates[Math.floor(coordinates.length / 2)],
-        coordinates[coordinates.length - 1]
-      ]);
-
       setRouteCoordinates(coordinates);
+      setRouteDetails(route);
+      showRouteDetails();
 
-      // Show route info
-      if (route.legs && route.legs[0]) {
-        const { distance, duration } = route.legs[0];
-        const activityDuration = calculateActivityDuration(
-          distance.value,
-          selectedActivity
-        );
-        
-        Alert.alert(
-          'Route Information',
-          `Distance: ${distance.text}\nEstimated ${selectedActivity} time: ${activityDuration}`
-        );
-      }
-
-      // Fit map to show the entire route
-      if (mapRef.current) {
-        const allCoords = [startLocation, ...coordinates, endLocation];
-        mapRef.current.fitToCoordinates(allCoords, {
-          edgePadding: { top: 100, right: 100, bottom: 100, left: 100 },
-          animated: true
-        });
-      }
-
+      // Calculate elevation gain after getting route
+      await calculateElevationGain(coordinates);
     } catch (error) {
       console.error('Error fetching directions:', error);
       Alert.alert('Error', 'Failed to process route request');
     }
+  };
+
+  const showRouteDetails = () => {
+    setModalVisible(true);
+    lastGestureDy.current = SCREEN_HEIGHT - HALF_HEIGHT;
+    Animated.spring(translateY, {
+      toValue: SCREEN_HEIGHT - HALF_HEIGHT,
+      useNativeDriver: true,
+      bounciness: 4,
+    }).start();
+  };
+
+  const minimizeModal = () => {
+    lastGestureDy.current = SCREEN_HEIGHT - MINIMIZED_HEIGHT;
+    Animated.spring(translateY, {
+      toValue: SCREEN_HEIGHT - MINIMIZED_HEIGHT,
+      useNativeDriver: true,
+      bounciness: 4,
+    }).start();
+  };
+
+  useEffect(() => {
+    if (routeDetails) {
+      showRouteDetails();
+    }
+  }, [routeDetails, waypoints]); // Added waypoints dependency
+
+  const calculateAverageSpeed = (activity) => {
+    return activity === 'cycling' ? 15 : 5; // 15 km/h for cycling, 5 km/h for walking
   };
 
   const calculateActivityDuration = (distanceInMeters, activity) => {
@@ -224,16 +337,137 @@ const Planner = () => {
     }
   };
 
-  const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // Earth's radius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
+  const RouteDetailsModal = () => {
+    if (!routeDetails || !routeDetails.legs) return null;
+
+    // Calculate total distance and duration across all legs
+    const totalDistance = {
+      text: routeDetails.legs.reduce((total, leg) => total + leg.distance.value, 0),
+      value: routeDetails.legs.reduce((total, leg) => total + leg.distance.value, 0)
+    };
+    totalDistance.text = `${(totalDistance.value / 1000).toFixed(1)} km`;
+
+    const activityDuration = calculateActivityDuration(totalDistance.value, selectedActivity);
+    const averageSpeed = calculateAverageSpeed(selectedActivity);
+
+    const currentPosition = -translateY._value;
+    const isMinimized = currentPosition <= SCREEN_HEIGHT - MINIMIZED_HEIGHT - 50;
+
+    return (
+      <Animated.View
+        style={[
+          styles.modalContainer,
+          {
+            transform: [{ translateY }],
+          },
+        ]}
+        {...panResponder.panHandlers}
+      >
+        <View style={styles.modalHandle} />
+        
+        {/* Minimized View */}
+        <View style={[
+          styles.minimizedContent,
+          isMinimized ? styles.minimizedContentActive : null
+        ]}>
+          <View style={styles.handleBarContainer}>
+            <View style={styles.handleBar} />
+          </View>
+          <View style={styles.minimizedMetrics}>
+            <View style={styles.routeMetric}>
+              <MaterialIcons name="directions" size={20} color="#4A90E2" />
+              <Text style={styles.minimizedText}>{totalDistance.text}</Text>
+            </View>
+            <View style={styles.routeMetric}>
+              <MaterialIcons name="timer" size={20} color="#4A90E2" />
+              <Text style={styles.minimizedText}>{activityDuration}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Expanded View */}
+        <ScrollView 
+          style={styles.expandedContent}
+          scrollEnabled={isScrollEnabled}
+          showsVerticalScrollIndicator={true}
+        >
+          <View style={styles.routeSummary}>
+            {/* Distance */}
+            <View style={styles.routeMetricExpanded}>
+              <MaterialIcons name="directions" size={24} color="#4A90E2" />
+              <View style={styles.metricTextContainer}>
+                <Text style={styles.metricLabel}>Distance</Text>
+                <Text style={styles.metricValue}>{totalDistance.text}</Text>
+              </View>
+            </View>
+
+            {/* Duration */}
+            <View style={styles.routeMetricExpanded}>
+              <MaterialIcons name="timer" size={24} color="#4A90E2" />
+              <View style={styles.metricTextContainer}>
+                <Text style={styles.metricLabel}>Est. Time</Text>
+                <Text style={styles.metricValue}>{activityDuration}</Text>
+              </View>
+            </View>
+
+            {/* Average Speed */}
+            <View style={styles.routeMetricExpanded}>
+              <MaterialIcons name="speed" size={24} color="#4A90E2" />
+              <View style={styles.metricTextContainer}>
+                <Text style={styles.metricLabel}>Avg Speed</Text>
+                <Text style={styles.metricValue}>{averageSpeed} km/h</Text>
+              </View>
+            </View>
+
+            {/* Elevation Gain */}
+            <View style={styles.routeMetricExpanded}>
+              <MaterialIcons name="terrain" size={24} color="#4A90E2" />
+              <View style={styles.metricTextContainer}>
+                <Text style={styles.metricLabel}>Elevation Gain</Text>
+                <Text style={styles.metricValue}>{elevationData} m</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+          <Text style={styles.directionsTitle}>Turn-by-turn directions</Text>
+          {routeDetails.legs[0].steps.map((step, index) => (
+            <View key={index} style={styles.directionStep}>
+              <View style={styles.stepIconContainer}>
+                <MaterialIcons 
+                  name={getDirectionIcon(step.maneuver)} 
+                  size={20} 
+                  color="#4A90E2" 
+                />
+              </View>
+              <View style={styles.stepTextContainer}>
+                <Text style={styles.stepText}>{step.html_instructions.replace(/<[^>]*>/g, '')}</Text>
+                <Text style={styles.stepDistance}>{step.distance.text}</Text>
+              </View>
+            </View>
+          ))}
+          <View style={styles.bottomPadding} />
+        </ScrollView>
+      </Animated.View>
+    );
+  };
+
+  const getDirectionIcon = (maneuver) => {
+    const iconMap = {
+      'turn-right': 'turn-right',
+      'turn-left': 'turn-left',
+      'straight': 'straight',
+      'roundabout-left': 'rotate-left',
+      'roundabout-right': 'rotate-right',
+      'uturn-left': 'turn-left',
+      'uturn-right': 'turn-right',
+      'merge': 'merge',
+      'fork-left': 'turn-slight-left',
+      'fork-right': 'turn-slight-right',
+      'ramp-left': 'turn-slight-left',
+      'ramp-right': 'turn-slight-right',
+    };
+    return iconMap[maneuver] || 'directions';
   };
 
   const addWaypoint = () => {
@@ -282,54 +516,67 @@ const Planner = () => {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ headerShown: false }} />
-      
+      <Stack.Screen
+        options={{
+          title: 'Plan Route',
+          headerShown: false,
+        }}
+      />
+
       <MapView
         ref={mapRef}
-        provider={PROVIDER_GOOGLE}
         style={styles.map}
-        initialRegion={currentLocation}
+        provider={PROVIDER_GOOGLE}
+        initialRegion={currentLocation || DEFAULT_LOCATION}
         showsUserLocation={true}
-        showsMyLocationButton={true}
-        mapType="standard"
-        loadingEnabled={true}
+        showsMyLocationButton={false}
       >
         {routeCoordinates.length > 0 && (
           <Polyline
             coordinates={routeCoordinates}
-            strokeColor="#2563eb"
+            strokeColor="#4A90E2"
             strokeWidth={3}
-            geodesic={true}
           />
         )}
-        
         {startLocation && (
           <Marker
             coordinate={startLocation}
-            title="Start"
             pinColor="green"
+            title="Start"
           />
         )}
-        
         {endLocation && (
           <Marker
             coordinate={endLocation}
-            title="Destination"
             pinColor="red"
+            title="End"
           />
         )}
-        
-        {waypoints.map((waypoint, index) => (
+        {waypoints.map((waypoint, index) => 
           waypoint.location && (
             <Marker
               key={waypoint.id}
               coordinate={waypoint.location}
-              title={`Waypoint ${index + 1}`}
               pinColor="blue"
+              title={`Waypoint ${index + 1}`}
             />
           )
-        ))}
+        )}
       </MapView>
+
+      {/* Save Button */}
+      <TouchableOpacity 
+        style={styles.saveButton}
+        onPress={() => {
+          // Save functionality will be implemented later
+          console.log('Save button pressed');
+        }}
+      >
+        <View style={styles.saveButtonContent}>
+          <Text style={styles.saveButtonText}>Save</Text>
+          <Feather name="arrow-right-circle" size={20} color="#FFF" />
+        </View>
+      </TouchableOpacity>
 
       {/* Zoom Controls */}
       <View style={styles.zoomControls}>
@@ -494,6 +741,7 @@ const Planner = () => {
           </View>
         )}
       </View>
+      {modalVisible && <RouteDetailsModal />}
     </View>
   );
 };
@@ -613,6 +861,161 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+  },
+  modalContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    height: FULL_HEIGHT,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#D1D1D6',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginVertical: 8,
+  },
+  minimizedContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  minimizedContentActive: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  handleBarContainer: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  handleBar: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#DDD',
+    borderRadius: 2,
+  },
+  minimizedMetrics: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  expandedContent: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  bottomPadding: {
+    height: 40,
+  },
+  routeSummary: {
+    padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    margin: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  routeMetricExpanded: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  metricTextContainer: {
+    marginLeft: 12,
+  },
+  metricLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 2,
+  },
+  metricValue: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '600',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E5E5EA',
+    marginVertical: 16,
+  },
+  directionsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+  },
+  directionStep: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  stepIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F2F2F7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  stepTextContainer: {
+    flex: 1,
+  },
+  stepText: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
+  },
+  stepDistance: {
+    fontSize: 12,
+    color: '#8E8E93',
+    marginTop: 4,
+  },
+  saveButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 100, // Positioned above tab bar
+    backgroundColor: '#4A90E2',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  saveButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  saveButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 4,
   },
 });
 
