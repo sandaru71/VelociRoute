@@ -30,6 +30,11 @@ export default function Record() {
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
       ),
+      headerRight: () => (
+        <TouchableOpacity style={styles.saveButton}> 
+          <Text style={styles.saveButtonText}>Save</Text>
+        </TouchableOpacity>
+      )
     });
   }, [navigation]);
 
@@ -231,5 +236,15 @@ const styles = StyleSheet.create({
     padding: 20,
     zIndex: 1,
     borderRadius: 5,
+  },
+  saveButton: {
+    backgroundColor: '#FEBE15',
+    padding: 13,
+    marginRight: 10,
+  },
+  saveButtonText: {
+    color: "blue",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
