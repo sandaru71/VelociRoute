@@ -168,10 +168,25 @@ export default function Record() {
     <View style={styles.container}>
       {/* Statistics Display */}
       <View style={styles.statisticsContainer}>
-        <Text style={styles.statisticsText}>Time: {formatTime(time)}</Text>
-        <Text style={styles.statisticsText}>Distance: {totalDistance.toFixed(2)}m</Text>
-        <Text style={styles.statisticsText}>Elevation Gain: {elevationGain.toFixed(2)}m</Text>
-        <Text style={styles.statisticsText}>Avg speed: {averageSpeed.toFixed(2)}km/h</Text>
+        <View style={styles.statItem}>
+          <Text style={styles.statLabel}>Time:</Text>
+          <Text style={styles.statValue}>{formatTime(time)}</Text>
+        </View>
+
+        <View style={styles.statItem}>
+          <Text style={styles.statLabel}>Distance:</Text>
+          <Text style={styles.statValue}>{totalDistance.toFixed(2)}m</Text>
+        </View>
+
+        <View style={styles.statItem}>
+          <Text style={styles.statLabel}>Elevation Gain:</Text> 
+          <Text style={styles.statValue}>{elevationGain.toFixed(2)}m</Text>
+        </View>
+
+        <View style={styles.statItem}>
+          <Text style={styles.statLabel}>Avg speed:</Text> 
+          <Text style={styles.statValue}>{averageSpeed.toFixed(2)}km/h</Text>
+        </View>
       </View>
 
       <MapView
@@ -212,7 +227,7 @@ export default function Record() {
             style={[styles.button, {backgroundColor: paused ? 'green' : 'orange', marginRight: 10}]}
             onPress={toggleTimer}
           >
-            <Text style={styles.buttonText}>{paused ? 'Start': 'Pause'}</Text>
+            <Text style={[styles.buttonText, {color: paused ? 'white' : 'black'}]}>{paused ? 'Start': 'Pause'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -238,15 +253,33 @@ const styles = StyleSheet.create({
   statisticsContainer: {
     position: 'absolute',
     zIndex: 1,
-    top: 40,
-    backgroundColor: '#FEBE15',
+    top: 10,
+    alignSelf: 'center',
+    // backgroundColor: '#rgba(254, 190, 21, 1)',
+    backgroundColor: 'rgba(0, 0, 0,0.8)',
     padding: 10,
     borderRadius: 5,
+    width: '60%'
   },
-  statisticsText: {
-    color: 'black',
-    fontSize: 14,
+  statItem: {
+    flexDirection:'row',
+    justifyContent: 'space-between',
+    alignItems:'center',
+    marginVertical: 2,
+  },
+  statLabel: {
+    fontSize: 16,
     fontWeight: 'bold',
+    color: 'white',
+    width: 120,
+    textAlign: 'left'
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'right',
+    flex: 1,
   },
   buttonContainer: {
     position: 'absolute',
