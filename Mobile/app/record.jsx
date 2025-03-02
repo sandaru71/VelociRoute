@@ -91,7 +91,7 @@ export default function Record() {
               );
               setTotalDistance((prevDistance) => prevDistance + distance);
 
-              const altitudeGain = altitude - lastPoint.altitude;
+              const altitudeGain = altitude ? altitude - lastPoint.altitude : 0
 
               if (altitudeGain > 0) {
                 setElevationGain((prevElevation) => prevElevation + altitudeGain);
@@ -210,6 +210,17 @@ export default function Record() {
         showsUserLocation={true} // Display blue dot for user's location
         followsUserLocation={true} // Keep map centered on user
       >
+
+        {/* Polyline to indicate the path */}
+        {path.length > 1 && (
+          <Polyline
+            coordinates={path}
+            strokeWidth={4}
+            strokeColor="blue"
+            zIndex={1}
+          />
+        )}
+        
         {/* Marker for current location */}
         {/* {currentLocation && (
           <Marker
