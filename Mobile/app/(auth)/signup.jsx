@@ -105,13 +105,13 @@ const SignUp = () => {
     <View style={styles.container}>
       {/* Animated Background */}
       <AnimatedGradient
-        colors={['#FF6B6B', '#FF8E53']}
+        colors={['#52B788', '#95D5B2']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.backgroundGradient, animatedStyle]}
       />
       <AnimatedGradient
-        colors={['#4ECDC4', '#2BAE66']}
+        colors={['#00B4D8', '#90E0EF']}
         start={{ x: 1, y: 0 }}
         end={{ x: 0, y: 1 }}
         style={[styles.backgroundGradient2, animatedStyle]}
@@ -189,7 +189,7 @@ const SignUp = () => {
           disabled={loading}
         >
           <LinearGradient
-            colors={['#4ECDC4', '#2BAE66']}
+            colors={['#00B4D8', '#90E0EF']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.gradient}
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   loginLink: {
-    color: '#FF6B6B',
+    color: '#00B4D8',
     fontSize: 16,
     fontWeight: 'bold',
   },
