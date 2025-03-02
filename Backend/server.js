@@ -7,6 +7,8 @@ const cors = require('cors');
 const path = require('path');
 const popularRoutes = require('./src/Routes/popularRoutes');
 const uploadRoutes = require('./src/Routes/uploadRoutes');
+const activityRoutes = require('./src/Routes/activityRoutes');
+const Activity = require('./src/Infrastructure/Models/Activity');
 
 const app = express();
 
@@ -28,8 +30,15 @@ app.use(
   })
 );
 
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!require('fs').existsSync(uploadsDir)) {
+  require('fs').mkdirSync(uploadsDir);
+}
+
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Add request logging
 app.use((req, res, next) => {
@@ -38,9 +47,17 @@ app.use((req, res, next) => {
 });
 
 // Connect to MongoDB and store connection in app.locals
-connectDB().then(database => {
+connectDB().then(async database => {
   app.locals.db = database;
   console.log("🚀 Database Ready!");
+  
+  // Create indexes after connection
+  try {
+    await Activity.createIndexes(database);
+    console.log("✅ Database indexes created successfully!");
+  } catch (error) {
+    console.error("❌ Error creating indexes:", error);
+  }
 }).catch(err => {
   console.error("❌ Database connection error:", err);
   process.exit(1);
@@ -49,6 +66,7 @@ connectDB().then(database => {
 // Register routes
 app.use('/api/popular-routes', popularRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/activities', activityRoutes);
 
 app.get('/', (req, res) => {
   res.send("MongoDB Node.js Driver is running!");

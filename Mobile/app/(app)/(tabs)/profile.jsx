@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { MaterialIcons } from "@expo/vector-icons";
 import { Calendar } from "react-native-calendars";
-import { COLORS, images, FONTS, SIZES } from "../../constants";
+import { COLORS, images, FONTS, SIZES } from "../../../constants";
 
 const Profile = () => {
 
