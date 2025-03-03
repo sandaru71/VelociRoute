@@ -47,7 +47,7 @@ const Planner = () => {
   const [routeDetails, setRouteDetails] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [isScrollEnabled, setIsScrollEnabled] = useState(false);
-  const [elevationData, setElevationData] = useState(0);
+  const [elevationData, setElevationData] = useState({ totalGain: 0, profile: [] });
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const lastGestureDy = useRef(0);
   const mapRef = useRef(null);
@@ -212,7 +212,6 @@ const Planner = () => {
           const currentElevation = data.results[i].elevation;
           const difference = currentElevation - prevElevation;
           
-          // Only count positive elevation changes (uphill)
           if (difference > 0) {
             totalGain += difference;
           }
@@ -220,13 +219,15 @@ const Planner = () => {
           prevElevation = currentElevation;
         }
 
-        setElevationData(Math.round(totalGain));
-        return Math.round(totalGain);
+        // Store elevation profile data
+        const elevationProfile = data.results.map(point => point.elevation);
+        setElevationData({ totalGain: Math.round(totalGain), profile: elevationProfile });
+        return { totalGain: Math.round(totalGain), profile: elevationProfile };
       }
-      return 0;
+      return { totalGain: 0, profile: [] };
     } catch (error) {
       console.error('Error fetching elevation data:', error);
-      return 0;
+      return { totalGain: 0, profile: [] };
     }
   };
 
@@ -278,7 +279,8 @@ const Planner = () => {
       showRouteDetails();
 
       // Calculate elevation gain after getting route
-      await calculateElevationGain(coordinates);
+      const elevationResult = await calculateElevationGain(coordinates);
+      setElevationData({ totalGain: elevationResult.totalGain, profile: elevationResult.profile });
     } catch (error) {
       console.error('Error fetching directions:', error);
       Alert.alert('Error', 'Failed to process route request');
@@ -425,7 +427,7 @@ const Planner = () => {
               <MaterialIcons name="terrain" size={24} color="#4A90E2" />
               <View style={styles.metricTextContainer}>
                 <Text style={styles.metricLabel}>Elevation Gain</Text>
-                <Text style={styles.metricValue}>{elevationData} m</Text>
+                <Text style={styles.metricValue}>{elevationData.totalGain} m</Text>
               </View>
             </View>
           </View>
@@ -569,7 +571,22 @@ const Planner = () => {
       <TouchableOpacity 
         style={styles.saveButton}
         onPress={() => {
-          router.push('../../../route');
+          if (!routeCoordinates.length || !routeDetails) {
+            Alert.alert('Error', 'Please create a route first');
+            return;
+          }
+          
+          // Pass route data to the route screen
+          router.push({
+            pathname: '../../../route',
+            params: {
+              routeCoordinates: JSON.stringify(routeCoordinates),
+              routeDetails: JSON.stringify(routeDetails),
+              elevationProfile: JSON.stringify(elevationData.profile || []),
+              elevationGain: elevationData.totalGain || 0,
+              selectedActivity: selectedActivity
+            }
+          });
         }}
       >
         <View style={styles.saveButtonContent}>
