@@ -13,12 +13,12 @@ import {
   PanResponder 
 } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
+import { Stack, useRouter } from 'expo-router';
 import MapView, { PROVIDER_GOOGLE, Marker, Polyline } from 'react-native-maps';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import * as Location from 'expo-location';
 import { MaterialIcons, FontAwesome5, Feather } from '@expo/vector-icons';
 import polyline from '@mapbox/polyline';
-import { Stack } from 'expo-router';
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyDvP_xQ39yqaHS74Je06nasmvEQ5ctSqK4';
 
@@ -35,6 +35,7 @@ const HALF_HEIGHT = SCREEN_HEIGHT * 0.5;
 const FULL_HEIGHT = SCREEN_HEIGHT * 0.9;
 
 const Planner = () => {
+  const router = useRouter();
   const [currentLocation, setCurrentLocation] = useState(null);
   const [startLocation, setStartLocation] = useState(null);
   const [endLocation, setEndLocation] = useState(null);
@@ -568,8 +569,7 @@ const Planner = () => {
       <TouchableOpacity 
         style={styles.saveButton}
         onPress={() => {
-          // Save functionality will be implemented later
-          console.log('Save button pressed');
+          router.push('../../../route');
         }}
       >
         <View style={styles.saveButtonContent}>
@@ -994,7 +994,7 @@ const styles = StyleSheet.create({
   saveButton: {
     position: 'absolute',
     right: 20,
-    bottom: 100, // Positioned above tab bar
+    bottom: 120, // Increased from 100 to 120 to move button higher
     backgroundColor: '#4A90E2',
     paddingHorizontal: 20,
     paddingVertical: 12,
