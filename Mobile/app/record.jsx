@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
@@ -23,28 +23,7 @@ export default function Record() {
   const [averageSpeed, setAverageSpeed] = useState(0);
   const [currentSpeed, setCurrentSpeed] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerLeft: () => (
-        <TouchableOpacity
-          style={{ marginLeft: 15 }}
-          onPress={() => navigation.navigate('index')}
-        >
-          <Ionicons name="arrow-back" size={24} color="#007AFF" />
-        </TouchableOpacity>
-      ),
-      headerRight: () => (
-        <TouchableOpacity 
-          style={[styles.saveButton, { opacity: path.length > 0 ? 1 : 0.5 }]}
-          disabled={path.length === 0}
-          onPress={() => handleSaveActivity()}
-        > 
-          <Text style={styles.saveButtonText}>Save</Text>
-        </TouchableOpacity>
-      )
-    });
-  }, [navigation, path]);
+  const mapRef = useRef(null);
 
   const getElevationData = async (latitude, longitude) => {
     try {
@@ -86,10 +65,10 @@ export default function Record() {
     }
   };
 
-  const startTracking = async () => {
+  const startLocationWatch = async () => {
     let {status} = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted'){
-      console.log('Permission to access location not granted.')
+      setErrorMsg('Permission to access location was not granted.');
       return;
     }
     
@@ -97,42 +76,65 @@ export default function Record() {
       {
         accuracy: Location.Accuracy.BestForNavigation,
         timeInterval: 1000,
-        distanceInterval: 2,
+        distanceInterval: 0.1, // Reduced to 0.1 meters for more frequent updates
       },
-      async (location) => {
+      (location) => {
         const { latitude, longitude, speed } = location.coords;
         setCurrentLocation({ latitude, longitude });
         
         // Update current speed (convert m/s to km/h)
         const currentSpeedKmh = speed ? speed * 3.6 : 0;
         setCurrentSpeed(currentSpeedKmh);
+      }
+    );
 
+    setLocationSubscription(subscription);
+  };
+
+  const startTracking = async () => {
+    if (!currentLocation) return;
+    
+    // Get initial elevation
+    const { latitude, longitude } = currentLocation;
+    const initialElevation = await getElevationData(latitude, longitude);
+    setPath([{ latitude, longitude, elevation: initialElevation }]);
+    
+    const subscription = await Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: 1000,
+        distanceInterval: 0.1, // Reduced to 0.1 meters for more frequent updates
+      },
+      async (location) => {
+        const { latitude, longitude, speed } = location.coords;
+        
         if (!paused) {
           const elevation = await getElevationData(latitude, longitude);
           
           setPath((prevPath) => {
-            if (prevPath.length > 0) {
-              const lastPoint = prevPath[prevPath.length - 1];
-              const distance = getDistance(
-                { latitude: lastPoint.latitude, longitude: lastPoint.longitude },
-                { latitude, longitude }
-              );
-              setTotalDistance((prevDistance) => prevDistance + distance);
+            const lastPoint = prevPath[prevPath.length - 1];
+            const distance = getDistance(
+              { latitude: lastPoint.latitude, longitude: lastPoint.longitude },
+              { latitude, longitude }
+            );
 
-              if (elevation && lastPoint.elevation) {
-                const elevationDiff = elevation - lastPoint.elevation;
-                if (elevationDiff > 0) {
-                  setElevationGain((prev) => prev + elevationDiff);
-                }
+            // Update distance for any movement (removed minimum threshold)
+            setTotalDistance((prevDistance) => prevDistance + distance);
+
+            if (elevation !== null && lastPoint.elevation !== null) {
+              const elevationDiff = elevation - lastPoint.elevation;
+              if (elevationDiff > 0) {
+                setElevationGain((prev) => prev + elevationDiff);
               }
             }
+
             return [...prevPath, { latitude, longitude, elevation }];
           });
         }
       }
     );
 
-    setLocationSubscription(subscription);
+    return subscription;
   };
 
   const stopTracking = () => {
@@ -142,15 +144,14 @@ export default function Record() {
     }
   };
 
-  const formatTime = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600)/60);
-    const secs = seconds % 60;
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2,'0')}`;
-  };
-
   const toggleTimer = () => {
     if (paused) {
+      // Reset path and counters when starting new tracking
+      setPath([]);
+      setTotalDistance(0);
+      setElevationGain(0);
+      setAverageSpeed(0);
+      
       const newIntervalId = setInterval(() => {
         setTime((prevTime) => {
           const newTime = prevTime + 1;
@@ -161,11 +162,14 @@ export default function Record() {
         });
       }, 1000);
       setIntervalId(newIntervalId);
-      startTracking();
+      startTracking().then(setLocationSubscription);
     } else {
       clearInterval(intervalId);
       setIntervalId(null);
-      stopTracking();
+      if (locationSubscription) {
+        locationSubscription.remove();
+        setLocationSubscription(null);
+      }
     }
     setPaused(!paused);
   };
@@ -189,13 +193,48 @@ export default function Record() {
     console.log('Saving activity...');
   };
 
+  const zoomToCurrentLocation = () => {
+    if (currentLocation && mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+        latitudeDelta: 0.005, // Closer zoom level
+        longitudeDelta: 0.005,
+      }, 1000); // Animation duration in ms
+    }
+  };
+
   useEffect(() => {
     getUserLocation();
+    startLocationWatch();
+    
     return () => {
       if (intervalId) clearInterval(intervalId);
-      if (locationSubscription) stopTracking();
+      if (locationSubscription) locationSubscription.remove();
     };
   }, []);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          style={{ marginLeft: 15 }}
+          onPress={() => navigation.navigate('index')}
+        >
+          <Ionicons name="arrow-back" size={24} color="#007AFF" />
+        </TouchableOpacity>
+      ),
+      headerRight: () => (
+        <TouchableOpacity 
+          style={[styles.saveButton, { opacity: path.length > 0 ? 1 : 0.5 }]}
+          disabled={path.length === 0}
+          onPress={() => handleSaveActivity()}
+        > 
+          <Text style={styles.saveButtonText}>Save</Text>
+        </TouchableOpacity>
+      )
+    });
+  }, [navigation, path]);
 
   if (isLoading) {
     return (
@@ -209,8 +248,11 @@ export default function Record() {
   return (
     <View style={styles.container}>
       <MapView
+        ref={mapRef}
         provider={PROVIDER_GOOGLE}
         style={styles.map}
+        showsUserLocation={true}
+        followsUserLocation={true}
         region={
           currentLocation
             ? {
@@ -235,11 +277,19 @@ export default function Record() {
         {path.length > 0 && (
           <Polyline
             coordinates={path}
-            strokeColor="#007AFF"
-            strokeWidth={4}
+            strokeColor={paused ? "#007AFF80" : "#007AFF"} // Transparent blue when paused, solid when active
+            strokeWidth={6}
+            lineDashPattern={paused ? [5, 5] : null} // Dashed when paused, solid when active
           />
         )}
       </MapView>
+
+      <TouchableOpacity 
+        style={styles.locationButton}
+        onPress={zoomToCurrentLocation}
+      >
+        <MaterialCommunityIcons name="crosshairs-gps" size={24} color="#007AFF" />
+      </TouchableOpacity>
 
       <View style={styles.statsOverlay}>
         <View style={styles.statsRow}>
@@ -356,7 +406,7 @@ const styles = StyleSheet.create({
   },
   controlsContainer: {
     position: 'absolute',
-    bottom: 100,
+    bottom: 25, // Adjusted for better positioning without tab bar
     left: 0,
     right: 0,
     flexDirection: 'row',
@@ -410,4 +460,27 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: '#007AFF',
   },
+  locationButton: {
+    position: 'absolute',
+    right: 16,
+    bottom: 25, // Adjusted for better positioning without tab bar
+    backgroundColor: 'white',
+    borderRadius: 30,
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
 });
+
+const formatTime = (seconds) => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600)/60);
+  const secs = seconds % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2,'0')}`;
+};

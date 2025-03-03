@@ -6,7 +6,13 @@ import TabBar from '../components/TabBar'
 const _layout = () => {
   return (
     <Tabs
-        tabBar={props=> <TabBar {...props} />}
+        tabBar={props => {
+            // Hide tab bar for record screen
+            if (props.state.index === 2) { // index 2 is the record screen
+                return null;
+            }
+            return <TabBar {...props} />;
+        }}
     >
         <Tabs.Screen
             name="index"
@@ -23,7 +29,8 @@ const _layout = () => {
         <Tabs.Screen
             name="record"
             options={{
-                title: "Record"
+                title: "Record",
+                headerShown: true
             }}
         />
         <Tabs.Screen
