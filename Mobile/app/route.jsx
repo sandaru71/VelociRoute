@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TextInput, TouchableOpacity, Animated } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TextInput, TouchableOpacity, Animated, Platform } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import MapView, { Polyline, Marker } from 'react-native-maps';
 import { LineChart } from 'react-native-chart-kit';
-import { Card, Surface } from 'react-native-paper';
+import { Card, Surface, Button, Modal, Portal, Dialog } from 'react-native-paper';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import moment from 'moment';
+import { TOMORROW_API_KEY } from '../config/keys';
+import { ActivityIndicator } from 'react-native';
 
 const RouteScreen = () => {
   const router = useRouter();
@@ -20,7 +24,103 @@ const RouteScreen = () => {
   const elevationGain = params.elevationGain || 0;
   const selectedActivity = params.selectedActivity || 'cycling';
 
-  // Calculate map region from route coordinates
+  // Weather states
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [weatherData, setWeatherData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const getWeatherIcon = (weatherCode) => {
+    // Tomorrow.io weather codes
+    switch (weatherCode) {
+      case 1000: // Clear
+        return { icon: 'sun', color: '#FFB300' };
+      case 1100: // Mostly Clear
+      case 1101: // Partly Cloudy
+        return { icon: 'cloud-sun', color: '#78909C' };
+      case 1102: // Mostly Cloudy
+      case 1001: // Cloudy
+        return { icon: 'cloud', color: '#78909C' };
+      case 4000: // Drizzle
+      case 4001: // Rain
+        return { icon: 'cloud-rain', color: '#4FC3F7' };
+      case 5000: // Snow
+      case 5001: // Flurries
+        return { icon: 'snowflake', color: '#90CAF9' };
+      default:
+        return { icon: 'sun', color: '#FFB300' };
+    }
+  };
+
+  const getWeatherConditionText = (code) => {
+    // Tomorrow.io weather codes to text
+    const conditions = {
+      1000: 'Clear',
+      1100: 'Mostly Clear',
+      1101: 'Partly Cloudy',
+      1102: 'Mostly Cloudy',
+      1001: 'Cloudy',
+      4000: 'Drizzle',
+      4001: 'Rain',
+      5000: 'Snow',
+      5001: 'Flurries'
+    };
+    return conditions[code] || 'Clear';
+  };
+
+  const onDateChange = (date) => {
+    setSelectedDate(date);
+    setShowDatePicker(false);
+    fetchWeatherData(date);
+  };
+
+  const fetchWeatherData = async (date) => {
+    if (!routeCoordinates.length) return;
+    
+    setLoading(true);
+    setError(null);
+    const endPoint = routeCoordinates[routeCoordinates.length - 1];
+    
+    try {
+      const response = await fetch(
+        `https://api.tomorrow.io/v4/weather/forecast?location=${endPoint.latitude},${endPoint.longitude}&timesteps=1d&apikey=${TOMORROW_API_KEY}`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Weather data not available');
+      }
+
+      const data = await response.json();
+      
+      if (!data.timelines || !data.timelines.daily) {
+        throw new Error('Invalid weather data format');
+      }
+
+      const formattedDate = moment(date).format('YYYY-MM-DD');
+      const forecast = data.timelines.daily.find(
+        day => moment(day.time).format('YYYY-MM-DD') === formattedDate
+      );
+
+      if (forecast) {
+        setWeatherData({
+          temperature: forecast.values.temperatureAvg,
+          condition: forecast.values.weatherCodeMax,
+          humidity: forecast.values.humidityAvg,
+          windSpeed: forecast.values.windSpeedAvg
+        });
+      } else {
+        throw new Error('No forecast available for selected date');
+      }
+    } catch (error) {
+      console.error('Error fetching weather:', error);
+      setError(error.message);
+      setWeatherData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getMapRegion = () => {
     if (routeCoordinates.length === 0) return null;
 
@@ -233,6 +333,110 @@ const RouteScreen = () => {
             </Card.Content>
           </Card>
         )}
+
+        {/* Weather Section */}
+        <Card style={styles.weatherCard}>
+          <Card.Title title="Weather Forecast" />
+          <Card.Content>
+            <View style={styles.datePickerContainer}>
+              <Button
+                mode="outlined"
+                onPress={() => setShowDatePicker(true)}
+                icon="calendar"
+                style={styles.dateButton}
+              >
+                {moment(selectedDate).format('MMM DD, YYYY')}
+              </Button>
+            </View>
+
+            <Portal>
+              <Dialog visible={showDatePicker} onDismiss={() => setShowDatePicker(false)}>
+                <Dialog.Title>Select Date</Dialog.Title>
+                <Dialog.Content>
+                  <View style={styles.dialogContent}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      {Array.from({ length: 15 }, (_, i) => {
+                        const date = new Date();
+                        date.setDate(date.getDate() + i);
+                        return (
+                          <TouchableOpacity
+                            key={i}
+                            style={[
+                              styles.dateOption,
+                              moment(selectedDate).isSame(date, 'day') && styles.selectedDate
+                            ]}
+                            onPress={() => onDateChange(date)}
+                          >
+                            <Text style={[
+                              styles.dateText,
+                              moment(selectedDate).isSame(date, 'day') && styles.selectedDateText
+                            ]}>
+                              {moment(date).format('ddd')}
+                            </Text>
+                            <Text style={[
+                              styles.dateNumber,
+                              moment(selectedDate).isSame(date, 'day') && styles.selectedDateText
+                            ]}>
+                              {moment(date).format('D')}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+                </Dialog.Content>
+                <Dialog.Actions>
+                  <Button onPress={() => setShowDatePicker(false)}>Done</Button>
+                </Dialog.Actions>
+              </Dialog>
+            </Portal>
+
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#4A90E2" />
+                <Text style={styles.loadingText}>Loading weather data...</Text>
+              </View>
+            ) : error ? (
+              <View style={styles.errorContainer}>
+                <MaterialIcons name="error-outline" size={48} color="#FF5252" />
+                <Text style={styles.errorText}>{error}</Text>
+                <Button 
+                  mode="contained" 
+                  onPress={() => fetchWeatherData(selectedDate)}
+                  style={styles.retryButton}
+                >
+                  Retry
+                </Button>
+              </View>
+            ) : weatherData && (
+              <View style={styles.weatherWidget}>
+                <View style={styles.weatherIconContainer}>
+                  <FontAwesome5
+                    name={getWeatherIcon(weatherData.condition).icon}
+                    size={48}
+                    color={getWeatherIcon(weatherData.condition).color}
+                  />
+                </View>
+                <View style={styles.weatherDetails}>
+                  <Text style={styles.temperature}>
+                    {Math.round(weatherData.temperature)}°C
+                  </Text>
+                  <Text style={styles.weatherCondition}>
+                    {getWeatherConditionText(weatherData.condition)}
+                  </Text>
+                  <Text style={styles.weatherSubtext}>
+                    Humidity: {Math.round(weatherData.humidity)}%
+                  </Text>
+                  <Text style={styles.weatherSubtext}>
+                    Wind: {Math.round(weatherData.windSpeed)} km/h
+                  </Text>
+                </View>
+              </View>
+            )}
+          </Card.Content>
+        </Card>
+        {/* Add padding at the bottom */}
+        <View style={styles.bottomPadding} />
       </ScrollView>
     </View>
   );
@@ -330,6 +534,112 @@ const styles = StyleSheet.create({
   elevationLegendText: {
     fontSize: 12,
     color: '#666',
+  },
+  weatherCard: {
+    margin: 16,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  datePickerContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  dateButton: {
+    width: '80%',
+  },
+  weatherWidget: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 20,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  weatherIconContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  weatherDetails: {
+    flex: 2,
+    paddingLeft: 16,
+  },
+  temperature: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  weatherCondition: {
+    fontSize: 18,
+    color: '#666',
+    marginBottom: 8,
+    textTransform: 'capitalize',
+  },
+  weatherSubtext: {
+    fontSize: 14,
+    color: '#888',
+    marginBottom: 4,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    padding: 32,
+  },
+  loadingText: {
+    marginTop: 16,
+    color: '#666',
+    fontSize: 16,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    padding: 32,
+  },
+  errorText: {
+    marginTop: 16,
+    marginBottom: 16,
+    color: '#666',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 8,
+    backgroundColor: '#4A90E2',
+  },
+  dialogContent: {
+    paddingVertical: 10,
+  },
+  dateOption: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    marginHorizontal: 4,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    minWidth: 60,
+  },
+  selectedDate: {
+    backgroundColor: '#4A90E2',
+  },
+  dateText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  dateNumber: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  selectedDateText: {
+    color: '#fff',
+  },
+  bottomPadding: {
+    height: 32,
   },
 });
 

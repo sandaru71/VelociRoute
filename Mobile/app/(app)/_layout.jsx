@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { Redirect } from 'expo-router';
+import { PaperProvider } from 'react-native-paper';
 
 export default function AppLayout() {
   const { user } = useAuth();
@@ -11,25 +12,27 @@ export default function AppLayout() {
   }
 
   return (
-    <Stack>
-      <Stack.Screen
-        name="(tabs)"
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="post"
-        options={{
-          presentation: 'modal',
-          headerShown: true,
-          headerTitle: 'Save Activity',
-          headerStyle: {
-            backgroundColor: '#fff',
-          },
-          headerTintColor: '#000',
-        }}
-      />
-    </Stack>
+    <PaperProvider>
+      <Stack>
+        <Stack.Screen
+          name="(tabs)"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="post"
+          options={{
+            presentation: 'modal',
+            headerShown: true,
+            headerTitle: 'Save Activity',
+            headerStyle: {
+              backgroundColor: '#fff',
+            },
+            headerTintColor: '#000',
+          }}
+        />
+      </Stack>
+    </PaperProvider>
   );
 }
