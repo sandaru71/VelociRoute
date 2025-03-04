@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import { API_URL } from '../../config';
 import { auth } from '../../firebase/config';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 
 const SaveActivityScreen = () => {
   const router = useRouter();
@@ -156,7 +156,7 @@ const SaveActivityScreen = () => {
 
       if (response.data.success) {
         Alert.alert('Success', 'Activity saved successfully!');
-        router.push('/(app)/(tabs)/index'); 
+        router.replace('/(tabs)'); 
       }
     } catch (error) {
       console.error('Error saving activity:', error);
@@ -168,12 +168,6 @@ const SaveActivityScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.resumeText}>Resume</Text>
-        
-      </View>
-
       {/* Activity Name */}
       <TextInput 
         style={styles.input} 
@@ -384,20 +378,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
     padding: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingBottom: 5,
-  },
-  resumeText: {
-    color: 'black',
-    fontSize: 16,
-  },
-  saveText: {
-    color: 'black',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   input: {
     backgroundColor: '#e8e8e8',

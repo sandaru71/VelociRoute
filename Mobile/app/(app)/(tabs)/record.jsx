@@ -190,13 +190,26 @@ export default function Record() {
 
   const handleSaveActivity = () => {
     console.log('Saving activity...');
-
-    router.push({
-      pathname: "/(app)/post",
-      params: {
-        routeData: JSON.stringify(mockData.routeData),
-        stats: JSON.stringify(mockData.stats)
+    
+    // Prepare the actual route data and stats
+    const activityData = {
+      routeData: {
+        path: path,
+        startLocation: path[0],
+        endLocation: path[path.length - 1]
+      },
+      stats: {
+        totalDistance: totalDistance,
+        elevationGain: elevationGain,
+        averageSpeed: averageSpeed,
+        duration: time
       }
+    };
+
+    // Use the correct routing method
+    navigation.navigate('post', {
+      routeData: JSON.stringify(activityData.routeData),
+      stats: JSON.stringify(activityData.stats)
     });
   };
 
