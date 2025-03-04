@@ -221,7 +221,7 @@ export default function Record() {
           style={{ marginLeft: 15 }}
           onPress={() => navigation.navigate('index')}
         >
-          <Ionicons name="arrow-back" size={24} color="#007AFF" />
+          <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
       ),
       headerRight: () => (
@@ -239,7 +239,7 @@ export default function Record() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="black" />
         <Text style={styles.loadingText}>Getting your location...</Text>
       </View>
     );
@@ -264,7 +264,7 @@ export default function Record() {
             : null
         }
       >
-        {currentLocation && (
+        {/* {currentLocation && (
           <Marker
             coordinate={currentLocation}
             title="Current Location"
@@ -273,7 +273,7 @@ export default function Record() {
               <View style={styles.currentLocationDot} />
             </View>
           </Marker>
-        )}
+        )} */}
         {path.length > 0 && (
           <Polyline
             coordinates={path}
@@ -294,13 +294,13 @@ export default function Record() {
       <View style={styles.statsOverlay}>
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <MaterialCommunityIcons name="clock-outline" size={24} color="#007AFF" />
+            <MaterialCommunityIcons name="clock-outline" size={24} color="#FEBE15" />
             <Text style={styles.statValue}>{formatTime(time)}</Text>
             <Text style={styles.statLabel}>Duration</Text>
           </View>
           
           <View style={styles.statCard}>
-            <MaterialCommunityIcons name="map-marker-distance" size={24} color="#007AFF" />
+            <MaterialCommunityIcons name="map-marker-distance" size={24} color="#FEBE15" />
             <Text style={styles.statValue}>{(totalDistance / 1000).toFixed(2)}</Text>
             <Text style={styles.statLabel}>Distance (km)</Text>
           </View>
@@ -308,13 +308,13 @@ export default function Record() {
 
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <MaterialCommunityIcons name="speedometer" size={24} color="#007AFF" />
+            <MaterialCommunityIcons name="speedometer" size={24} color="#FEBE15" />
             <Text style={styles.statValue}>{currentSpeed.toFixed(1)}</Text>
             <Text style={styles.statLabel}>Current Speed (km/h)</Text>
           </View>
 
           <View style={styles.statCard}>
-            <MaterialCommunityIcons name="trending-up" size={24} color="#007AFF" />
+            <MaterialCommunityIcons name="trending-up" size={24} color="#FEBE15" />
             <Text style={styles.statValue}>{elevationGain.toFixed(0)}</Text>
             <Text style={styles.statLabel}>Elevation Gain (m)</Text>
           </View>
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#007AFF',
+    color: 'black',
   },
   statsOverlay: {
     position: 'absolute',
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   startButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FEBE15',
     width: 80,
     height: 80,
     borderRadius: 40,
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   saveButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#FEBE15',
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 20,
