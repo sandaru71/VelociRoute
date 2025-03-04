@@ -7,7 +7,13 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false
       }}
-      tabBar={props => <TabBar {...props} />}
+      tabBar={props => {
+        // Hide tab bar for record screen
+        if (props.state.index === 2) { // index 2 is the record screen
+          return null;
+        }
+        return <TabBar {...props} />;
+      }}
     >
       <Tabs.Screen
         name="index"
@@ -24,7 +30,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="record"
         options={{
-          title: "Record"
+          title: "Record",
+          headerShown: true // Show header for record screen
         }}
       />
       <Tabs.Screen
