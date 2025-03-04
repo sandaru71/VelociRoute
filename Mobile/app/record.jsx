@@ -10,4 +10,4 @@ const Record = () => {
   )
 }
 
-export default Record
+export default Record 
