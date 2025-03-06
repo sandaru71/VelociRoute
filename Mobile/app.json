@@ -9,14 +9,27 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "config": {
+        "googleMapsApiKey": "AIzaSyB7alGuNMvdyAk8Tb0B2jG3KjnotL4fYqo"
+      },
+      "bundleIdentifier": "com.sandaru.dev.Mobile"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.sandaru.dev.Mobile"
+      "package": "com.sandaru.dev.Mobile",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyB7alGuNMvdyAk8Tb0B2jG3KjnotL4fYqo"
+        }
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -33,18 +46,16 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ] 
-    ],
-    "experiments": {
-      "typedRoutes": true
-    },
-    "plugins": [
+      ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow VelociRoute to use your location."
+          "locationAlwaysAndWhenInUsePermission": "Allow Mobile to use your location."
         }
       ]
-    ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }
