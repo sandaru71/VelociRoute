@@ -21,18 +21,20 @@ import axios from 'axios';
 import MapView, { Polyline, Marker } from 'react-native-maps';
 
 // Configure axios base URL and defaults
+const LOCAL_IP = '10.245.27.196'; // Your computer's local IP address
+
 const API_BASE_URL = Platform.select({
-  android: 'http://10.0.2.2:3000/api',
-  ios: 'http://192.168.8.112:3000/api', // Your computer's IP address
-  default: 'http://localhost:3000/api'
+  android: __DEV__ ? `http://${LOCAL_IP}:3000/api` : 'https://your-production-api.com/api',
+  ios: __DEV__ ? `http://${LOCAL_IP}:3000/api` : 'https://your-production-api.com/api',
+  default: __DEV__ ? 'http://localhost:3000/api' : 'https://your-production-api.com/api'
 });
 
 console.log('Using API URL:', API_BASE_URL); // Debug log
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000,
-  timeoutErrorMessage: 'Request timed out',
+  timeout: 15000, // Increased timeout
+  timeoutErrorMessage: 'Request timed out - please check your connection',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -45,7 +47,8 @@ axiosInstance.interceptors.request.use(
     console.log('Request:', {
       url: config.url,
       method: config.method,
-      headers: config.headers
+      headers: config.headers,
+      baseURL: config.baseURL // Added baseURL to debug output
     });
     return config;
   },
