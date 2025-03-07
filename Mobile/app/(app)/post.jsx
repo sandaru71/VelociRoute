@@ -365,6 +365,13 @@ const SaveActivityScreen = () => {
         </View>
       </Modal>
 
+      {/* Discard Button */}
+      <TouchableOpacity
+        style={styles.discardButton}
+      >
+        <Text style={styles.discardButtonText}>Discard Activity</Text>
+      </TouchableOpacity>
+
       {/* Save Button */}
       <TouchableOpacity 
         style={[styles.saveButton, isLoading && styles.disabledButton]} 
@@ -373,6 +380,14 @@ const SaveActivityScreen = () => {
       >
         <Text style={styles.saveButtonText}>
           {isLoading ? 'Saving...' : 'Save Activity'}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={styles.postActivityButton}
+      >
+        <Text style={styles.postActivityText}>
+          Post Activity
         </Text>
       </TouchableOpacity>
     </View>
@@ -467,17 +482,43 @@ const styles = StyleSheet.create({
   saveButton: {
     backgroundColor: '#4CAF50',
     padding: 15,
-    borderRadius: 8,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
+    marginHorizontal: 10,
+  },
+  discardButton: {
+    backgroundColor: '#FEBE15',
+    padding: 15,
+    borderRadius: 10,
     alignItems: 'center',
     marginTop: 20,
-    marginHorizontal: 20,
+    marginHorizontal: 10,
+  },
+  discardButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'black',
   },
   disabledButton: {
     opacity: 0.7,
   },
   saveButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 18  ,
+    fontWeight: 'bold',
+  },
+  postActivityButton: {
+    backgroundColor: '#FEBE15',
+    padding: 15,
+    borderRadius: 10,
+    marginHorizontal: 10,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  postActivityText: {
+    fontSize: 18,
+    color: 'white',
     fontWeight: 'bold',
   },
   modalBackground: {
