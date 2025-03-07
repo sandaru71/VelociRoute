@@ -8,6 +8,7 @@ const path = require('path');
 const popularRoutes = require('./src/Routes/popularRoutes');
 const uploadRoutes = require('./src/Routes/uploadRoutes');
 const activityRoutes = require('./src/Routes/activityRoutes');
+const userRoutes = require('./src/Routes/userRoutes');
 const Activity = require('./src/Infrastructure/Models/Activity');
 
 const app = express();
@@ -58,15 +59,17 @@ connectDB().then(async database => {
   } catch (error) {
     console.error("❌ Error creating indexes:", error);
   }
+
+  // Register routes after database connection
+  app.use('/api/popular-routes', popularRoutes);
+  app.use('/api/upload', uploadRoutes);
+  app.use('/api/activities', activityRoutes);
+  app.use('/api/users', userRoutes(database));  // Pass database instance to userRoutes
+
 }).catch(err => {
   console.error("❌ Database connection error:", err);
   process.exit(1);
 });
-
-// Register routes
-app.use('/api/popular-routes', popularRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/activities', activityRoutes);
 
 app.get('/', (req, res) => {
   res.send("MongoDB Node.js Driver is running!");

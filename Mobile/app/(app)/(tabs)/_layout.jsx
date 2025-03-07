@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import TabBar from '../../../components/TabBar';
+import { COLORS } from '../../../constants';
 
 export default function TabsLayout() {
   return (
@@ -8,8 +9,9 @@ export default function TabsLayout() {
         headerShown: false
       }}
       tabBar={props => {
-        // Hide tab bar for record screen
-        if (props.state.index === 2) { // index 2 is the record screen
+        // Hide tab bar for record screen and editProfile
+        const routeName = props.state.routes[props.state.index].name;
+        if (props.state.index === 2 || routeName === 'editProfile') {
           return null;
         }
         return <TabBar {...props} />;
@@ -31,7 +33,7 @@ export default function TabsLayout() {
         name="record"
         options={{
           title: "Record",
-          headerShown: true // Show header for record screen
+          headerShown: true
         }}
       />
       <Tabs.Screen
@@ -44,6 +46,24 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: "Profile"
+        }}
+      />
+      <Tabs.Screen
+        name="editProfile"
+        options={{
+          href: null, // This prevents the tab from showing in the tab bar
+          headerShown: true,
+          headerTitle: "Edit Profile",
+          headerStyle: {
+            backgroundColor: COLORS.primary,
+          },
+          headerTintColor: '#fff',
+          headerTitleStyle: {
+            fontWeight: 'bold',
+          },
+          headerShadowVisible: false,
+          headerBackVisible: true,
+          headerBackTitle: "Back",
         }}
       />
     </Tabs>

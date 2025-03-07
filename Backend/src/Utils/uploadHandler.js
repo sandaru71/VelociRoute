@@ -21,9 +21,9 @@ const storage = multer.diskStorage({
 
 // File filter for images and GPX files
 const fileFilter = (req, file, cb) => {
-    if (file.fieldname === 'images') {
+    if (file.fieldname === 'images' || file.fieldname === 'image') {
         // Accept images only
-        if (!file.originalname.match(/\.(jpg|JPG|jpeg|JPEG|png|PNG|gif|GIF)$/)) {
+        if (!file.originalname.match(/\.(jpg|JPG|jpeg|JPEG|png|PNG|gif|GIF|webp|WEBP)$/)) {
             req.fileValidationError = 'Only image files are allowed!';
             return cb(new Error('Only image files are allowed!'), false);
         }
@@ -45,13 +45,44 @@ const upload = multer({
     }
 });
 
-// Function to upload file to Cloudinary
+// Function to upload file to Cloudinary with transformation options
 const uploadToCloudinary = async (file, folder) => {
     try {
-        const result = await cloudinary.uploader.upload(file.path, {
+        let uploadOptions = {
             resource_type: folder === 'gpx' ? 'raw' : 'image',
-            folder: folder
-        });
+            folder: folder,
+        };
+
+        // Add specific transformations for profile images
+        if (folder === 'profile_images') {
+            uploadOptions = {
+                ...uploadOptions,
+                transformation: [
+                    { width: 400, height: 400, crop: 'fill', quality: 'auto' },
+                    { fetch_format: 'auto' }
+                ],
+                eager: [
+                    // Thumbnail version
+                    { width: 150, height: 150, crop: 'fill', quality: 'auto' },
+                    // Cover photo version (if needed)
+                    { width: 800, height: 400, crop: 'fill', quality: 'auto' }
+                ],
+                eager_async: true,
+                eager_notification_url: process.env.CLOUDINARY_NOTIFICATION_URL
+            };
+        }
+
+        const result = await cloudinary.uploader.upload(file.path, uploadOptions);
+        
+        // Return appropriate URL based on the folder
+        if (folder === 'profile_images') {
+            return {
+                url: result.secure_url,
+                thumbnail: result.eager?.[0]?.secure_url || result.secure_url,
+                cover: result.eager?.[1]?.secure_url || result.secure_url
+            };
+        }
+        
         return result.secure_url;
     } catch (error) {
         console.error('Error uploading to Cloudinary:', error);

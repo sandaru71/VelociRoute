@@ -16,7 +16,6 @@ const TabBarButton = (props) => {
     },[scale, isFocused]);
 
     const animatedIconStyle = useAnimatedStyle(()=>{
-
         const scaleValue = interpolate(
             scale.value,
             [0, 1],
@@ -29,13 +28,12 @@ const TabBarButton = (props) => {
         );
 
         return {
-            // styles
             transform: [{scale: scaleValue}],
             top
         }
     })
-    const animatedTextStyle = useAnimatedStyle(()=>{
 
+    const animatedTextStyle = useAnimatedStyle(()=>{
         const opacity = interpolate(
             scale.value,
             [0, 1],
@@ -43,28 +41,31 @@ const TabBarButton = (props) => {
         );
 
         return {
-            // styles
             opacity
         }
     })
-  return (
-    <Pressable {...props} style={styles.container}>
-        <Animated.View style={[animatedIconStyle]}>
-            {
-                icons[routeName]({
-                    color
-                })
-            }
-        </Animated.View>
-        
-        <Animated.Text style={[{ 
-            color,
-            fontSize: 11
-        }, animatedTextStyle]}>
-            {label}
-        </Animated.Text>
-    </Pressable>
-  )
+
+    // Check if the icon exists for the route
+    const IconComponent = icons[routeName];
+    if (!IconComponent) {
+        console.warn(`No icon found for route: ${routeName}`);
+        return null;
+    }
+
+    return (
+        <Pressable {...props} style={styles.container}>
+            <Animated.View style={[animatedIconStyle]}>
+                <IconComponent color={color} />
+            </Animated.View>
+            
+            <Animated.Text style={[{ 
+                color,
+                fontSize: 11
+            }, animatedTextStyle]}>
+                {label}
+            </Animated.Text>
+        </Pressable>
+    )
 }
 
 const styles = StyleSheet.create({
