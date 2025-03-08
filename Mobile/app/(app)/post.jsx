@@ -6,7 +6,10 @@ import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import { API_URL } from '../../config';
 import { auth } from '../../firebase/config';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import Record from './(tabs)/record';
+
 
 const SaveActivityScreen = () => {
   const router = useRouter();
@@ -174,254 +177,264 @@ const SaveActivityScreen = () => {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{paddingBottom: 50}} showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      {/* <View style={styles.header}>
-        <Text style={styles.resumeText}>Resume</Text>
-        
-      </View> */}
-
-      {/* Activity Name */}
-      <TextInput 
-        style={styles.input} 
-        placeholder="Morning Walk" 
-        placeholderTextColor="grey" 
-        value={activityName}
-        onChangeText={(text) => setActivityName(text)}
-      />
-
-      {/* Map and Photo Section */}
-      <View style={styles.mapPhotoContainer}>
-        <View style={styles.mapPlaceholder}>
-          <Text style={styles.mapText}>This is a sample map. You'll see your activity map after saving.</Text>
-        </View>
-        
-        <TouchableOpacity style={styles.photoUpload} onPress={pickImage}>
-          {selectedImages.length > 0 ? (
-            <View style={{ width: '100%', height: '100%', position: 'relative' }}>
-              <Image 
-                source={{ uri: selectedImages[0].uri }} 
-                style={{ width: '100%', height: '100%' }} 
-                resizeMode="cover"
-              />
+    <>
+      <Stack.Screen
+          options={{
+            headerLeft: () => (
               <TouchableOpacity
-                style={[styles.removeButton, { top: 5, right: 5 }]}
-                onPress={() => {
-                  setSelectedImages([]);
-                }}
+                style={{ marginLeft: 0, marginRight: 10 }}
+                onPress={() => router.back()}
               >
-                <FontAwesome5 name="times-circle" size={20} color="red" />
+                <Ionicons name="arrow-back" size={24} color="black" />
               </TouchableOpacity>
-            </View>
-          ) : (
-            <>
-              <FontAwesome5 name="image" size={24} color="black" />
-              <Text style={styles.photoText}>Add Photos/Video</Text>
-            </>
-          )}
-        </TouchableOpacity>
+            ),
+          }}
+        />
 
-        {selectedImages.length > 1 && (
-          <FlatList
-            data={selectedImages.slice(1)}
-            horizontal
-            style={styles.imageList}
-            renderItem={({ item, index }) => (
-              <View style={styles.imageContainer}>
-                <Image source={{ uri: item.uri }} style={styles.selectedImage} />
+      <ScrollView style={styles.container} contentContainerStyle={{paddingBottom: 50}} showsVerticalScrollIndicator={false}>
+        
+        {/* Activity Name */}
+        <TextInput 
+          style={styles.input} 
+          placeholder="Morning Walk" 
+          placeholderTextColor="grey" 
+          value={activityName}
+          onChangeText={(text) => setActivityName(text)}
+        />
+
+        {/* Map and Photo Section */}
+        <View style={styles.mapPhotoContainer}>
+          <View style={styles.mapPlaceholder}>
+            <Text style={styles.mapText}>This is a sample map. You'll see your activity map after saving.</Text>
+          </View>
+          
+          <TouchableOpacity style={styles.photoUpload} onPress={pickImage}>
+            {selectedImages.length > 0 ? (
+              <View style={{ width: '100%', height: '100%', position: 'relative' }}>
+                <Image 
+                  source={{ uri: selectedImages[0].uri }} 
+                  style={{ width: '100%', height: '100%' }} 
+                  resizeMode="cover"
+                />
                 <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => removeImage(index + 1)}
+                  style={[styles.removeButton, { top: 5, right: 5 }]}
+                  onPress={() => {
+                    setSelectedImages([]);
+                  }}
                 >
                   <FontAwesome5 name="times-circle" size={20} color="red" />
                 </TouchableOpacity>
               </View>
+            ) : (
+              <>
+                <FontAwesome5 name="image" size={24} color="black" />
+                <Text style={styles.photoText}>Add Photos/Video</Text>
+              </>
             )}
-            keyExtractor={(item, index) => index.toString()}
-          />
-        )}
-      </View>
-      
-      {/* Activity Description */}
-      <TextInput
-        style={[styles.input, styles.description]}
-        placeholder="How did it go? Share more about your activity.
-         "
-        placeholderTextColor="grey"
-        value={description}
-        onChangeText={(text) => setDescription(text)}
-      />
+          </TouchableOpacity>
 
-      {/* Time Taken */}
-      <View style={styles.statContainer}>
-        <Text style={styles.statLabel}>Time Taken:</Text>
-        <Text style={styles.statValue}>{formatTime(stats.duration || 0)}</Text>
-      </View>
-
-      {/* Distance */}
-      <View style={styles.statContainer}>
-        <Text style={styles.statLabel}>Distance:</Text>
-        <Text style={styles.statValue}>{stats.distance || '0'} km</Text>
-      </View>
-
-      {/* Average Speed */}
-      <View style={styles.statContainer}>
-        <Text style={styles.statLabel}>Average Speed:</Text>
-        <Text style={styles.statValue}>{stats.averageSpeed || '0'} km/h</Text>
-      </View>
-
-      {/* Elevation gain */}
-      <View style={styles.statContainer}>
-        <Text style={styles.statLabel}>Elevation Gain:</Text>
-        <Text style={styles.statValue}>{stats.elevationGain || '0'} m</Text>
-      </View>
-
-      {/* Activity Type */}
-      <TouchableOpacity style={styles.dropdown} onPress={toggleActivityTypeModal}>
-      {selectedActivityType && (
-          <FontAwesome5
-            name={activityIcons[selectedActivityType]}
-            size={18}
-            color="black"
-            style={styles.iconAfterText}
-          />
-        )}
-        <Text style={styles.dropdownText}>
-          {selectedActivityType ? selectedActivityType : 'Select Activity Type'}
-        </Text>
-        
-        <Feather name="chevron-down" size={20} color="black" style={styles.chevron} />
-      </TouchableOpacity>
-
-      {/* Activity Rating */}
-      <TouchableOpacity style={styles.dropdown} onPress={toggleRatingModal}>
-      {selectedActivityRating && (
-          <FontAwesome5
-            name={ratingIcons[selectedActivityRating]}
-            size={18}
-            color="black"
-            style={styles.iconAfterText}
-          />
-        )}
-        <Text style={styles.dropdownText}>
-          {selectedActivityRating ? selectedActivityRating : 'Rate the activity'}
-        </Text>
-        
-        <Feather name="chevron-down" size={20} color="black" style={styles.chevron} />
-      </TouchableOpacity>
-
-      {/* Difficulty Level */}
-      <TouchableOpacity style={styles.dropdown} onPress={toggleDifficultyModal}>
-      {selectedDifficulty && (
-          <FontAwesome5
-            name={difficultyIcons[selectedDifficulty]}
-            size={18}
-            color="black"
-            style={styles.iconAfterText}
-          />
-        )}
-        <Text style={styles.dropdownText}>
-          {selectedDifficulty ? selectedDifficulty : 'Select Difficulty'}
-        </Text>
-        
-        <Feather name="chevron-down" size={20} color="black" style={styles.chevron} />
-      </TouchableOpacity>
-
-      {/* Modal for Activity Type */}
-      <Modal visible={isActivityTypeModalVisible} transparent={true} animationType="fade">
-        <View style={styles.modalBackground}>
-          <View style={styles.modalContainer}>
+          {selectedImages.length > 1 && (
             <FlatList
-              data={activityTypes}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.modalOption}
-                  onPress={() => handleSelectActivityType(item)}
-                >
-                  <Text style={styles.modalOptionText}>{item}</Text>
-                </TouchableOpacity>
+              data={selectedImages.slice(1)}
+              horizontal
+              style={styles.imageList}
+              renderItem={({ item, index }) => (
+                <View style={styles.imageContainer}>
+                  <Image source={{ uri: item.uri }} style={styles.selectedImage} />
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={() => removeImage(index + 1)}
+                  >
+                    <FontAwesome5 name="times-circle" size={20} color="red" />
+                  </TouchableOpacity>
+                </View>
               )}
+              keyExtractor={(item, index) => index.toString()}
             />
-            <TouchableOpacity style={styles.closeModalButton} onPress={toggleActivityTypeModal}>
-              <Text style={styles.closeModalText}>Close</Text>
-            </TouchableOpacity>
-          </View>
+          )}
         </View>
-      </Modal>
+        
+        {/* Activity Description */}
+        <TextInput
+          style={[styles.input, styles.description]}
+          placeholder="How did it go? Share more about your activity.
+          "
+          placeholderTextColor="grey"
+          value={description}
+          onChangeText={(text) => setDescription(text)}
+        />
 
-      {/* Modal for Activity Rating */}
-      <Modal visible={isRatingModalVisible} transparent={true} animationType="fade">
-        <View style={styles.modalBackground}>
-          <View style={styles.modalContainer}>
-            <FlatList
-              data={activityRatings}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.modalOption}
-                  onPress={() => handleSelectActivityRating(item)}
-                >
-                  <Text style={styles.modalOptionText}>{item}</Text>
-                </TouchableOpacity>
-              )}
+        {/* Time Taken */}
+        <View style={styles.statContainer}>
+          <Text style={styles.statLabel}>Time Taken:</Text>
+          <Text style={styles.statValue}>{formatTime(stats.duration || 0)}</Text>
+        </View>
+
+        {/* Distance */}
+        <View style={styles.statContainer}>
+          <Text style={styles.statLabel}>Distance:</Text>
+          <Text style={styles.statValue}>{stats.distance || '0'} km</Text>
+        </View>
+
+        {/* Average Speed */}
+        <View style={styles.statContainer}>
+          <Text style={styles.statLabel}>Average Speed:</Text>
+          <Text style={styles.statValue}>{stats.averageSpeed || '0'} km/h</Text>
+        </View>
+
+        {/* Elevation gain */}
+        <View style={styles.statContainer}>
+          <Text style={styles.statLabel}>Elevation Gain:</Text>
+          <Text style={styles.statValue}>{stats.elevationGain || '0'} m</Text>
+        </View>
+
+        {/* Activity Type */}
+        <TouchableOpacity style={styles.dropdown} onPress={toggleActivityTypeModal}>
+        {selectedActivityType && (
+            <FontAwesome5
+              name={activityIcons[selectedActivityType]}
+              size={18}
+              color="black"
+              style={styles.iconAfterText}
             />
-            <TouchableOpacity style={styles.closeModalButton} onPress={toggleRatingModal}>
-              <Text style={styles.closeModalText}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+          )}
+          <Text style={styles.dropdownText}>
+            {selectedActivityType ? selectedActivityType : 'Select Activity Type'}
+          </Text>
+          
+          <Feather name="chevron-down" size={20} color="black" style={styles.chevron} />
+        </TouchableOpacity>
 
-      {/* Modal for Difficulty Level */}
-      <Modal visible={isDifficultyModalVisible} transparent={true} animationType="fade">
-        <View style={styles.modalBackground}>
-          <View style={styles.modalContainer}>
-            <FlatList
-              data={difficultyLevels}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.modalOption}
-                  onPress={() => handleSelectDifficulty(item)}
-                >
-                  <Text style={styles.modalOptionText}>{item}</Text>
-                </TouchableOpacity>
-              )}
+        {/* Activity Rating */}
+        <TouchableOpacity style={styles.dropdown} onPress={toggleRatingModal}>
+        {selectedActivityRating && (
+            <FontAwesome5
+              name={ratingIcons[selectedActivityRating]}
+              size={18}
+              color="black"
+              style={styles.iconAfterText}
             />
-            <TouchableOpacity style={styles.closeModalButton} onPress={toggleDifficultyModal}>
-              <Text style={styles.closeModalText}>Close</Text>
-            </TouchableOpacity>
+          )}
+          <Text style={styles.dropdownText}>
+            {selectedActivityRating ? selectedActivityRating : 'Rate the activity'}
+          </Text>
+          
+          <Feather name="chevron-down" size={20} color="black" style={styles.chevron} />
+        </TouchableOpacity>
+
+        {/* Difficulty Level */}
+        <TouchableOpacity style={styles.dropdown} onPress={toggleDifficultyModal}>
+        {selectedDifficulty && (
+            <FontAwesome5
+              name={difficultyIcons[selectedDifficulty]}
+              size={18}
+              color="black"
+              style={styles.iconAfterText}
+            />
+          )}
+          <Text style={styles.dropdownText}>
+            {selectedDifficulty ? selectedDifficulty : 'Select Difficulty'}
+          </Text>
+          
+          <Feather name="chevron-down" size={20} color="black" style={styles.chevron} />
+        </TouchableOpacity>
+
+        {/* Modal for Activity Type */}
+        <Modal visible={isActivityTypeModalVisible} transparent={true} animationType="fade">
+          <View style={styles.modalBackground}>
+            <View style={styles.modalContainer}>
+              <FlatList
+                data={activityTypes}
+                keyExtractor={(item) => item}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.modalOption}
+                    onPress={() => handleSelectActivityType(item)}
+                  >
+                    <Text style={styles.modalOptionText}>{item}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+              <TouchableOpacity style={styles.closeModalButton} onPress={toggleActivityTypeModal}>
+                <Text style={styles.closeModalText}>Close</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
 
-      {/* Discard Button */}
-      <TouchableOpacity
-        style={styles.discardButton}
-      >
-        <Text style={styles.discardButtonText}>Discard Activity</Text>
-      </TouchableOpacity>
+        {/* Modal for Activity Rating */}
+        <Modal visible={isRatingModalVisible} transparent={true} animationType="fade">
+          <View style={styles.modalBackground}>
+            <View style={styles.modalContainer}>
+              <FlatList
+                data={activityRatings}
+                keyExtractor={(item) => item}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.modalOption}
+                    onPress={() => handleSelectActivityRating(item)}
+                  >
+                    <Text style={styles.modalOptionText}>{item}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+              <TouchableOpacity style={styles.closeModalButton} onPress={toggleRatingModal}>
+                <Text style={styles.closeModalText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
-      {/* Save Button */}
-      <TouchableOpacity 
-        style={[styles.saveButton, isLoading && styles.disabledButton]} 
-        onPress={handleSaveActivity}
-        disabled={isLoading}
-      >
-        <Text style={styles.saveButtonText}>
-          {isLoading ? 'Saving...' : 'Save Activity'}
-        </Text>
-      </TouchableOpacity>
+        {/* Modal for Difficulty Level */}
+        <Modal visible={isDifficultyModalVisible} transparent={true} animationType="fade">
+          <View style={styles.modalBackground}>
+            <View style={styles.modalContainer}>
+              <FlatList
+                data={difficultyLevels}
+                keyExtractor={(item) => item}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.modalOption}
+                    onPress={() => handleSelectDifficulty(item)}
+                  >
+                    <Text style={styles.modalOptionText}>{item}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+              <TouchableOpacity style={styles.closeModalButton} onPress={toggleDifficultyModal}>
+                <Text style={styles.closeModalText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
-      <TouchableOpacity 
-        style={styles.postActivityButton}
-      >
-        <Text style={styles.postActivityText}>
-          Post Activity
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
+        {/* Discard Button */}
+        <TouchableOpacity
+          style={styles.discardButton}
+        >
+          <Text style={styles.discardButtonText}>Discard Activity</Text>
+        </TouchableOpacity>
+
+        {/* Save Button */}
+        <TouchableOpacity 
+          style={[styles.saveButton, isLoading && styles.disabledButton]} 
+          onPress={handleSaveActivity}
+          disabled={isLoading}
+        >
+          <Text style={styles.saveButtonText}>
+            {isLoading ? 'Saving...' : 'Save Activity'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.postActivityButton}
+        >
+          <Text style={styles.postActivityText}>
+            Post Activity
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </>
   );
 };
 
