@@ -55,41 +55,43 @@ export default function Record() {
           
           setCurrentLocation(newLocation);
           
-          setPath(prevPath => {
-            if (prevPath.length === 0) {
-              return [newLocation];
-            }
-
-            const lastLocation = prevPath[prevPath.length - 1];
-            const distanceFromLast = getPreciseDistance(
-              { latitude: lastLocation.latitude, longitude: lastLocation.longitude },
-              { latitude: newLocation.latitude, longitude: newLocation.longitude }
-            );
-
-            // Only add new point if we've moved at least 1 meter
-            if (distanceFromLast >= 1) {
-              // Update total distance
-              setTotalDistance(prevDistance => {
-                const newDistance = prevDistance + (distanceFromLast / 1000); // Convert to km
-                return newDistance;
-              });
-
-              // Calculate current speed (km/h)
-              const speedInKmH = (location.coords.speed * 3.6) || 0; // Convert m/s to km/h
-              setCurrentSpeed(speedInKmH);
-
-              // Update elevation if altitude changed
-              if (lastLocation.altitude && newLocation.altitude) {
-                const elevationChange = newLocation.altitude - lastLocation.altitude;
-                if (elevationChange > 0) {
-                  setElevationGain(prev => prev + elevationChange);
-                }
+          if (!paused) {
+            setPath(prevPath => {
+              if (prevPath.length === 0) {
+                return [newLocation];
               }
 
-              return [...prevPath, newLocation];
-            }
-            return prevPath;
-          });
+              const lastLocation = prevPath[prevPath.length - 1];
+              const distanceFromLast = getPreciseDistance(
+                { latitude: lastLocation.latitude, longitude: lastLocation.longitude },
+                { latitude: newLocation.latitude, longitude: newLocation.longitude }
+              );
+
+              // Only add new point if we've moved at least 1 meter
+              if (distanceFromLast >= 1) {
+                // Update total distance
+                setTotalDistance(prevDistance => {
+                  const newDistance = prevDistance + (distanceFromLast / 1000); // Convert to km
+                  return newDistance;
+                });
+
+                // Calculate current speed (km/h)
+                const speedInKmH = (location.coords.speed * 3.6) || 0; // Convert m/s to km/h
+                setCurrentSpeed(speedInKmH);
+
+                // Update elevation if altitude changed
+                if (lastLocation.altitude && newLocation.altitude) {
+                  const elevationChange = newLocation.altitude - lastLocation.altitude;
+                  if (elevationChange > 0) {
+                    setElevationGain(prev => prev + elevationChange);
+                  }
+                }
+
+                return [...prevPath, newLocation];
+              }
+              return prevPath;
+            });
+          }
         }
       );
       setLocationSubscription(subscription);
@@ -256,9 +258,8 @@ export default function Record() {
           {path.length > 0 && (
             <Polyline
               coordinates={path}
-              strokeColor={paused ? "#007AFF80" : "#007AFF"}
+              strokeColor="#007AFF"
               strokeWidth={6}
-              lineDashPattern={paused ? [5, 5] : null}
               zIndex={1}
             />
           )}
