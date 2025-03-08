@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Modal, FlatList, StyleSheet, Image, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Modal, FlatList, StyleSheet, Image, Alert, ScrollView } from 'react-native';
 import { FontAwesome5, Feather } from '@expo/vector-icons';
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
@@ -167,12 +167,12 @@ const SaveActivityScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{paddingBottom: 50}} showsVerticalScrollIndicator={false}>
       {/* Header */}
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
         <Text style={styles.resumeText}>Resume</Text>
         
-      </View>
+      </View> */}
 
       {/* Activity Name */}
       <TextInput 
@@ -244,6 +244,21 @@ const SaveActivityScreen = () => {
         value={description}
         onChangeText={(text) => setDescription(text)}
       />
+
+      {/* Time Taken */}
+      <View style={styles.dropdown}>
+        <Text style={styles.resumeText}>Time Taken for activity: </Text>
+      </View>
+
+      {/* Distance */}
+      <View style={styles.dropdown}>
+        <Text style={styles.resumeText}>Distance: </Text>
+      </View>
+
+      {/* Elevation gain */}
+      <View style={styles.dropdown}>
+        <Text style={styles.resumeText}>Elevation Gain: </Text>
+      </View>
 
       {/* Activity Type */}
       <TouchableOpacity style={styles.dropdown} onPress={toggleActivityTypeModal}>
@@ -390,7 +405,7 @@ const SaveActivityScreen = () => {
           Post Activity
         </Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 };
 
