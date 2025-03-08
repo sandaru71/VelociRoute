@@ -136,6 +136,14 @@ export default function Record() {
     };
   }, [paused]);
 
+  useEffect(() => {
+    // Calculate average speed whenever time or distance changes
+    if (time > 0) {
+      const avgSpeed = (totalDistance / (time / 3600)); // km/h
+      setAverageSpeed(avgSpeed);
+    }
+  }, [time, totalDistance]);
+
   const toggleTimer = () => {
     if (paused) {
       // Starting the timer
@@ -170,6 +178,11 @@ export default function Record() {
   };
 
   const handleSaveActivity = () => {
+    // Pause the activity before saving
+    if (!paused) {
+      toggleTimer();
+    }
+    
     console.log('Saving activity...');
     const stats = {
       duration: time,
@@ -297,8 +310,15 @@ export default function Record() {
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
               <MaterialCommunityIcons name="speedometer" size={24} color="#FEBE15" />
-              <Text style={styles.statValue}>{currentSpeed.toFixed(1)}</Text>
-              <Text style={styles.statLabel}>Current Speed (km/h)</Text>
+              <Text style={styles.statValue}>
+                {paused ? 
+                  `${averageSpeed.toFixed(1)}` :
+                  `${currentSpeed.toFixed(1)}`
+                }
+              </Text>
+              <Text style={styles.statLabel}>
+                {paused ? 'Average Speed (km/h)' : 'Current Speed (km/h)'}
+              </Text>
             </View>
 
             <View style={styles.statCard}>
