@@ -178,18 +178,18 @@ const SaveActivityScreen = () => {
 
   return (
     <>
-      <Stack.Screen
+      {/* <Stack.Screen
           options={{
             headerLeft: () => (
               <TouchableOpacity
-                style={{ marginLeft: 0, marginRight: 10 }}
+                style={{ marginLeft: 5, marginRight: 10 }}
                 onPress={() => router.back()}
               >
                 <Ionicons name="arrow-back" size={24} color="black" />
               </TouchableOpacity>
             ),
           }}
-        />
+        /> */}
 
       <ScrollView style={styles.container} contentContainerStyle={{paddingBottom: 50}} showsVerticalScrollIndicator={false}>
         
