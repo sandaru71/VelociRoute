@@ -13,8 +13,8 @@ const SaveActivityScreen = () => {
   const params = useLocalSearchParams();
   
   // Get route data and stats from params
-  const routeData = params.routeData ? JSON.parse(params.routeData) : null;
-  const stats = params.stats ? JSON.parse(params.stats) : null;
+  const routeData = params.routeData ? JSON.parse(params.routeData) : [];
+  const stats = params.stats ? JSON.parse(params.stats) : {};
 
   const [activityName, setActivityName] = useState('');
   const [description, setDescription] = useState('');
@@ -49,6 +49,13 @@ const SaveActivityScreen = () => {
     Easy: 'flag',
     Medium: 'flag-checkered',
     Hard: 'mountain',
+  };
+
+  const formatTime = (time) => {
+    const hours = Math.floor(time / 3600);
+    const minutes = Math.floor((time % 3600) / 60);
+    const seconds = time % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
   const toggleActivityTypeModal = () => {
@@ -246,18 +253,27 @@ const SaveActivityScreen = () => {
       />
 
       {/* Time Taken */}
-      <View style={styles.dropdown}>
-        <Text style={styles.resumeText}>Time Taken for activity: </Text>
+      <View style={styles.statContainer}>
+        <Text style={styles.statLabel}>Time Taken:</Text>
+        <Text style={styles.statValue}>{formatTime(stats.duration || 0)}</Text>
       </View>
 
       {/* Distance */}
-      <View style={styles.dropdown}>
-        <Text style={styles.resumeText}>Distance: </Text>
+      <View style={styles.statContainer}>
+        <Text style={styles.statLabel}>Distance:</Text>
+        <Text style={styles.statValue}>{stats.distance || '0'} km</Text>
+      </View>
+
+      {/* Average Speed */}
+      <View style={styles.statContainer}>
+        <Text style={styles.statLabel}>Average Speed:</Text>
+        <Text style={styles.statValue}>{stats.averageSpeed || '0'} km/h</Text>
       </View>
 
       {/* Elevation gain */}
-      <View style={styles.dropdown}>
-        <Text style={styles.resumeText}>Elevation Gain: </Text>
+      <View style={styles.statContainer}>
+        <Text style={styles.statLabel}>Elevation Gain:</Text>
+        <Text style={styles.statValue}>{stats.elevationGain || '0'} m</Text>
       </View>
 
       {/* Activity Type */}
@@ -586,6 +602,25 @@ const styles = StyleSheet.create({
     right: -8,
     backgroundColor: 'white',
     borderRadius: 10,
+  },
+  statContainer: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF',
   },
 });
 
