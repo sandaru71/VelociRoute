@@ -1,12 +1,46 @@
-import React from "react";
-import { View, Text, Image, TouchableOpacity, ScrollView } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { MaterialIcons } from "@expo/vector-icons";
 import { Calendar } from "react-native-calendars";
-import { COLORS, images, FONTS, SIZES } from "../../../constants";
+import { COLORS, FONTS, SIZES } from "../../../constants";
+import { useRouter } from "expo-router";
+import { getAuth } from 'firebase/auth';
+import axios from 'axios';
+import { getApiEndpoint } from '../../../config';
 
 const Profile = () => {
+  const router = useRouter();
+  const auth = getAuth();
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        if (auth.currentUser) {
+          const response = await axios.get(getApiEndpoint(`users/${auth.currentUser.email}`));
+          setUserData(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [auth.currentUser]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={{ ...FONTS.body3, marginTop: 10, color: COLORS.gray }}>Loading profile...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView
@@ -20,30 +54,56 @@ const Profile = () => {
       <ScrollView contentContainerStyle={{ padding: 12 }}>
         {/* Cover Image */}
         <View style={{ width: "100%" }}>
-          <Image
-            source={images.profileBackground}
-            resizeMode="cover"
-            style={{
-              height: 228,
-              width: "100%",
-            }}
-          />
+          {userData?.coverImage ? (
+            <Image
+              source={{ uri: userData.coverImage }}
+              resizeMode="cover"
+              style={{
+                height: 228,
+                width: "100%",
+              }}
+            />
+          ) : (
+            <View
+              style={{
+                height: 228,
+                width: "100%",
+                backgroundColor: COLORS.primary + '20', // Using primary color with 20% opacity
+              }}
+            />
+          )}
         </View>
 
         {/* Profile Section */}
         <View style={{ flex: 1, alignItems: "center" }}>
-          <Image
-            source={images.profilePhoto}
-            resizeMode="cover"
-            style={{
+          {userData?.profileImage ? (
+            <Image
+              source={{ uri: userData.profileThumbnail || userData.profileImage }}
+              resizeMode="cover"
+              style={{
+                height: 155,
+                width: 155,
+                borderRadius: 999,
+                borderColor: COLORS.primary,
+                borderWidth: 2,
+                marginTop: -90,
+              }}
+            />
+          ) : (
+            <View style={{
               height: 155,
               width: 155,
               borderRadius: 999,
               borderColor: COLORS.primary,
               borderWidth: 2,
               marginTop: -90,
-            }}
-          />
+              backgroundColor: COLORS.lightGray,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+              <MaterialIcons name="person" size={80} color={COLORS.primary} />
+            </View>
+          )}
 
           <Text
             style={{
@@ -53,16 +113,16 @@ const Profile = () => {
               fontWeight: "bold",
             }}
           >
-            Melissa Peters
+            {userData ? `${userData.firstName} ${userData.lastName}` : 'Update Profile'}
           </Text>
           <Text
             style={{
               color: COLORS.black,
               ...FONTS.body4,
-              fontFamily:'Arial'
+              fontFamily: 'Arial'
             }}
           >
-            Cyclist
+            {userData?.sport || 'Add your sport'}
           </Text>
 
           {/* Location */}
@@ -78,11 +138,11 @@ const Profile = () => {
               style={{
                 ...FONTS.body4,
                 marginLeft: 4,
-                fontFamily:'Arial'
+                fontFamily: 'Arial'
               }}
             >
-              Dehiwala, Colombo
-            </Text> 
+              {userData?.location || 'Add your location'}
+            </Text>
           </View>
 
           {/* Stats Section */}
@@ -107,13 +167,13 @@ const Profile = () => {
                   color: COLORS.black,
                 }}
               >
-                10
+                {userData?.followers?.length || 0}
               </Text>
               <Text
                 style={{
                   ...FONTS.body4,
                   color: COLORS.black,
-                  fontWeight:'bold',
+                  fontWeight: 'bold',
                 }}
               >
                 Followers
@@ -134,20 +194,20 @@ const Profile = () => {
                   color: COLORS.black,
                 }}
               >
-                6
+                {userData?.following?.length || 0}
               </Text>
               <Text
                 style={{
                   ...FONTS.body4,
                   color: COLORS.black,
-                  fontWeight:'bold',
+                  fontWeight: 'bold',
                 }}
               >
-                Followings
+                Following
               </Text>
             </View>
 
-            {/* Likes */}
+            {/* Activities */}
             <View
               style={{
                 flexDirection: "column",
@@ -161,13 +221,13 @@ const Profile = () => {
                   color: COLORS.black,
                 }}
               >
-                5
+                {userData?.activities?.length || 0}
               </Text>
               <Text
                 style={{
                   ...FONTS.body4,
                   color: COLORS.black,
-                  fontWeight:'bold',
+                  fontWeight: 'bold',
                 }}
               >
                 Activities
@@ -178,6 +238,7 @@ const Profile = () => {
           {/* Buttons Section */}
           <View style={{ flexDirection: "row", marginTop: 8 }}>
             <TouchableOpacity
+              onPress={() => router.push("/(app)/(tabs)/editProfile")}
               style={{
                 width: 124,
                 height: 36,
@@ -191,146 +252,46 @@ const Profile = () => {
               <Text
                 style={{
                   ...FONTS.body4,
-                  color: COLORS.black,
+                  color: COLORS.white,
                   fontWeight: "bold",
                 }}
               >
                 Edit Profile
               </Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{
-                width: 124,
-                height: 36,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: COLORS.primary,
-                borderRadius: 10,
-                marginHorizontal: SIZES.padding,
-              }}
-            >
-              <Text
-                style={{
-                  ...FONTS.body4,
-                  color: COLORS.black,
-                  fontWeight: "bold",
-                }}
-              >
-                Add Friend
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Stats Section */}
-          <View
-            style={{
-              marginTop: 20,
-              backgroundColor: COLORS.primary,
-              width: "70%",
-              padding: 12,
-              borderRadius: 25,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 20,
-                color: COLORS.black,
-                textAlign: "center",
-                marginBottom: 10,
-                fontWeight: "bold",
-                fontFamily:'Arial'
-              }}
-            >
-              Stats
-            </Text>
-
-            {/* Last 4 Weeks */}
-            <View
-              style={{
-                borderBottomColor: COLORS.black,
-                borderBottomWidth: 2,
-                paddingBottom: 20,
-              }}
-            >
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ ...FONTS.body5, color: COLORS.black, fontWeight: "bold", paddingBottom: 8 }}>
-                  Last 4 Weeks
-                </Text>
-              </View>
-
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ ...FONTS.body4, color: COLORS.black, paddingLeft: 20 }}>Activity / Week</Text>
-                <Text style={{ ...FONTS.body4, color: COLORS.black, paddingRight: 20 }}>00</Text>
-              </View>
-
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ ...FONTS.body4, color: COLORS.black, paddingLeft: 20 }}>Avg Distance / Week</Text>
-                <Text style={{ ...FONTS.body4, color: COLORS.black, paddingRight: 20 }}>00</Text>
-              </View>
-
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ ...FONTS.body4, color: COLORS.black, paddingLeft: 20 }}>Avg Time / Week</Text>
-                <Text style={{ ...FONTS.body4, color: COLORS.black, paddingRight: 20 }}>00</Text>
-              </View>
-            </View>
-
-            {/* All-Time */}
-            <View style={{ marginTop: 8 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ ...FONTS.body5, color: COLORS.black, fontWeight: "bold", paddingBottom: 8, paddingTop: 12 }}>
-                  All-Time
-                </Text>
-              </View>
-
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ ...FONTS.body4, color: COLORS.black, paddingLeft: 20 }}>Activities</Text>
-                <Text style={{ ...FONTS.body4, color: COLORS.black, paddingRight: 20 }}>00</Text>
-              </View>
-
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ ...FONTS.body4, color: COLORS.black, paddingLeft: 20 }}>Distance</Text>
-                <Text style={{ ...FONTS.body4, color: COLORS.black, paddingRight: 20 }}>00</Text>
-              </View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ ...FONTS.body4, color: COLORS.black, paddingLeft: 20 }}>Elev Gain</Text>
-                <Text style={{ ...FONTS.body4, color: COLORS.black, paddingRight: 20 }}>00</Text>
-              </View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ ...FONTS.body4, color: COLORS.black, paddingLeft: 20 }}>Time</Text>
-                <Text style={{ ...FONTS.body4, color: COLORS.black, paddingRight: 20 }}>00</Text>
-              </View>
-            </View>
           </View>
 
           {/* Calendar Section */}
-          <View style={{ marginTop: 40, width: "70%", borderRadius: 15, overflow: "hidden" }}>
-            <Text
-              style={{
-                fontSize: 20,
-                color: COLORS.black,
-                textAlign: "center",
-                fontWeight: "bold",
-                marginBottom: 10,
-                fontFamily:'Arial',
-              }}
-            >
-              Activity Calendar
-            </Text>
+          <View style={{ width: '100%', marginTop: 20 }}>
             <Calendar
-              current={"2025-02-01"}
-              markedDates={{
-                "2025-02-06": { selected: true, marked: true, selectedColor: COLORS.primary },
-              }}
               theme={{
                 backgroundColor: COLORS.white,
-                calendarBackground: COLORS.gray,
-                todayTextColor: COLORS.primary,
-                arrowColor: COLORS.primary,
+                calendarBackground: COLORS.white,
                 textSectionTitleColor: COLORS.black,
+                selectedDayBackgroundColor: COLORS.primary,
+                selectedDayTextColor: COLORS.white,
+                todayTextColor: COLORS.primary,
                 dayTextColor: COLORS.black,
+                textDisabledColor: COLORS.gray,
+                dotColor: COLORS.primary,
+                selectedDotColor: COLORS.white,
+                arrowColor: COLORS.primary,
                 monthTextColor: COLORS.black,
+                textDayFontFamily: 'Arial',
+                textMonthFontFamily: 'Arial',
+                textDayHeaderFontFamily: 'Arial',
+                textDayFontWeight: '300',
+                textMonthFontWeight: 'bold',
+                textDayHeaderFontWeight: '300',
+                textDayFontSize: 16,
+                textMonthFontSize: 16,
+                textDayHeaderFontSize: 16
               }}
+              markedDates={userData?.activities?.reduce((acc, activity) => {
+                const date = new Date(activity.date).toISOString().split('T')[0];
+                acc[date] = { marked: true };
+                return acc;
+              }, {}) || {}}
             />
           </View>
         </View>

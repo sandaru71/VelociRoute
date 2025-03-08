@@ -46,6 +46,13 @@ export default function TabsLayout() {
           title: "Profile"
         }}
       />
+      <Tabs.Screen
+        name="editProfile"
+        options={{
+          title: "Edit Profile",
+          href: null // This prevents the screen from showing in the tab bar
+        }}
+      />
     </Tabs>
   );
 }

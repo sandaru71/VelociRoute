@@ -21,6 +21,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../firebase/config';
+import axios from 'axios';
+import { getApiEndpoint } from '../../config';
 
 const { width, height } = Dimensions.get('window');
 
@@ -85,8 +87,27 @@ const Login = () => {
 
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.replace('/(app)');
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Check if user exists in MongoDB
+      try {
+        const response = await axios.get(getApiEndpoint(`users/${userCredential.user.email}`));
+        if (response.data) {
+          // User exists, go to main app
+          router.replace('/(app)');
+        } else {
+          // First time user, redirect to edit profile
+          router.replace('/(app)/(tabs)/editProfile');
+        }
+      } catch (error) {
+        // If user not found in MongoDB, redirect to edit profile
+        if (error.response && error.response.status === 404) {
+          router.replace('/(app)/(tabs)/editProfile');
+        } else {
+          console.error('Error checking user data:', error);
+          router.replace('/(app)');
+        }
+      }
     } catch (error) {
       Alert.alert('Error', error.message);
     } finally {
