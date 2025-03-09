@@ -5,11 +5,11 @@ import { StatusBar } from "expo-status-bar";
 import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter, Stack } from "expo-router";
-import { COLORS, FONTS, SIZES } from "../../../constants";
+import { COLORS, FONTS, SIZES } from "../../constants";
 import { getAuth } from 'firebase/auth';
 import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getApiEndpoint } from '../../../config';
+import { getApiEndpoint } from '../../config';
 
 const { width } = Dimensions.get('window');
 
@@ -27,6 +27,7 @@ const EditProfile = () => {
   });
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -43,10 +44,13 @@ const EditProfile = () => {
             profileThumbnail: userData.profileThumbnail || null,
             coverImage: userData.coverImage || null,
           });
+          setIsFirstTimeUser(false);
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
-        if (error.response?.status !== 404) {
+        if (error.response?.status === 404) {
+          setIsFirstTimeUser(true);
+        } else {
           Alert.alert('Error', 'Failed to load profile data. Please try again.');
         }
       } finally {
@@ -125,8 +129,24 @@ const EditProfile = () => {
         return;
       }
 
-      if (!formData.firstName || !formData.lastName || !formData.sport || !formData.location) {
-        Alert.alert('Error', 'Please fill in all required fields');
+      // Validate required fields
+      const requiredFields = {
+        firstName: 'First Name',
+        lastName: 'Last Name',
+        sport: 'Preferred Activity',
+        location: 'Location'
+      };
+
+      const missingFields = Object.entries(requiredFields)
+        .filter(([key]) => !formData[key])
+        .map(([_, label]) => label);
+
+      if (missingFields.length > 0) {
+        Alert.alert(
+          'Required Fields',
+          `Please fill in the following fields:\n${missingFields.join('\n')}`,
+          [{ text: 'OK' }]
+        );
         return;
       }
 
@@ -140,12 +160,11 @@ const EditProfile = () => {
 
       await axios.put(getApiEndpoint(`users/${auth.currentUser.email}`), userData);
 
-      Alert.alert('Success', 'Profile updated successfully!', [
-        {
-          text: 'OK',
-          onPress: () => router.push("/(app)/(tabs)/profile")
-        }
-      ]);
+      Alert.alert(
+        isFirstTimeUser ? 'Welcome!' : 'Success',
+        isFirstTimeUser ? 'Your profile has been created successfully!' : 'Profile updated successfully!',
+        [{ text: 'OK', onPress: () => router.push("/(app)/(tabs)/profile") }]
+      );
     } catch (error) {
       console.error('Error saving profile:', error);
       Alert.alert('Error', 'Failed to update profile. Please try again.');
@@ -168,15 +187,17 @@ const EditProfile = () => {
       <Stack.Screen
         options={{
           headerShown: true,
-          headerTitle: "Edit Profile",
+          headerTitle: isFirstTimeUser ? "Complete Your Profile" : "Edit Profile",
           headerTitleStyle: {
             ...FONTS.h3,
             color: COLORS.black,
           },
           headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()}>
-              <Ionicons name="arrow-back" size={24} color={COLORS.black} />
-            </TouchableOpacity>
+            !isFirstTimeUser && (
+              <TouchableOpacity onPress={() => router.back()}>
+                <Ionicons name="arrow-back" size={24} color={"black"} />
+              </TouchableOpacity>
+            )
           ),
           headerStyle: {
             backgroundColor: COLORS.white,
