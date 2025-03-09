@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Modal, FlatList, StyleSheet, Image, Alert, ScrollView } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Modal, FlatList, StyleSheet, Image, Alert, ScrollView, Dimensions } from 'react-native';
 import { FontAwesome5, Feather } from '@expo/vector-icons';
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
@@ -8,12 +8,13 @@ import { API_URL } from '../../config';
 import { auth } from '../../firebase/config';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import MapView, { Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import Record from './(tabs)/record';
-
 
 const SaveActivityScreen = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const mapRef = useRef(null);
   
   // Get route data and stats from params
   const routeData = params.routeData ? JSON.parse(params.routeData) : [];
@@ -29,6 +30,7 @@ const SaveActivityScreen = () => {
   const [isDifficultyModalVisible, setIsDifficultyModalVisible] = useState(false);
   const [selectedImages, setSelectedImages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [mapType, setMapType] = useState('standard');
 
   const activityTypes = ['Running', 'Walking', 'Cycling', 'Hiking'];
   const activityRatings = ['Great', 'Good', 'Average', 'Poor'];
@@ -176,6 +178,20 @@ const SaveActivityScreen = () => {
     }
   };
 
+  const fitToRoute = () => {
+    if (mapRef.current && routeData.length > 0) {
+      const coordinates = routeData.map(point => ({
+        latitude: point.latitude,
+        longitude: point.longitude,
+      }));
+      
+      mapRef.current.fitToCoordinates(coordinates, {
+        edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+        animated: true,
+      });
+    }
+  };
+
   return (
     <>
       {/* <Stack.Screen
@@ -193,21 +209,53 @@ const SaveActivityScreen = () => {
 
       <ScrollView style={styles.container} contentContainerStyle={{paddingBottom: 50}} showsVerticalScrollIndicator={false}>
         
+        {/* Map View */}
+        {routeData.length > 0 && (
+          <View style={styles.mapContainer}>
+            <MapView
+              ref={mapRef}
+              style={styles.map}
+              provider={PROVIDER_GOOGLE}
+              mapType={mapType}
+              initialRegion={{
+                latitude: routeData[0].latitude,
+                longitude: routeData[0].longitude,
+                latitudeDelta: 0.02,
+                longitudeDelta: 0.02,
+              }}
+            >
+              <Polyline
+                coordinates={routeData.map(point => ({
+                  latitude: point.latitude,
+                  longitude: point.longitude,
+                }))}
+                strokeColor="#0891b2"
+                strokeWidth={3}
+              />
+            </MapView>
+            {/* Map Controls */}
+            <View style={styles.mapControls}>
+              <TouchableOpacity 
+                style={styles.mapButton} 
+                onPress={fitToRoute}
+              >
+                <Ionicons name="expand-outline" size={24} color="white" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Activity Name */}
         <TextInput 
           style={styles.input} 
-          placeholder="Morning Walk" 
+          placeholder="Activity title" 
           placeholderTextColor="grey" 
           value={activityName}
           onChangeText={(text) => setActivityName(text)}
         />
 
-        {/* Map and Photo Section */}
+        {/* Photo Section */}
         <View style={styles.mapPhotoContainer}>
-          <View style={styles.mapPlaceholder}>
-            <Text style={styles.mapText}>This is a sample map. You'll see your activity map after saving.</Text>
-          </View>
-          
           <TouchableOpacity style={styles.photoUpload} onPress={pickImage}>
             {selectedImages.length > 0 ? (
               <View style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -257,8 +305,7 @@ const SaveActivityScreen = () => {
         {/* Activity Description */}
         <TextInput
           style={[styles.input, styles.description]}
-          placeholder="How did it go? Share more about your activity.
-          "
+          placeholder="Description of activity..."
           placeholderTextColor="grey"
           value={description}
           onChangeText={(text) => setDescription(text)}
@@ -494,22 +541,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 5,
   },
-  mapPlaceholder: {
-    width: '48%',
-    height: 100,
-    backgroundColor: '#e8e8e8',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  mapText: {
-    color: 'grey',
-    fontSize: 10,
-    textAlign: 'center',
-  },
   photoUpload: {
-    width: '48%',
-    height: 100,
+    width: '100%',
+    height: 200,
     borderWidth: 3,
     borderColor: 'black',
     opacity: 0.5,
@@ -634,6 +668,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#007AFF',
+  },
+  mapContainer: {
+    height: 200,
+    marginHorizontal: 10,
+    marginVertical: 5,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  map: {
+    width: '100%',
+    height: '100%',
+  },
+  mapControls: {
+    position: 'absolute',
+    right: 10,
+    top: 10,
+    backgroundColor: 'transparent',
+  },
+  mapButton: {
+    backgroundColor: '#0891b2',
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
 });
 
