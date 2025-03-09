@@ -5,7 +5,7 @@ import axios from 'axios';
 import Avatar from './components/Avatar';
 
 // Import your API base URL from config
-const API_URL = 'http://192.168.1.7:3000/api';  // Using your local IP address and port
+const API_URL = 'http://192.168.18.4:3000/api';  // Using your local IP address and port
 
 // Importing images from assets
 import map from '../assets/images/map.jpg';
@@ -15,7 +15,7 @@ import maleCyclist from '../assets/images/male-cyclist.png';
 import girlRunner from '../assets/images/girlRunner.png';
 import hiker from '../assets/images/hiker.png';
 import runner2 from '../assets/images/runner2.png';
-import defaultAvatar from './assets/images/default-avatar.png';
+// import defaultAvatar from './assets/images/default-avatar.png';
 
 const stories = [
   { id: 1, name: 'Yonara', image: girlRunner },
