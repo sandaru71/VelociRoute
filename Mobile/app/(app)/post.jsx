@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Modal, FlatList, StyleSheet, Image, Alert, ScrollView, Dimensions } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Modal, FlatList, StyleSheet, Image, Alert, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
 import { FontAwesome5, Feather } from '@expo/vector-icons';
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
@@ -168,7 +168,7 @@ const SaveActivityScreen = () => {
 
       if (response.data.success) {
         Alert.alert('Success', 'Activity saved successfully!');
-        router.push('/(app)/(tabs)/index'); 
+        router.push('/(tabs)/profile'); 
       }
     } catch (error) {
       console.error('Error saving activity:', error);
@@ -176,6 +176,30 @@ const SaveActivityScreen = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleDiscardActivity = () => {
+    Alert.alert(
+      'Discard Activity',
+      'Are you sure you want to discard this activity? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Discard',
+          style: 'destructive',
+          onPress: () => {
+            // Navigate back to record page with reset flag
+            router.replace({
+              pathname: '/(app)/(tabs)/record',
+              params: { reset: true }
+            });
+          }
+        }
+      ]
+    );
   };
 
   const fitToRoute = () => {
@@ -457,20 +481,23 @@ const SaveActivityScreen = () => {
 
         {/* Discard Button */}
         <TouchableOpacity
-          style={styles.discardButton}
+          style={[styles.button, styles.discardButton]}
+          onPress={handleDiscardActivity}
         >
-          <Text style={styles.discardButtonText}>Discard Activity</Text>
+            <Text style={[styles.buttonText, styles.discardButtonText]}>Discard Activity</Text>
         </TouchableOpacity>
 
-        {/* Save Button */}
-        <TouchableOpacity 
-          style={[styles.saveButton, isLoading && styles.disabledButton]} 
+        {/* Save button */}
+        <TouchableOpacity
+          style={[styles.button, styles.saveButton]}
           onPress={handleSaveActivity}
           disabled={isLoading}
         >
-          <Text style={styles.saveButtonText}>
-            {isLoading ? 'Saving...' : 'Save Activity'}
-          </Text>
+          {isLoading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Save Activity</Text>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -696,6 +723,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+  },
+  button: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  buttonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
   },
 });
 
