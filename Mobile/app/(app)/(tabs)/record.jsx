@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import { useRouter, Stack } from 'expo-router';
+import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { getDistance, getPreciseDistance } from 'geolib';
@@ -18,6 +18,7 @@ export default function Record() {
   const [path, setPath] = useState([]);
   const [locationSubscription, setLocationSubscription] = useState(null);
   const router = useRouter();
+  const params = useLocalSearchParams();
   const [totalDistance, setTotalDistance] = useState(0);
   const [elevationGain, setElevationGain] = useState(0);
   const [averageSpeed, setAverageSpeed] = useState(0);
@@ -143,6 +144,13 @@ export default function Record() {
       setAverageSpeed(avgSpeed);
     }
   }, [time, totalDistance]);
+
+  useEffect(() => {
+    // Check if we need to reset the tracking data
+    if (params.reset === 'true') {
+      resetTimer();
+    }
+  }, [params.reset]);
 
   const toggleTimer = () => {
     if (paused) {
