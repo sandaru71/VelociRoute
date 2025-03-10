@@ -178,6 +178,79 @@ const SaveActivityScreen = () => {
     }
   };
 
+  const handlePostActivity = async () => {
+    try {
+      setIsLoading(true);
+
+      if (!activityName || !selectedActivityType) {
+        Alert.alert('Error', 'Activity name and activity type are required');
+        return;
+      }
+
+      const token = await auth.currentUser.getIdToken();
+      if (!token) {
+        Alert.alert('Error', 'Authentication error, Please try again.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('activityName', activityName);
+      formData.append('description', description);
+      formData.append('activityType', selectedActivityType);
+      formData.append('rating', selectedActivityRating);
+      formData.append('difficulty', selectedDifficulty);
+
+      if (routeData) {
+        formData.append('route', JSON.stringify(routeData));
+      }
+      
+      if (stats) {
+        formData.append('stats', JSON.stringify(stats));
+      }
+
+      selectedImages.forEach((image, index) => {
+        formData.append('images', {
+          uri: image.uri,
+          type: 'image/jpeg',
+          name: `image${index}.jpg`,
+        });
+      });
+      
+      //   const activityData = {
+      //   title,
+      //   description,
+      //   imageUrls,
+      //   mapUrl,
+      //   timeTaken,
+      //   distance: parseFloat(distance),
+      //   avgSpeed: parseFloat(avgSpeed),
+      //   elevationGain: parseFloat(elevationGain),
+      //   activityType,
+      //   activityRating: parseFloat(activityRating),
+      //   difficulty,
+      //   likeCount,
+      //   comments
+      // };
+
+      const response = await axios.post(`${API_URL}/api/activities/save`, activityData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${auth.currentUser.getIdToken()}`,
+        },
+      });
+
+      if (response.data.success) {
+        Alert.alert('Success', 'Activity posted successfully!');
+        router.push('/(tabs)/profile');
+      }
+    } catch (error) {
+      console.error('Error posting activity:', error);
+      Alert.alert('Error', 'Failed to post activity.\nPlease try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleDiscardActivity = () => {
     Alert.alert(
       'Discard Activity',
@@ -502,10 +575,16 @@ const SaveActivityScreen = () => {
 
         <TouchableOpacity 
           style={styles.postActivityButton}
+          onPress={handlePostActivity}
+          disabled={isLoading}
         >
-          <Text style={styles.postActivityText}>
-            Post Activity
-          </Text>
+          {isLoading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.postActivityText}>
+              Post Activity
+            </Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </>
