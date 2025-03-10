@@ -101,17 +101,6 @@ const Feed = () => {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Story Section */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.storyContainer}>
-        {stories.map((story) => (
-          <TouchableOpacity key={story.id} onPress={() => openStory(story)}>
-            <View style={styles.storyBorder}>
-              <Image source={story.image} style={styles.storyImage} />
-            </View>
-            <Text style={styles.storyName}>{story.name}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
 
       {/* Story Modal (Full Screen) */}
       <Modal visible={storyModalVisible} transparent={true} animationType="fade">
