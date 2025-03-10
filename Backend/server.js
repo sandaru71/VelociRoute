@@ -9,6 +9,7 @@ const popularRoutes = require('./src/Routes/popularRoutes');
 const uploadRoutes = require('./src/Routes/uploadRoutes');
 const activityRoutes = require('./src/Routes/activityRoutes');
 const Activity = require('./src/Infrastructure/Models/Activity');
+const activityPostsRoutes = require('./src/Routes/activityPosts');
 
 const app = express();
 
@@ -67,6 +68,7 @@ connectDB().then(async database => {
 app.use('/api/popular-routes', popularRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/activities', activityRoutes);
+app.use('/api/activity-posts', activityPostsRoutes);
 
 app.get('/', (req, res) => {
   res.send("MongoDB Node.js Driver is running!");
