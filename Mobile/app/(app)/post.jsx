@@ -208,6 +208,7 @@ const SaveActivityScreen = () => {
         formData.append('stats', JSON.stringify(stats));
       }
 
+      // Append images
       selectedImages.forEach((image, index) => {
         formData.append('images', {
           uri: image.uri,
@@ -215,27 +216,11 @@ const SaveActivityScreen = () => {
           name: `image${index}.jpg`,
         });
       });
-      
-      //   const activityData = {
-      //   title,
-      //   description,
-      //   imageUrls,
-      //   mapUrl,
-      //   timeTaken,
-      //   distance: parseFloat(distance),
-      //   avgSpeed: parseFloat(avgSpeed),
-      //   elevationGain: parseFloat(elevationGain),
-      //   activityType,
-      //   activityRating: parseFloat(activityRating),
-      //   difficulty,
-      //   likeCount,
-      //   comments
-      // };
 
-      const response = await axios.post(`${API_URL}/api/activities/save`, activityData, {
+      const response = await axios.post(`${API_URL}/api/activity-posts/create`, formData, {
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${auth.currentUser.getIdToken()}`,
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`,
         },
       });
 
