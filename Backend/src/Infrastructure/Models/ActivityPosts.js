@@ -18,12 +18,14 @@ class ActivityPost {
     }
 
     static getCollection(db) {
-        return db.collection('activityPosts');
+        return db.collection('posts'); 
     }
 
     static async createIndexes(db) {
         const collection = this.getCollection(db);
         await collection.createIndex({ userEmail: 1, createdAt: -1 });
+        await collection.createIndex({ activityType: 1 });
+        await collection.createIndex({ difficulty: 1 });
     }
 
     async save(db) {

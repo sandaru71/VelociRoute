@@ -2,7 +2,7 @@ const express = require("express");
 require("dotenv/config");
 const morgan = require("morgan");
 const bodyParser = require("body-parser");
-const connectDB = require('./src/Infrastructure/db');
+const { connectDB } = require('./src/Infrastructure/db');
 const cors = require('cors');
 const path = require('path');
 const popularRoutes = require('./src/Routes/popularRoutes');
@@ -84,8 +84,14 @@ const port = process.env.APP_PORT || 3000;
 const host = '0.0.0.0'; // Listen on all network interfaces
 
 app.listen(port, host, () => {
+  console.log(`\n🚀 Server is running!`);
+  console.log(`📱 API Endpoints:`);
+  console.log(`   • Local Development: http://localhost:${port}/api`);
+  console.log(`   • Android Emulator: http://10.0.2.2:${port}/api`);
+  console.log(`   • iOS Simulator: http://localhost:${port}/api`);
+  console.log(`   • Local Network: http://10.137.28.196:${port}/api`);
   console.log(`Server started on http://${host}:${port}`);
   console.log('Local: http://localhost:3000');
-  console.log('On Your Network: http://192.168.8.112:3000');
+  console.log('On Your Network: http://10.137.28.196:3000');
   console.log('Upload test form available at: http://localhost:3000/upload-test.html');
 });
