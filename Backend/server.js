@@ -9,7 +9,7 @@ const popularRoutes = require('./src/Routes/popularRoutes');
 const uploadRoutes = require('./src/Routes/uploadRoutes');
 const activityRoutes = require('./src/Routes/activityRoutes');
 const Activity = require('./src/Infrastructure/Models/Activity');
-const activityPostsRoutes = require('./src/Routes/activityPosts');
+const activityPostsRoutes = require('./src/Routes/activityPosts.js');
 
 const app = express();
 

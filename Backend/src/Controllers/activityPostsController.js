@@ -10,7 +10,7 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-exports.postActivity = async (req, res) => {
+exports.createActivityPost = async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -53,7 +53,7 @@ exports.postActivity = async (req, res) => {
                     imageUrls.push(result.secure_url);
                 } catch (uploadError) {
                     console.error('Error occurred while uploading to Cloudinary: ', uploadError);
-                }finally{
+                } finally {
                     if (fs.existsSync(file.path)) {
                         fs.unlinkSync(file.path);
                     }
@@ -72,9 +72,11 @@ exports.postActivity = async (req, res) => {
                 parsedStats = JSON.parse(stats);
             }
         } catch (parseError) {
-            console.error('Error occured when parsing routes or stats: ', parseError);
+            console.error('Error occurred when parsing routes or stats: ', parseError);
         }
+
         const activityPost = new ActivityPost({
+            userEmail,
             activityName,
             description,
             activityType,
@@ -98,29 +100,4 @@ exports.postActivity = async (req, res) => {
             error: 'Failed to create activity post'
         });
     }
-}
-
-// const createActivityPost = async (req, res) => {
-//   try {
-//     const { activityName, description, activityType, rating, difficulty, images, route, stats } = req.body;
-//     const activityPost = new ActivityPost({
-//       activityName,
-//       description,
-//       activityType,
-//       rating,
-//       difficulty,
-//       images,
-//       route,
-//       stats
-//     });
-//     await activityPost.save();
-//     res.status(201).json({ message: 'Post shared successfully' });
-//   } catch (error) {
-//     console.error('Share activity error: ', error)
-//     res.status(500).json({ error: 'Failed to share the post.' });
-//   }
-// };
-
-// module.exports = {
-//   createActivityPost
-// };
+};
