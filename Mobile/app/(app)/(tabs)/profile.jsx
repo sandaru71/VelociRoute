@@ -25,14 +25,14 @@ const Profile = () => {
           
           // Redirect to edit profile if first time user (no profile data)
           if (!response.data || !response.data.firstName) {
-            router.push("/(app)/editProfile");
+            router.push("/(app)/edit-profile");
           }
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
         if (error.response?.status === 404) {
           // User not found in database, redirect to edit profile
-          router.push("/(app)/editProfile");
+          router.push("/(app)/edit-profile");
         }
       } finally {
         setLoading(false);
@@ -261,7 +261,7 @@ const Profile = () => {
           {/* Buttons Section */}
           <View style={{ flexDirection: "row", marginTop: 8 }}>
             <TouchableOpacity
-              onPress={() => router.push("/(app)/editProfile")}
+              onPress={() => router.push("/(app)/edit-profile")}
               style={{
                 width: 124,
                 height: 36,

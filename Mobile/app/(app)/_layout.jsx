@@ -41,7 +41,7 @@ export default function AppLayout() {
 
   // If first time user, redirect to edit profile
   if (isFirstTimeUser) {
-    return <Redirect href="/(app)/editProfile" />;
+    return <Redirect href="/(app)/edit-profile" />;
   }
 
   return (

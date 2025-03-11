@@ -97,12 +97,12 @@ const Login = () => {
           router.replace('/(app)');
         } else {
           // First time user, redirect to edit profile
-          router.replace('/(app)/(tabs)/editProfile');
+          router.replace('/(app)/editProfile');
         }
       } catch (error) {
         // If user not found in MongoDB, redirect to edit profile
         if (error.response && error.response.status === 404) {
-          router.replace('/(app)/(tabs)/editProfile');
+          router.replace('/(app)/editProfile');
         } else {
           console.error('Error checking user data:', error);
           router.replace('/(app)');
