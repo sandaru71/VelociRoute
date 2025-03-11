@@ -2,7 +2,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict
-import tensorflow as tf
+import torch
+import torchvision.transforms as transforms
+import torchvision.models as models
 import numpy as np
 from PIL import Image
 import io
@@ -23,19 +25,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load the EfficientNetB0 model
-model = tf.keras.applications.EfficientNetB0(
-    include_top=True,
-    weights='imagenet',
-    input_shape=(224, 224, 3)
-)
+# Load the ResNet50 model
+model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V2)
+model.eval()
+
+# Define image transformations
+transform = transforms.Compose([
+    transforms.Resize(256),
+    transforms.CenterCrop(224),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+])
 
 # Define road condition classes
 ROAD_CONDITIONS = {
-    'asphalt': ['road', 'highway', 'freeway'],
-    'gravel': ['dirt_track', 'gravel_road', 'unpaved'],
-    'broken': ['broken_road', 'construction_site'],
-    'wet': ['wet_road', 'puddle', 'flooded_road']
+    'asphalt': ['road', 'highway', 'freeway', 'path', 'street'],
+    'gravel': ['dirt_track', 'gravel', 'unpaved', 'dirt_road'],
+    'broken': ['broken', 'construction', 'damaged'],
+    'wet': ['wet', 'puddle', 'flooded', 'rain']
 }
 
 class ImageURL(BaseModel):
@@ -44,18 +51,23 @@ class ImageURL(BaseModel):
 class RouteImages(BaseModel):
     images: List[Dict[str, str]]
 
-def preprocess_image(image_data: bytes) -> np.ndarray:
-    """Preprocess image for EfficientNet model."""
+def preprocess_image(image_data: bytes) -> torch.Tensor:
+    """Preprocess image for ResNet model."""
     image = Image.open(io.BytesIO(image_data)).convert('RGB')
-    image = image.resize((224, 224))
-    image_array = tf.keras.preprocessing.image.img_to_array(image)
-    image_array = tf.keras.applications.efficientnet.preprocess_input(image_array)
-    return np.expand_dims(image_array, axis=0)
+    image_tensor = transform(image)
+    return image_tensor.unsqueeze(0)
 
-def classify_road_condition(predictions: np.ndarray) -> Dict:
+def classify_road_condition(predictions: torch.Tensor) -> Dict:
     """Map ImageNet predictions to road conditions."""
+    # Get probabilities
+    probabilities = torch.nn.functional.softmax(predictions[0], dim=0)
+    
     # Get top 5 predictions
-    top_predictions = tf.keras.applications.efficientnet.decode_predictions(predictions, top=5)[0]
+    top_probs, top_indices = torch.topk(probabilities, k=5)
+    
+    # Load ImageNet class labels
+    with open(os.path.join(os.path.dirname(__file__), 'imagenet_classes.txt'), 'r') as f:
+        categories = [s.strip() for s in f.readlines()]
     
     # Initialize confidence scores
     conditions = {
@@ -66,13 +78,14 @@ def classify_road_condition(predictions: np.ndarray) -> Dict:
     }
     
     # Map ImageNet classes to road conditions
-    for _, class_name, confidence in top_predictions:
+    for prob, idx in zip(top_probs, top_indices):
+        class_name = categories[idx]
         for condition, related_classes in ROAD_CONDITIONS.items():
-            if any(related in class_name for related in related_classes):
+            if any(related in class_name.lower() for related in related_classes):
                 if condition == 'asphalt':
-                    conditions['smooth_asphalt'] += confidence
+                    conditions['smooth_asphalt'] += float(prob)
                 else:
-                    conditions[condition] += confidence
+                    conditions[condition] += float(prob)
     
     # Get the most likely condition
     max_condition = max(conditions.items(), key=lambda x: x[1])
@@ -91,10 +104,11 @@ async def classify_single_image(image_url: ImageURL):
         response.raise_for_status()
         
         # Preprocess image
-        image_array = preprocess_image(response.content)
+        image_tensor = preprocess_image(response.content)
         
         # Get predictions
-        predictions = model.predict(image_array)
+        with torch.no_grad():
+            predictions = model(image_tensor)
         
         # Classify road condition
         result = classify_road_condition(predictions)
@@ -113,10 +127,11 @@ async def classify_route(route_data: RouteImages):
             response.raise_for_status()
             
             # Preprocess image
-            image_array = preprocess_image(response.content)
+            image_tensor = preprocess_image(response.content)
             
             # Get predictions
-            predictions = model.predict(image_array)
+            with torch.no_grad():
+                predictions = model(image_tensor)
             
             # Classify road condition
             classification = classify_road_condition(predictions)
