@@ -74,6 +74,9 @@ app.get('/', (req, res) => {
   res.send("MongoDB Node.js Driver is running!");
 });
 
+app.use(express.json());
+app.use(express.urlencoded({extended: true}));
+
 // Add error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
