@@ -29,7 +29,8 @@ const SaveActivityScreen = () => {
   const [isRatingModalVisible, setIsRatingModalVisible] = useState(false);
   const [isDifficultyModalVisible, setIsDifficultyModalVisible] = useState(false);
   const [selectedImages, setSelectedImages] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPosting, setIsPosting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [mapType, setMapType] = useState('standard');
 
   const activityTypes = ['Running', 'Walking', 'Cycling', 'Hiking'];
@@ -54,6 +55,39 @@ const SaveActivityScreen = () => {
     Easy: 'flag',
     Medium: 'flag-checkered',
     Hard: 'mountain',
+  };
+
+  const CLOUDINARY_CLOUD_NAME = 'velociroute';
+  const CLOUDINARY_UPLOAD_PRESET = 'ml_default';
+
+  const uploadToCloudinary = async (imageUri) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: 'upload.jpg',
+      });
+      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+      return data.secure_url;
+    } catch (error) {
+      console.error('Error uploading to Cloudinary:', error);
+      throw error;
+    }
+  };
+
+  const formatDuration = (duration) => {
+    const hours = Math.floor(duration / 3600);
+    const minutes = Math.floor((duration % 3600) / 60);
+    const seconds = Math.floor(duration % 60);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
   const formatTime = (time) => {
@@ -121,7 +155,7 @@ const SaveActivityScreen = () => {
 
   const handleSaveActivity = async () => {
     try {
-      setIsLoading(true);
+      setIsSaving(true);
 
       if (!activityName || !selectedActivityType) {
         Alert.alert('Error', 'Activity name and type are required');
@@ -135,6 +169,7 @@ const SaveActivityScreen = () => {
         return;
       }
 
+      // Prepare form data for saving
       const formData = new FormData();
       formData.append('activityName', activityName);
       formData.append('description', description);
@@ -159,6 +194,7 @@ const SaveActivityScreen = () => {
         });
       });
 
+      console.log('Saving activity to activities collection');
       const response = await axios.post(`${API_URL}/api/activities/save`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -169,44 +205,52 @@ const SaveActivityScreen = () => {
       if (response.data.success) {
         Alert.alert('Success', 'Activity saved successfully!');
         router.push('/(tabs)/profile'); 
+      } else {
+        Alert.alert('Error', response.data.error || 'Failed to save activity');
       }
     } catch (error) {
       console.error('Error saving activity:', error);
       Alert.alert('Error', 'Failed to save activity. Please try again.');
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
   const handlePostActivity = async () => {
     try {
-      setIsLoading(true);
+      setIsPosting(true);
 
       if (!activityName || !selectedActivityType) {
-        Alert.alert('Error', 'Activity name and activity type are required');
+        Alert.alert('Error', 'Activity name and type are required');
         return;
       }
 
+      // Get current user's token
       const token = await auth.currentUser.getIdToken();
       if (!token) {
-        Alert.alert('Error', 'Authentication error, Please try again.');
+        Alert.alert('Error', 'Authentication error. Please try again.');
         return;
       }
 
+      // Prepare form data for posting
       const formData = new FormData();
       formData.append('activityName', activityName);
       formData.append('description', description);
       formData.append('activityType', selectedActivityType);
       formData.append('rating', selectedActivityRating);
       formData.append('difficulty', selectedDifficulty);
-
+      
+      // Add route data and stats if available
       if (routeData) {
         formData.append('route', JSON.stringify(routeData));
       }
-      
       if (stats) {
         formData.append('stats', JSON.stringify(stats));
       }
+
+      // Initialize likes and comments arrays for posts collection
+      formData.append('likes', '0');
+      formData.append('comments', JSON.stringify([]));
 
       // Append images
       selectedImages.forEach((image, index) => {
@@ -217,6 +261,7 @@ const SaveActivityScreen = () => {
         });
       });
 
+      console.log('Posting activity to posts collection');
       const response = await axios.post(`${API_URL}/api/activity-posts/create`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -226,13 +271,15 @@ const SaveActivityScreen = () => {
 
       if (response.data.success) {
         Alert.alert('Success', 'Activity posted successfully!');
-        router.push('/(tabs)/profile');
+        router.push('/(tabs)');
+      } else {
+        Alert.alert('Error', response.data.error || 'Failed to post activity');
       }
     } catch (error) {
       console.error('Error posting activity:', error);
-      Alert.alert('Error', 'Failed to post activity.\nPlease try again.');
+      Alert.alert('Error', 'Failed to post activity. Please try again.');
     } finally {
-      setIsLoading(false);
+      setIsPosting(false);
     }
   };
 
@@ -549,9 +596,9 @@ const SaveActivityScreen = () => {
         <TouchableOpacity
           style={[styles.button, styles.saveButton]}
           onPress={handleSaveActivity}
-          disabled={isLoading}
+          disabled={isSaving || isPosting}
         >
-          {isLoading ? (
+          {isSaving ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.buttonText}>Save Activity</Text>
@@ -561,9 +608,9 @@ const SaveActivityScreen = () => {
         <TouchableOpacity 
           style={styles.postActivityButton}
           onPress={handlePostActivity}
-          disabled={isLoading}
+          disabled={isPosting || isSaving}
         >
-          {isLoading ? (
+          {isPosting ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.postActivityText}>
