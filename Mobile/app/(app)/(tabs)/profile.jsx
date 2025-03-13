@@ -1,20 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator, FlatList, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { MaterialIcons } from "@expo/vector-icons";
-import { Calendar } from "react-native-calendars";
+import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { COLORS, FONTS, SIZES } from "../../../constants";
 import { useRouter } from "expo-router";
 import { getAuth } from 'firebase/auth';
 import axios from 'axios';
 import { getApiEndpoint } from '../../../config';
 
+const { width } = Dimensions.get('window');
+
 const Profile = () => {
   const router = useRouter();
   const auth = getAuth();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activities, setActivities] = useState([]);
+  const [activeTab, setActiveTab] = useState('activities');
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -23,15 +27,15 @@ const Profile = () => {
           const response = await axios.get(getApiEndpoint(`users/${auth.currentUser.email}`));
           setUserData(response.data);
           
-          // Redirect to edit profile if first time user (no profile data)
           if (!response.data || !response.data.firstName) {
             router.push("/(app)/edit-profile");
+          } else {
+            fetchUserActivities();
           }
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
         if (error.response?.status === 404) {
-          // User not found in database, redirect to edit profile
           router.push("/(app)/edit-profile");
         }
       } finally {
@@ -41,6 +45,60 @@ const Profile = () => {
 
     fetchUserData();
   }, [auth.currentUser]);
+
+  const fetchUserActivities = async () => {
+    setActivitiesLoading(true);
+    try {
+      const response = await axios.get(getApiEndpoint(`users/${auth.currentUser.email}/activities`));
+      setActivities(response.data);
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+    } finally {
+      setActivitiesLoading(false);
+    }
+  };
+
+  const ActivityCard = ({ activity }) => (
+    <View style={{
+      backgroundColor: COLORS.white,
+      borderRadius: 15,
+      padding: 15,
+      marginBottom: 10,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+        <MaterialIcons name={activity.type === 'cycling' ? 'directions-bike' : 'directions-run'} size={24} color={COLORS.primary} />
+        <Text style={{ ...FONTS.h4, marginLeft: 10, color: COLORS.black }}>{activity.title}</Text>
+      </View>
+      
+      {activity.image && (
+        <Image 
+          source={{ uri: activity.image }}
+          style={{ width: '100%', height: 200, borderRadius: 10, marginBottom: 10 }}
+          resizeMode="cover"
+        />
+      )}
+      
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 5 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <MaterialIcons name="timer" size={20} color={COLORS.gray} />
+          <Text style={{ ...FONTS.body4, marginLeft: 5, color: COLORS.gray }}>{activity.duration}</Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <MaterialIcons name="straighten" size={20} color={COLORS.gray} />
+          <Text style={{ ...FONTS.body4, marginLeft: 5, color: COLORS.gray }}>{activity.distance} km</Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <MaterialIcons name="speed" size={20} color={COLORS.gray} />
+          <Text style={{ ...FONTS.body4, marginLeft: 5, color: COLORS.gray }}>{activity.pace} km/h</Text>
+        </View>
+      </View>
+    </View>
+  );
 
   if (loading) {
     return (
@@ -52,39 +110,25 @@ const Profile = () => {
   }
 
   return (
-    <SafeAreaView
-      style={{
-        flex: 1,
-        backgroundColor: COLORS.white,
-      }}
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.white }}>
       <StatusBar backgroundColor={COLORS.gray} />
 
-      <ScrollView contentContainerStyle={{ padding: 12 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
         {/* Cover Image */}
-        <View style={{ width: "100%" }}>
+        <View style={{ width: "100%", height: 228 }}>
           {userData?.coverImage ? (
             <Image
               source={{ uri: userData.coverImage }}
               resizeMode="cover"
-              style={{
-                height: 228,
-                width: "100%",
-              }}
+              style={{ height: "100%", width: "100%" }}
             />
           ) : (
-            <View
-              style={{
-                height: 228,
-                width: "100%",
-                backgroundColor: COLORS.primary + '20', // Using primary color with 20% opacity
-              }}
-            />
+            <View style={{ height: "100%", width: "100%", backgroundColor: COLORS.primary + '20' }} />
           )}
         </View>
 
         {/* Profile Section */}
-        <View style={{ flex: 1, alignItems: "center" }}>
+        <View style={{ alignItems: "center", paddingHorizontal: 16 }}>
           {userData?.profileImage ? (
             <Image
               source={{ uri: userData.profileThumbnail || userData.profileImage }}
@@ -93,9 +137,9 @@ const Profile = () => {
                 height: 155,
                 width: 155,
                 borderRadius: 999,
-                borderColor: COLORS.primary,
-                borderWidth: 2,
-                marginTop: -90,
+                borderColor: COLORS.white,
+                borderWidth: 4,
+                marginTop: -77,
               }}
             />
           ) : (
@@ -103,9 +147,9 @@ const Profile = () => {
               height: 155,
               width: 155,
               borderRadius: 999,
-              borderColor: COLORS.primary,
-              borderWidth: 2,
-              marginTop: -90,
+              borderColor: COLORS.white,
+              borderWidth: 4,
+              marginTop: -77,
               backgroundColor: COLORS.lightGray,
               justifyContent: 'center',
               alignItems: 'center',
@@ -114,209 +158,126 @@ const Profile = () => {
             </View>
           )}
 
-          <Text
-            style={{
-              ...FONTS.h3,
-              color: COLORS.black,
-              marginVertical: 8,
-              fontWeight: "bold",
-            }}
-          >
+          <Text style={{ ...FONTS.h2, color: COLORS.black, marginTop: 12 }}>
             {userData ? `${userData.firstName} ${userData.lastName}` : 'Update Profile'}
           </Text>
-          <Text
-            style={{
-              color: COLORS.black,
-              ...FONTS.body4,
-              fontFamily: 'Arial'
-            }}
-          >
+          
+          <Text style={{ ...FONTS.body3, color: COLORS.gray, marginTop: 4 }}>
             {userData?.sport || 'Add your sport'}
           </Text>
 
-          {/* Edit Profile Button */}
-          {/* <TouchableOpacity
-            onPress={() => router.push("/(app)/editProfile")}
+          <TouchableOpacity
+            onPress={() => router.push("/(app)/edit-profile")}
             style={{
               backgroundColor: COLORS.primary,
-              paddingHorizontal: 20,
-              paddingVertical: 10,
+              paddingHorizontal: 24,
+              paddingVertical: 8,
               borderRadius: 20,
-              marginTop: 10,
+              marginTop: 16,
+              flexDirection: 'row',
+              alignItems: 'center',
             }}
           >
+            <MaterialIcons name="edit" size={18} color={COLORS.white} style={{ marginRight: 8 }} />
             <Text style={{ color: COLORS.white, ...FONTS.body4 }}>Edit Profile</Text>
-          </TouchableOpacity> */}
+          </TouchableOpacity>
 
-          {/* Location */}
-          <View
-            style={{
-              flexDirection: "row",
-              marginVertical: 6,
-              alignItems: "center",
-            }}
-          >
-            <MaterialIcons name="location-on" size={24} color="black" />
-            <Text
-              style={{
-                ...FONTS.body4,
-                marginLeft: 4,
-                fontFamily: 'Arial'
-              }}
-            >
+          <View style={{ flexDirection: "row", marginTop: 16, alignItems: "center" }}>
+            <MaterialIcons name="location-on" size={20} color={COLORS.gray} />
+            <Text style={{ ...FONTS.body4, marginLeft: 4, color: COLORS.gray }}>
               {userData?.location || 'Add your location'}
             </Text>
           </View>
 
           {/* Stats Section */}
-          <View
-            style={{
-              flex: 1,
-              paddingVertical: 8,
-              flexDirection: "row",
-            }}
-          >
-            {/* Followers */}
-            <View
-              style={{
-                flexDirection: "column",
-                alignItems: "center",
-                marginHorizontal: SIZES.padding,
-              }}
-            >
-              <Text
-                style={{
-                  ...FONTS.h2,
-                  color: COLORS.black,
-                }}
-              >
-                {userData?.followers?.length || 0}
-              </Text>
-              <Text
-                style={{
-                  ...FONTS.body4,
-                  color: COLORS.black,
-                  fontWeight: 'bold',
-                }}
-              >
-                Followers
-              </Text>
+          <View style={{
+            flexDirection: "row",
+            marginTop: 20,
+            paddingVertical: 16,
+            borderTopWidth: 1,
+            borderBottomWidth: 1,
+            borderColor: COLORS.lightGray,
+            width: '100%',
+            justifyContent: 'space-around'
+          }}>
+            <View style={{ alignItems: "center" }}>
+              <Text style={{ ...FONTS.h3, color: COLORS.black }}>{userData?.followers?.length || 0}</Text>
+              <Text style={{ ...FONTS.body4, color: COLORS.gray }}>Followers</Text>
             </View>
-
-            {/* Followings */}
-            <View
-              style={{
-                flexDirection: "column",
-                alignItems: "center",
-                marginHorizontal: SIZES.padding,
-              }}
-            >
-              <Text
-                style={{
-                  ...FONTS.h2,
-                  color: COLORS.black,
-                }}
-              >
-                {userData?.following?.length || 0}
-              </Text>
-              <Text
-                style={{
-                  ...FONTS.body4,
-                  color: COLORS.black,
-                  fontWeight: 'bold',
-                }}
-              >
-                Following
-              </Text>
+            <View style={{ alignItems: "center" }}>
+              <Text style={{ ...FONTS.h3, color: COLORS.black }}>{userData?.following?.length || 0}</Text>
+              <Text style={{ ...FONTS.body4, color: COLORS.gray }}>Following</Text>
             </View>
-
-            {/* Activities */}
-            <View
-              style={{
-                flexDirection: "column",
-                alignItems: "center",
-                marginHorizontal: SIZES.padding,
-              }}
-            >
-              <Text
-                style={{
-                  ...FONTS.h2,
-                  color: COLORS.black,
-                }}
-              >
-                {userData?.activities?.length || 0}
-              </Text>
-              <Text
-                style={{
-                  ...FONTS.body4,
-                  color: COLORS.black,
-                  fontWeight: 'bold',
-                }}
-              >
-                Activities
-              </Text>
+            <View style={{ alignItems: "center" }}>
+              <Text style={{ ...FONTS.h3, color: COLORS.black }}>{activities.length}</Text>
+              <Text style={{ ...FONTS.body4, color: COLORS.gray }}>Activities</Text>
             </View>
           </View>
 
-          {/* Buttons Section */}
-          <View style={{ flexDirection: "row", marginTop: 8 }}>
+          {/* Tabs */}
+          <View style={{
+            flexDirection: 'row',
+            width: '100%',
+            marginTop: 20,
+            borderBottomWidth: 1,
+            borderColor: COLORS.lightGray,
+          }}>
             <TouchableOpacity
-              onPress={() => router.push("/(app)/edit-profile")}
               style={{
-                width: 124,
-                height: 36,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: COLORS.primary,
-                borderRadius: 10,
-                marginHorizontal: SIZES.padding,
+                flex: 1,
+                paddingVertical: 12,
+                alignItems: 'center',
+                borderBottomWidth: 2,
+                borderBottomColor: activeTab === 'activities' ? COLORS.primary : 'transparent'
               }}
+              onPress={() => setActiveTab('activities')}
             >
-              <Text
-                style={{
-                  ...FONTS.body4,
-                  color: COLORS.white,
-                  fontWeight: "bold",
-                }}
-              >
-                Edit Profile
-              </Text>
+              <Text style={{
+                ...FONTS.body3,
+                color: activeTab === 'activities' ? COLORS.primary : COLORS.gray,
+                fontWeight: activeTab === 'activities' ? 'bold' : 'normal'
+              }}>Activities</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                paddingVertical: 12,
+                alignItems: 'center',
+                borderBottomWidth: 2,
+                borderBottomColor: activeTab === 'routes' ? COLORS.primary : 'transparent'
+              }}
+              onPress={() => setActiveTab('routes')}
+            >
+              <Text style={{
+                ...FONTS.body3,
+                color: activeTab === 'routes' ? COLORS.primary : COLORS.gray,
+                fontWeight: activeTab === 'routes' ? 'bold' : 'normal'
+              }}>Routes</Text>
             </TouchableOpacity>
           </View>
+        </View>
 
-          {/* Calendar Section */}
-          <View style={{ width: '100%', marginTop: 20 }}>
-            <Calendar
-              theme={{
-                backgroundColor: COLORS.white,
-                calendarBackground: COLORS.white,
-                textSectionTitleColor: COLORS.black,
-                selectedDayBackgroundColor: COLORS.primary,
-                selectedDayTextColor: COLORS.white,
-                todayTextColor: COLORS.primary,
-                dayTextColor: COLORS.black,
-                textDisabledColor: COLORS.gray,
-                dotColor: COLORS.primary,
-                selectedDotColor: COLORS.white,
-                arrowColor: COLORS.primary,
-                monthTextColor: COLORS.black,
-                textDayFontFamily: 'Arial',
-                textMonthFontFamily: 'Arial',
-                textDayHeaderFontFamily: 'Arial',
-                textDayFontWeight: '300',
-                textMonthFontWeight: 'bold',
-                textDayHeaderFontWeight: '300',
-                textDayFontSize: 16,
-                textMonthFontSize: 16,
-                textDayHeaderFontSize: 16
-              }}
-              markedDates={userData?.activities?.reduce((acc, activity) => {
-                const date = new Date(activity.date).toISOString().split('T')[0];
-                acc[date] = { marked: true };
-                return acc;
-              }, {}) || {}}
-            />
-          </View>
+        {/* Activities/Routes Content */}
+        <View style={{ padding: 16 }}>
+          {activeTab === 'activities' ? (
+            activitiesLoading ? (
+              <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
+            ) : activities.length > 0 ? (
+              activities.map((activity, index) => (
+                <ActivityCard key={index} activity={activity} />
+              ))
+            ) : (
+              <View style={{ alignItems: 'center', marginTop: 40 }}>
+                <MaterialIcons name="directions-run" size={48} color={COLORS.gray} />
+                <Text style={{ ...FONTS.body3, color: COLORS.gray, marginTop: 12 }}>No activities posted yet</Text>
+              </View>
+            )
+          ) : (
+            <View style={{ alignItems: 'center', marginTop: 40 }}>
+              <MaterialIcons name="map" size={48} color={COLORS.gray} />
+              <Text style={{ ...FONTS.body3, color: COLORS.gray, marginTop: 12 }}>Routes coming soon</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -8,7 +8,7 @@ const path = require('path');
 const popularRoutes = require('./src/Routes/popularRoutes');
 const uploadRoutes = require('./src/Routes/uploadRoutes');
 const activityRoutes = require('./src/Routes/activityRoutes');
-const Activity = require('./src/Infrastructure/Models/Activity');
+const userRoutes = require('./src/Routes/userRoutes');
 
 const app = express();
 
@@ -46,18 +46,17 @@ app.use((req, res, next) => {
   next();
 });
 
-// Connect to MongoDB and store connection in app.locals
-connectDB().then(async database => {
+// Connect to MongoDB
+connectDB().then(database => {
   app.locals.db = database;
   console.log("🚀 Database Ready!");
   
   // Create indexes after connection
-  try {
-    await Activity.createIndexes(database);
-    console.log("✅ Database indexes created successfully!");
-  } catch (error) {
-    console.error("❌ Error creating indexes:", error);
-  }
+  const activityCollection = database.collection('activities');
+  activityCollection.createIndex({ userEmail: 1, createdAt: -1 })
+    .then(() => console.log("✅ Activity indexes created successfully!"))
+    .catch(error => console.error("❌ Error creating activity indexes:", error));
+
 }).catch(err => {
   console.error("❌ Database connection error:", err);
   process.exit(1);
@@ -67,9 +66,10 @@ connectDB().then(async database => {
 app.use('/api/popular-routes', popularRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/activities', activityRoutes);
+app.use('/api', userRoutes);
 
 app.get('/', (req, res) => {
-  res.send("MongoDB Node.js Driver is running!");
+  res.send("VelociRoute API is running!");
 });
 
 // Add error handling middleware
@@ -85,5 +85,4 @@ app.listen(port, host, () => {
   console.log(`Server started on http://${host}:${port}`);
   console.log('Local: http://localhost:3000');
   console.log('On Your Network: http://192.168.8.112:3000');
-  console.log('Upload test form available at: http://localhost:3000/upload-test.html');
 });
