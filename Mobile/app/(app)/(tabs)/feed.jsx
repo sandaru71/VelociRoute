@@ -20,26 +20,40 @@ const Feed = () => {
 
   const parseGPX = (gpxData) => {
     try {
-      // Basic XML parsing for GPX data
-      const trackPoints = [];
-      const matches = gpxData.match(/<trkpt[^>]*>.*?<\/trkpt>/g);
-      
-      if (matches) {
-        matches.forEach(point => {
-          const lat = point.match(/lat="([^"]*)"/)?.[1];
-          const lon = point.match(/lon="([^"]*)"/)?.[1];
-          if (lat && lon) {
+      // If it's already an array of coordinates, return it
+      if (Array.isArray(gpxData)) {
+        return gpxData;
+      }
+
+      // Handle string GPX data
+      if (typeof gpxData === 'string') {
+        console.log('Processing GPX string:', gpxData.substring(0, 100)); // Log first 100 chars for debugging
+
+        // Extract all trkpt elements
+        const trackPoints = [];
+        const trkptRegex = /<trkpt\s+lat="([^"]+)"\s+lon="([^"]+)"[^>]*>/g;
+        let match;
+
+        while ((match = trkptRegex.exec(gpxData)) !== null) {
+          const lat = parseFloat(match[1]);
+          const lon = parseFloat(match[2]);
+          
+          if (!isNaN(lat) && !isNaN(lon)) {
             trackPoints.push({
-              latitude: parseFloat(lat),
-              longitude: parseFloat(lon)
+              latitude: lat,
+              longitude: lon
             });
           }
-        });
+        }
+
+        console.log('Parsed track points:', trackPoints.length);
+        return trackPoints.length > 0 ? trackPoints : null;
       }
-      return trackPoints;
+
+      return null;
     } catch (error) {
       console.error('Error parsing GPX:', error);
-      return [];
+      return null;
     }
   };
 
@@ -49,20 +63,55 @@ const Feed = () => {
       const response = await axios.get(`${API_URL}/api/activity-posts`);
       console.log('Posts response:', response.data);
       if (response.data.success) {
-        const postsWithRoutes = await Promise.all(response.data.data.map(async post => {
-          if (post.gpxFile) {
-            try {
-              const gpxResponse = await axios.get(`${API_URL}/api/gpx/${post._id}`);
-              const routePoints = parseGPX(gpxResponse.data);
-              return { ...post, route: routePoints };
-            } catch (error) {
-              console.error('Error fetching GPX for post:', post._id, error);
-              return post;
-            }
+        const postsWithProcessedData = response.data.data.map(post => {
+          // Process route data
+          let processedRoute = null;
+          if (post.route) {
+            processedRoute = parseGPX(post.route);
           }
-          return post;
-        }));
-        setPosts(postsWithRoutes);
+
+          // Process stats data
+          let processedStats = {
+            duration: 0,
+            distance: 0,
+            elevationGain: 0,
+            averageSpeed: 0
+          };
+
+          try {
+            // Parse stats if it's a string
+            const stats = typeof post.stats === 'string' ? JSON.parse(post.stats) : post.stats;
+            
+            if (stats) {
+              // Convert duration from seconds to a number
+              processedStats.duration = parseInt(stats.duration) || 0;
+              
+              // Convert distance from string (km) to number
+              processedStats.distance = parseFloat(stats.distance) * 1000 || 0; // Convert km to meters
+              
+              // Convert elevation gain from string to number
+              processedStats.elevationGain = parseFloat(stats.elevationGain) || 0;
+              
+              // Convert average speed from string (km/h) to number (m/s)
+              processedStats.averageSpeed = (parseFloat(stats.averageSpeed) / 3.6) || 0; // Convert km/h to m/s
+            }
+
+            console.log('Processed stats for post:', post._id, {
+              raw: stats,
+              processed: processedStats
+            });
+          } catch (error) {
+            console.error('Error processing stats for post:', post._id, error);
+          }
+
+          return {
+            ...post,
+            route: processedRoute,
+            ...processedStats
+          };
+        });
+
+        setPosts(postsWithProcessedData);
       } else {
         console.error('Failed to fetch posts:', response.data.error);
       }
@@ -121,27 +170,28 @@ const Feed = () => {
   };
 
   const formatDuration = (seconds) => {
-    if (!seconds) return 'N/A';
+    if (!seconds && seconds !== 0) return 'N/A';
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+    const remainingSeconds = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   const formatDistance = (meters) => {
-    if (!meters) return 'N/A';
+    if (!meters && meters !== 0) return 'N/A';
     const km = (meters / 1000).toFixed(2);
     return `${km} km`;
   };
 
   const formatSpeed = (speedMps) => {
-    if (!speedMps) return 'N/A';
-    const speedKph = (speedMps * 3.6).toFixed(1);
+    if (!speedMps && speedMps !== 0) return 'N/A';
+    const speedKph = (speedMps * 3.6).toFixed(1); // Convert m/s to km/h
     return `${speedKph} km/h`;
   };
 
   const formatElevation = (meters) => {
-    if (!meters) return 'N/A';
-    return `${meters.toFixed(1)}m`;
+    if (!meters && meters !== 0) return 'N/A';
+    return `${Math.round(meters)}m`;
   };
 
   if (loading) {
@@ -195,7 +245,7 @@ const Feed = () => {
 
             {/* Map and Images */}
             <ScrollView horizontal pagingEnabled style={styles.mediaScroller}>
-              {post.route && Array.isArray(post.route) && post.route.length > 0 && (
+              {post.route && Array.isArray(post.route) && post.route.length > 0 ? (
                 <View style={styles.mapContainer}>
                   <MapView
                     ref={ref => mapRefs.current[post._id] = ref}
@@ -225,15 +275,14 @@ const Feed = () => {
                       pinColor="red"
                     />
                   </MapView>
-                  
-                </View>
-              )}
-              <TouchableOpacity 
+                  <TouchableOpacity 
                     style={styles.zoomButton}
                     onPress={() => fitToRoute(post._id, post.route)}
                   >
                     <FontAwesome name="compress" size={20} color="white" />
                   </TouchableOpacity>
+                </View>
+              ) : null}
               {post.images && Array.isArray(post.images) && post.images.map((imageUrl, index) => (
                 typeof imageUrl === "string" && imageUrl.trim() !== '' ? (
                 <Image 
@@ -255,7 +304,7 @@ const Feed = () => {
               <View style={styles.statItem}>
                 <FontAwesome name="clock-o" size={16} color="#666" />
                 <Text style={styles.statLabel}>Duration</Text>
-                <Text style={styles.statValue}>{formatDuration(post.time)}</Text>
+                <Text style={styles.statValue}>{formatDuration(post.duration)}</Text>
               </View>
               <View style={styles.statItem}>
                 <FontAwesome name="road" size={16} color="#666" />
@@ -497,7 +546,7 @@ const styles = StyleSheet.create({
   zoomButton: {
     position: 'absolute',
     right: 40,
-    bottom: 10,
+    bottom: 120,
     backgroundColor: 'black',
     opacity: 0.5,
     padding: 10,

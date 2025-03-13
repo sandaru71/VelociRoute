@@ -430,7 +430,7 @@ const SaveActivityScreen = () => {
             {selectedImages.length > 0 && selectedImages[0]?.uri ? (
               <View style={{ width: '100%', height: '100%', position: 'relative' }}>
                 <Image 
-                  source={{ uri: typeofselectedImages[0]?.uri === 'string' ? selectedImages[0].uri : ""}} 
+                  source={{ uri: typeof selectedImages[0]?.uri === 'string' ? selectedImages[0].uri : ""}} 
                   style={{ width: '100%', height: '100%' }} 
                   resizeMode="cover"
                   onError={(error) => handleImageError(error, 'map', selectedImages[0]?.uri)}
