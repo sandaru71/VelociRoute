@@ -386,12 +386,13 @@ const SaveActivityScreen = () => {
         {/* Photo Section */}
         <View style={styles.mapPhotoContainer}>
           <TouchableOpacity style={styles.photoUpload} onPress={pickImage}>
-            {selectedImages.length > 0 ? (
+            {selectedImages.length > 0 && selectedImages[0]?.uri ? (
               <View style={{ width: '100%', height: '100%', position: 'relative' }}>
                 <Image 
-                  source={{ uri: selectedImages[0].uri }} 
+                  source={{ uri: typeofselectedImages[0]?.uri === 'string' ? selectedImages[0].uri : ""}} 
                   style={{ width: '100%', height: '100%' }} 
                   resizeMode="cover"
+                  onError={(error) => handleImageError(error, 'map', selectedImages[0]?.uri)}
                 />
                 <TouchableOpacity
                   style={[styles.removeButton, { top: 5, right: 5 }]}
@@ -405,7 +406,7 @@ const SaveActivityScreen = () => {
             ) : (
               <>
                 <FontAwesome5 name="image" size={24} color="black" />
-                <Text style={styles.photoText}>Add Photos/Video</Text>
+                <Text style={styles.photoText}>Add Photos/ Video</Text>
               </>
             )}
           </TouchableOpacity>

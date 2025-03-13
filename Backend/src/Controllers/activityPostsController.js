@@ -85,7 +85,9 @@ exports.createActivityPost = async (req, res) => {
             difficulty,
             images: imageUrls,
             route: parsedRoute,
-            stats: parsedStats
+            stats: parsedStats,
+            likes: [],
+            comments: []
         });
     
         const result = await activityPost.save(req.app.locals.db);
@@ -109,7 +111,7 @@ exports.getAllActivityPosts = async (req, res) => {
         const db = req.app.locals.db;
         
         // Use the routes_db database and posts collection
-        const posts = await db.db('routes_db').collection('posts')
+        const posts = await db.collection('posts')
             .find()
             .sort({ createdAt: -1 })
             .toArray();
@@ -137,7 +139,7 @@ exports.likePost = async (req, res) => {
         const userEmail = decodedToken.email;
 
         const db = req.app.locals.db;
-        const postsCollection = db.db('routes_db').collection('posts');
+        const postsCollection = db.collection('posts');
 
         const post = await postsCollection.findOne({ _id: new ObjectId(postId) });
         if (!post) {
@@ -197,7 +199,7 @@ exports.commentOnPost = async (req, res) => {
         const userEmail = decodedToken.email;
 
         const db = req.app.locals.db;
-        const postsCollection = db.db('routes_db').collection('posts');
+        const postsCollection = db.collection('posts');
 
         const post = await postsCollection.findOne({ _id: new ObjectId(postId) });
         if (!post) {

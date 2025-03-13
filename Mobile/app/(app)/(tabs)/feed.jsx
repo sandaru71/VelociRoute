@@ -111,7 +111,7 @@ const Feed = () => {
 
           {/* Map and Images */}
           <ScrollView horizontal pagingEnabled style={styles.mediaScroller}>
-            {post.route && (
+            {post.route && typeof post.route === 'string' && (
               <Image 
                 source={{ uri: post.route }}
                 style={styles.postImage}
@@ -119,7 +119,8 @@ const Feed = () => {
                 onError={(error) => handleImageError(error, 'map', post.route)}
               />
             )}
-            {post.images && post.images.map((imageUrl, index) => (
+            {post.images && Array.isArray(post.images) && post.images.map((imageUrl, index) => (
+              typeof imageUrl === "string" && imageUrl.trim() !== '' ? (
               <Image 
                 key={index}
                 source={{ uri: imageUrl }}
@@ -127,6 +128,7 @@ const Feed = () => {
                 resizeMode="cover"
                 onError={(error) => handleImageError(error, 'activity', imageUrl)}
               />
+              ) : null
             ))}
           </ScrollView>
 
@@ -142,7 +144,7 @@ const Feed = () => {
           <View style={styles.actions}>
             <TouchableOpacity onPress={() => handleLike(post._id)} style={styles.button}>
               <FontAwesome 
-                name={post.likes?.includes(post.userName) ? "heart" : "heart-o"} 
+                name={(post.likes || []).includes(post.userName) ? "heart" : "heart-o"} 
                 size={20} 
                 color="red" 
               />
