@@ -1,22 +1,19 @@
 const express = require('express');
 const router = express.Router();
-const { createActivityPost } = require('../Controllers/activityPostsController');
+const { createActivityPost, getAllActivityPosts, likePost, commentOnPost } = require('../Controllers/activityPostsController');
 const upload = require('../Utils/multerConfig');
 const auth = require('../Infrastructure/Middleware/auth');
 
+// Create post
 router.post('/create', auth, upload.array('images', 10), createActivityPost);
 
-// router.post('/upload', async (req, res) => {
-//     console.log("Recieved data: ", req.body);
+// Get all posts
+router.get('/', getAllActivityPosts);
 
-//     try{
-//         const newActivityPost = new ActivityPost(req.body);
-//         await newActivityPost.save();
-//         res.status(200).json({ message: 'Post uploaded successfully' });
-//     } catch (error) {
-//         console.error('Error uploading post:', error);
-//         res.status(500).json({ error: 'Failed to upload post' });
-//     }
-// })
+// Like a post
+router.put('/like/:postId', auth, likePost);
+
+// Comment on a post
+router.post('/comment/:postId', auth, commentOnPost);
 
 module.exports = router;
