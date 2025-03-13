@@ -179,7 +179,29 @@ const SaveActivityScreen = () => {
       
       // Add route data and stats if available
       if (routeData) {
-        formData.append('route', JSON.stringify(routeData));
+        // Create GPX data
+        const gpxData = `<?xml version="1.0" encoding="UTF-8"?>
+        <gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" creator="VelociRoute">
+          <metadata>
+            <name>${activityName}</name>
+            <time>${new Date().toISOString()}</time>
+          </metadata>
+          <trk>
+            <name>${activityName}</name>
+            <type>${selectedActivityType}</type>
+            <trkseg>
+              ${routeData.map(coord => `
+                <trkpt lat="${coord.latitude}" lon="${coord.longitude}">
+                  ${coord.timestamp ? `<time>${new Date(coord.timestamp).toISOString()}</time>` : ''}
+                  ${coord.altitude ? `<ele>${coord.altitude}</ele>` : ''}
+                </trkpt>`).join('')}
+            </trkseg>
+          </trk>
+        </gpx>`;
+
+        // Instead of using Blob, send the GPX data as a string
+        formData.append('route', gpxData);
+        formData.append('routeFilename', 'activity.gpx');
       }
       if (stats) {
         formData.append('stats', JSON.stringify(stats));
@@ -194,17 +216,20 @@ const SaveActivityScreen = () => {
         });
       });
 
-      console.log('Saving activity to activities collection');
+      console.log('Saving to:', `${API_URL}/api/activities/save`);
       const response = await axios.post(`${API_URL}/api/activities/save`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${token}`,
         },
+        timeout: 10000, // Set timeout to 10 seconds
+        maxContentLength: Infinity, // Allow large file uploads
+        maxBodyLength: Infinity
       });
 
-      if (response.data.success) {
+      if (response.status === 201) {
         Alert.alert('Success', 'Activity saved successfully!');
-        router.push('/(tabs)/profile'); 
+        router.push('/(app)/(tabs)/feed'); 
       } else {
         Alert.alert('Error', response.data.error || 'Failed to save activity');
       }
@@ -232,48 +257,64 @@ const SaveActivityScreen = () => {
         return;
       }
 
-      // Prepare form data for posting
-      const formData = new FormData();
-      formData.append('activityName', activityName);
-      formData.append('description', description);
-      formData.append('activityType', selectedActivityType);
-      formData.append('rating', selectedActivityRating);
-      formData.append('difficulty', selectedDifficulty);
-      
-      // Add route data and stats if available
+      // Upload images to Cloudinary first
+      const uploadedImageUrls = await Promise.all(
+        selectedImages.map(image => uploadToCloudinary(image.uri))
+      );
+
+      // Prepare activity data
+      const activityData = new FormData();
+      activityData.append('activityName', activityName);
+      activityData.append('description', description);
+      activityData.append('activityType', selectedActivityType);
+      activityData.append('rating', selectedActivityRating);
+      activityData.append('difficulty', selectedDifficulty);
+      activityData.append('images', JSON.stringify(uploadedImageUrls));
+
+      // Convert route data to GPX format
       if (routeData) {
-        formData.append('route', JSON.stringify(routeData));
+        // Create GPX data
+        const gpxData = `<?xml version="1.0" encoding="UTF-8"?>
+        <gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" creator="VelociRoute">
+          <metadata>
+            <name>${activityName}</name>
+            <time>${new Date().toISOString()}</time>
+          </metadata>
+          <trk>
+            <name>${activityName}</name>
+            <type>${selectedActivityType}</type>
+            <trkseg>
+              ${routeData.map(coord => `
+                <trkpt lat="${coord.latitude}" lon="${coord.longitude}">
+                  ${coord.timestamp ? `<time>${new Date(coord.timestamp).toISOString()}</time>` : ''}
+                  ${coord.altitude ? `<ele>${coord.altitude}</ele>` : ''}
+                </trkpt>`).join('')}
+            </trkseg>
+          </trk>
+        </gpx>`;
+
+        // Instead of using Blob, send the GPX data as a string
+        activityData.append('route', gpxData);
+        activityData.append('routeFilename', 'activity.gpx');
       }
       if (stats) {
-        formData.append('stats', JSON.stringify(stats));
+        activityData.append('stats', JSON.stringify(stats));
       }
 
-      // Initialize likes and comments arrays for posts collection
-      formData.append('likes', '0');
-      formData.append('comments', JSON.stringify([]));
-
-      // Append images
-      selectedImages.forEach((image, index) => {
-        formData.append('images', {
-          uri: image.uri,
-          type: 'image/jpeg',
-          name: `image${index}.jpg`,
-        });
-      });
-
-      console.log('Posting activity to posts collection');
-      const response = await axios.post(`${API_URL}/api/activity-posts/create`, formData, {
+      console.log('Posting to:', `${API_URL}/api/activity-posts/create`);
+      const response = await axios.post(`${API_URL}/api/activity-posts/create`, activityData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${token}`,
         },
+        timeout: 10000, // Set timeout to 10 seconds
+        maxContentLength: Infinity, // Allow large file uploads
+        maxBodyLength: Infinity
       });
 
       if (response.data.success) {
         Alert.alert('Success', 'Activity posted successfully!');
-        router.push('/(tabs)');
-      } else {
-        Alert.alert('Error', response.data.error || 'Failed to post activity');
+        router.push('/(app)/(tabs)/feed');
       }
     } catch (error) {
       console.error('Error posting activity:', error);

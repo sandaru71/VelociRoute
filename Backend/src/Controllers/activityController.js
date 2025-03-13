@@ -10,6 +10,39 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+const saveGpxFile = async (gpxData, filename) => {
+  const filePath = `./uploads/${filename}`;
+  
+  // Ensure uploads directory exists
+  if (!fs.existsSync('./uploads')) {
+    fs.mkdirSync('./uploads', { recursive: true });
+  }
+
+  // Save GPX data to a temporary file
+  fs.writeFileSync(filePath, gpxData);
+
+  try {
+    // Upload to Cloudinary
+    const result = await cloudinary.uploader.upload(filePath, {
+      folder: 'velociroute_gpx',
+      resource_type: 'raw',
+      public_id: filename.replace('.gpx', '')
+    });
+
+    // Clean up temporary file
+    fs.unlinkSync(filePath);
+
+    return result.secure_url;
+  } catch (error) {
+    // Clean up temporary file in case of error
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    console.error('Error uploading GPX to Cloudinary:', error);
+    throw error;
+  }
+};
+
 exports.saveActivity = async (req, res) => {
   try {
     // Get Firebase token from Authorization header
@@ -41,13 +74,15 @@ exports.saveActivity = async (req, res) => {
       rating,
       difficulty,
       route,
+      routeFilename,
       stats
     } = req.body;
 
     const files = req.files;
     let imageUrls = [];
+    let gpxUrl = null;
 
-    // Upload images to Cloudinary in parallel
+    // Upload images to Cloudinary
     if (files && files.length > 0) {
       for (const file of files) {
         try {
@@ -66,18 +101,23 @@ exports.saveActivity = async (req, res) => {
       }
     }
 
-    // Parse route and stats if they are strings
-    let parsedRoute = route;
+    // Handle GPX data if present
+    if (route && routeFilename) {
+      try {
+        gpxUrl = await saveGpxFile(route, routeFilename);
+      } catch (error) {
+        console.error('Error saving GPX file:', error);
+      }
+    }
+
+    // Parse stats if it's a string
     let parsedStats = stats;
     try {
-      if (typeof route === 'string') {
-        parsedRoute = JSON.parse(route);
-      }
       if (typeof stats === 'string') {
         parsedStats = JSON.parse(stats);
       }
     } catch (parseError) {
-      console.error('Error parsing route or stats:', parseError);
+      console.error('Error parsing stats:', parseError);
     }
 
     // Create new activity document
@@ -89,12 +129,12 @@ exports.saveActivity = async (req, res) => {
       rating,
       difficulty,
       images: imageUrls,
-      route: parsedRoute,
+      gpxUrl: gpxUrl,
       stats: parsedStats
     });
 
     // Save to database
-    const result = await activity.save(req.app.locals.db);
+    await activity.save(req.app.locals.db);
 
     res.status(201).json({
       success: true,

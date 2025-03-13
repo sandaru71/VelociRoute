@@ -10,9 +10,11 @@ class Activity {
     this.rating = data.rating;
     this.difficulty = data.difficulty;
     this.images = data.images || [];
-    this.route = data.route || null;
+    this.gpxUrl = data.gpxUrl || null;
     this.stats = data.stats || null;
     this.createdAt = new Date();
+    this.likes = 0;
+    this.comments = [];
   }
 
   static getCollection(db) {

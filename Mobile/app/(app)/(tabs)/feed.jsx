@@ -3,6 +3,7 @@ import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, TextInput,
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import axios from 'axios';
 import { API_URL } from '../../../config';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 
 const Feed = () => {
   const [posts, setPosts] = useState([]);
@@ -101,24 +102,37 @@ const Feed = () => {
             </View>
             <View>
               <Text style={styles.username}>{post.userName || 'Anonymous'}</Text>
-              <Text style={styles.location}>{post.activityName}</Text>
+              {/* <Text style={styles.location}>{post.activityName}</Text> */}
             </View>
           </View>
 
           {/* Activity Details */}
           <Text style={styles.activityTitle}>{post.activityName}</Text>
-          <Text style={styles.activityDescription}>{post.description}</Text>
+          
 
           {/* Map and Images */}
           <ScrollView horizontal pagingEnabled style={styles.mediaScroller}>
-            {post.route && typeof post.route === 'string' && (
-              <Image 
-                source={{ uri: post.route }}
-                style={styles.postImage}
-                resizeMode="cover"
-                onError={(error) => handleImageError(error, 'map', post.route)}
-              />
+
+            {post.route && Array.isArray(post.route) && post.route.length > 0 && (
+              <MapView
+                style={styles.postMap}
+                initialRegion={{
+                  latitude: post.route[0].latitude,
+                  longitude: post.route[0].longitude,
+                  latitudeDelta: 0.0922,
+                  longitudeDelta: 0.0421,
+                }}
+              >
+                <Polyline
+                  coordinates={post.route}
+                  strokeColor="#FF4500"
+                  strokeWidth={2}
+                />
+
+                <Marker coordinate={post.route[0]} />
+              </MapView>
             )}
+            
             {post.images && Array.isArray(post.images) && post.images.map((imageUrl, index) => (
               typeof imageUrl === "string" && imageUrl.trim() !== '' ? (
               <Image 
@@ -132,12 +146,15 @@ const Feed = () => {
             ))}
           </ScrollView>
 
+          {/* Activity Description */}
+          <Text style={styles.activityDescription}>{post.description}</Text>
+
           {/* Stats Section */}
           <View style={styles.statsContainer}>
+            <Text style={styles.stats}>⏱️ Duration: {post.time || 'N/A'}</Text>  
             <Text style={styles.stats}>🏃‍♂️ Distance: {post.distance || 'N/A'}</Text>
-            <Text style={styles.stats}>⏱️ Time: {post.time || 'N/A'}</Text>
-            <Text style={styles.stats}>📈 Elevation: {post.elevationGain || 'N/A'}</Text>
-            <Text style={styles.stats}>⚡ Avg Speed: {post.averageSpeed || 'N/A'}</Text>
+            <Text style={styles.stats}>📈 Elevation Gain: {post.elevationGain || 'N/A'}</Text>
+            <Text style={styles.stats}>⚡ Average Speed: {post.averageSpeed || 'N/A'}</Text>
           </View>
 
           {/* Like and Comment Buttons */}
