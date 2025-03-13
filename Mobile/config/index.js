@@ -1,7 +1,25 @@
-// Configuration variables
-// export const API_URL = 'http://10.0.2.2:3000'; // Android emulator
-// export const API_URL = 'http://localhost:3000'; // iOS simulator
-export const API_URL = 'http://10.137.28.196:3000'; // Local Network Development
+// import { Platform } from 'react-native';
+
+// // Configuration variables
+// const getApiUrl = () => {
+//   if (Platform.OS === 'android') {
+//     // Android Emulator
+//     return 'http://10.0.2.2:3000';
+//   } else if (Platform.OS === 'ios') {
+//     // iOS Simulator
+//     return 'http://localhost:3000';
+//   } else {
+//     // Local Network Development (physical device)
+//     return 'http://10.197.231.196:3000';
+//   }
+// };
+
+
+// export const API_URL = getApiUrl();
+
+// export const API_URL = 'http://10.0.2.2:3000'; //android emulator
+// export const API_URL = 'http://localhost:3000'; //ios emulator
+export const API_URL = 'http://10.197.231.196:3000'; //local network
 
 export default {
   API_URL,

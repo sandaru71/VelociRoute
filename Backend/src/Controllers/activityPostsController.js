@@ -88,13 +88,11 @@ exports.createActivityPost = async (req, res) => {
             stats: parsedStats
         });
     
-        const db = req.app.locals.db;
-        const postsCollection = db.db('routes_db').collection('posts');
-        const result = await postsCollection.insertOne(activityPost);
+        const result = await activityPost.save(req.app.locals.db);
     
         res.status(201).json({
             success: true,
-            data: result.ops[0]
+            data: result
         });
     } catch (error) {
         console.error('Error creating activity post: ', error);

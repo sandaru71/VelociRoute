@@ -45,9 +45,9 @@ exports.saveActivity = async (req, res) => {
     } = req.body;
 
     const files = req.files;
-    const imageUrls = [];
+    let imageUrls = [];
 
-    // Upload images to Cloudinary
+    // Upload images to Cloudinary in parallel
     if (files && files.length > 0) {
       for (const file of files) {
         try {

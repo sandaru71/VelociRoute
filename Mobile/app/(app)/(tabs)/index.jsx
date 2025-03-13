@@ -121,7 +121,7 @@ const parseGPX = (gpxContent) => {
   }
 };
 
-const RouteMapModal = ({ visible, onClose, mapUrl }) => {
+const RouteMapModal = ({ visible, onClose, mapUrl }) => { 
   const [loading, setLoading] = useState(true);
   const [routeData, setRouteData] = useState(null);
   const [error, setError] = useState(null);

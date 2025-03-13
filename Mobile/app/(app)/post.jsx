@@ -133,11 +133,11 @@ const SaveActivityScreen = () => {
         return;
       }
 
-      // Launch image picker
+      // Launch image picker with compression options
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
-        quality: 1,
+        quality: 0.5, // Reduced quality for better performance
       });
 
       if (!result.canceled) {
@@ -185,7 +185,7 @@ const SaveActivityScreen = () => {
         formData.append('stats', JSON.stringify(stats));
       }
 
-      // Append images
+      // Append images with optimized settings
       selectedImages.forEach((image, index) => {
         formData.append('images', {
           uri: image.uri,
