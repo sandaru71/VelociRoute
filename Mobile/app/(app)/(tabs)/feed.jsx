@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Dimensions, SafeAreaView } from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Dimensions, SafeAreaView, FlatList } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import axios from 'axios';
 import { API_URL } from '../../../config';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as geolib from 'geolib';
+import { auth } from '../../../firebase/config';
 
 const Feed = () => {
   const [posts, setPosts] = useState([]);
@@ -13,10 +14,128 @@ const Feed = () => {
   const [selectedStory, setSelectedStory] = useState(null);
   const [storyModalVisible, setStoryModalVisible] = useState(false);
   const mapRefs = useRef({});
+  const [currentUserEmail, setCurrentUserEmail] = useState(null);
 
-  useEffect(() => {
-    fetchPosts();
-  }, []);
+  const fetchPosts = async (user = auth.currentUser) => {
+    if (!user) {
+      console.error('No authenticated user');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const token = await user.getIdToken(true);
+      if (!token) {
+        console.error('No authentication token found');
+        return;
+      }
+
+      const response = await axios.get(`${API_URL}/api/activity-posts`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data.success) {
+        const postsWithProcessedData = response.data.data.map(post => {
+          // Process route data
+          let processedRoute = null;
+          if (post.route) {
+            processedRoute = parseGPX(post.route);
+          }
+
+          // Process stats data
+          let processedStats = {
+            duration: 0,
+            distance: 0,
+            elevationGain: 0,
+            averageSpeed: 0
+          };
+
+          try {
+            const stats = typeof post.stats === 'string' ? JSON.parse(post.stats) : post.stats;
+            if (stats) {
+              processedStats.duration = parseInt(stats.duration) || 0;
+              processedStats.distance = parseFloat(stats.distance) * 1000 || 0;
+              processedStats.elevationGain = parseFloat(stats.elevationGain) || 0;
+              processedStats.averageSpeed = (parseFloat(stats.averageSpeed) / 3.6) || 0;
+            }
+          } catch (error) {
+            console.error('Error processing stats for post:', post._id, error);
+          }
+
+          // Process likes data
+          const likes = Array.isArray(post.likes) ? post.likes : [];
+          const likedByCurrentUser = likes.includes(user.email);
+          console.log(`Post ${post._id} - Likes:`, likes, 'Current user:', user.email, 'Liked:', likedByCurrentUser);
+
+          return {
+            ...post,
+            route: processedRoute,
+            ...processedStats,
+            likes,
+            likedByCurrentUser,
+            likeCount: likes.length
+          };
+        });
+
+        setPosts(postsWithProcessedData);
+      }
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLike = async (postId) => {
+    const user = auth.currentUser;
+    if (!user) {
+      console.error('No authenticated user');
+      return;
+    }
+
+    try {
+      // Update UI optimistically
+      setPosts(prevPosts =>
+        prevPosts.map(post => {
+          if (post._id === postId) {
+            const wasLiked = post.likedByCurrentUser;
+            const newLikes = wasLiked
+              ? post.likes.filter(email => email !== user.email)
+              : [...post.likes, user.email];
+            
+            return {
+              ...post,
+              likes: newLikes,
+              likedByCurrentUser: !wasLiked,
+              likeCount: newLikes.length
+            };
+          }
+          return post;
+        })
+      );
+
+      // Make API call
+      const response = await axios.put(`${API_URL}/api/activity-posts/like/${postId}`, {
+        userEmail: user.email
+      }, {
+        headers: {
+          'Authorization': `Bearer ${await user.getIdToken()}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.data.success) {
+        await fetchPosts(user);
+      }
+    } catch (error) {
+      console.error('Error handling like:', error);
+      await fetchPosts(user);
+    }
+  };
 
   const parseGPX = (gpxData) => {
     try {
@@ -57,88 +176,8 @@ const Feed = () => {
     }
   };
 
-  const fetchPosts = async () => {
-    try {
-      console.log('Fetching posts from:', `${API_URL}/api/activity-posts`);
-      const response = await axios.get(`${API_URL}/api/activity-posts`);
-      console.log('Posts response:', response.data);
-      if (response.data.success) {
-        const postsWithProcessedData = response.data.data.map(post => {
-          // Process route data
-          let processedRoute = null;
-          if (post.route) {
-            processedRoute = parseGPX(post.route);
-          }
-
-          // Process stats data
-          let processedStats = {
-            duration: 0,
-            distance: 0,
-            elevationGain: 0,
-            averageSpeed: 0
-          };
-
-          try {
-            // Parse stats if it's a string
-            const stats = typeof post.stats === 'string' ? JSON.parse(post.stats) : post.stats;
-            
-            if (stats) {
-              // Convert duration from seconds to a number
-              processedStats.duration = parseInt(stats.duration) || 0;
-              
-              // Convert distance from string (km) to number
-              processedStats.distance = parseFloat(stats.distance) * 1000 || 0; // Convert km to meters
-              
-              // Convert elevation gain from string to number
-              processedStats.elevationGain = parseFloat(stats.elevationGain) || 0;
-              
-              // Convert average speed from string (km/h) to number (m/s)
-              processedStats.averageSpeed = (parseFloat(stats.averageSpeed) / 3.6) || 0; // Convert km/h to m/s
-            }
-
-            console.log('Processed stats for post:', post._id, {
-              raw: stats,
-              processed: processedStats
-            });
-          } catch (error) {
-            console.error('Error processing stats for post:', post._id, error);
-          }
-
-          return {
-            ...post,
-            route: processedRoute,
-            ...processedStats
-          };
-        });
-
-        setPosts(postsWithProcessedData);
-      } else {
-        console.error('Failed to fetch posts:', response.data.error);
-      }
-    } catch (error) {
-      console.error('Error fetching posts:', error.response?.data || error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleImageError = (error, type, url) => {
     console.error(`Error loading ${type} image:`, url, error.nativeEvent.error);
-  };
-
-  const handleLike = async (postId) => {
-    try {
-      const response = await axios.put(`${API_URL}/api/activity-posts/like/${postId}`);
-      if (response.data.success) {
-        setPosts(prevPosts =>
-          prevPosts.map(post =>
-            post._id === postId ? response.data.data : post
-          )
-        );
-      }
-    } catch (error) {
-      console.error('Error liking post:', error);
-    }
   };
 
   const handleComment = async (postId) => {
@@ -194,6 +233,28 @@ const Feed = () => {
     return `${Math.round(meters)}m`;
   };
 
+  useEffect(() => {
+    let mounted = true;
+
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (!mounted) return;
+
+      if (user) {
+        setCurrentUserEmail(user.email);
+        console.log('User logged in:', user.email);
+        await fetchPosts(user);
+      } else {
+        setCurrentUserEmail(null);
+        setPosts([]);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, []);
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -211,79 +272,75 @@ const Feed = () => {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={styles.safeArea}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Feed</Text>
       </View>
 
-      <ScrollView style={styles.container}>
-        {posts.map((post, index) => (
-          <View 
-            key={post._id} 
-            style={[
-              styles.postCard,
-              index === posts.length - 1 && styles.lastPost
-            ]}
-          >
+      <FlatList
+        data={posts}
+        keyExtractor={(item) => item._id}
+        renderItem={({ item }) => (
+          <View style={styles.postContainer}>
             {/* User Info */}
             <View style={styles.userInfo}>
               <View style={[styles.avatar, styles.defaultAvatar]}>
                 <Text style={styles.avatarText}>
-                  {post.userName?.charAt(0).toUpperCase() || 'U'}
+                  {item.userName?.charAt(0).toUpperCase() || 'U'}
                 </Text>
               </View>
               <View>
-                <Text style={styles.username}>{post.userName || 'Anonymous'}</Text>
-                {/* <Text style={styles.location}>{post.activityName}</Text> */}
+                <Text style={styles.username}>{item.userName || 'Anonymous'}</Text>
+                {/* <Text style={styles.location}>{item.activityName}</Text> */}
               </View>
             </View>
 
             {/* Activity Details */}
-            <Text style={styles.activityTitle}>{post.activityName}</Text>
+            <Text style={styles.activityTitle}>{item.activityName}</Text>
             
 
             {/* Map and Images */}
             <ScrollView horizontal pagingEnabled style={styles.mediaScroller}>
-              {post.route && Array.isArray(post.route) && post.route.length > 0 ? (
+              {item.route && Array.isArray(item.route) && item.route.length > 0 ? (
                 <View style={styles.mapContainer}>
                   <MapView
-                    ref={ref => mapRefs.current[post._id] = ref}
+                    ref={ref => mapRefs.current[item._id] = ref}
                     provider={PROVIDER_GOOGLE}
                     style={styles.postMap}
                     initialRegion={{
-                      latitude: post.route[0].latitude,
-                      longitude: post.route[0].longitude,
+                      latitude: item.route[0].latitude,
+                      longitude: item.route[0].longitude,
                       latitudeDelta: 0.02,
                       longitudeDelta: 0.02,
                     }}
                   >
                     <Polyline
-                      coordinates={post.route}
+                      coordinates={item.route}
                       strokeColor="#FF4500"
                       strokeWidth={3}
                       strokeOpacity={0.8}
                     />
                     <Marker
-                      coordinate={post.route[0]}
+                      coordinate={item.route[0]}
                       title="Start"
                       pinColor="green"
                     />
                     <Marker
-                      coordinate={post.route[post.route.length - 1]}
+                      coordinate={item.route[item.route.length - 1]}
                       title="End"
                       pinColor="red"
                     />
                   </MapView>
                   <TouchableOpacity 
                     style={styles.zoomButton}
-                    onPress={() => fitToRoute(post._id, post.route)}
+                    onPress={() => fitToRoute(item._id, item.route)}
                   >
                     <FontAwesome name="compress" size={20} color="white" />
                   </TouchableOpacity>
                 </View>
               ) : null}
-              {post.images && Array.isArray(post.images) && post.images.map((imageUrl, index) => (
+              {item.images && Array.isArray(item.images) && item.images.map((imageUrl, index) => (
                 typeof imageUrl === "string" && imageUrl.trim() !== '' ? (
                 <Image 
                   key={index}
@@ -297,52 +354,63 @@ const Feed = () => {
             </ScrollView>
 
             {/* Activity Description */}
-            <Text style={styles.activityDescription}>{post.description}</Text>
+            <Text style={styles.activityDescription}>{item.description}</Text>
 
             {/* Stats Section */}
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
                 <FontAwesome name="clock-o" size={16} color="#666" />
                 <Text style={styles.statLabel}>Duration</Text>
-                <Text style={styles.statValue}>{formatDuration(post.duration)}</Text>
+                <Text style={styles.statValue}>{formatDuration(item.duration)}</Text>
               </View>
               <View style={styles.statItem}>
                 <FontAwesome name="road" size={16} color="#666" />
                 <Text style={styles.statLabel}>Distance</Text>
-                <Text style={styles.statValue}>{formatDistance(post.distance)}</Text>
+                <Text style={styles.statValue}>{formatDistance(item.distance)}</Text>
               </View>
               <View style={styles.statItem}>
                 <FontAwesome name="arrow-up" size={16} color="#666" />
                 <Text style={styles.statLabel}>Elevation</Text>
-                <Text style={styles.statValue}>{formatElevation(post.elevationGain)}</Text>
+                <Text style={styles.statValue}>{formatElevation(item.elevationGain)}</Text>
               </View>
               <View style={styles.statItem}>
                 <FontAwesome name="flash" size={16} color="#666" />
                 <Text style={styles.statLabel}>Avg Speed</Text>
-                <Text style={styles.statValue}>{formatSpeed(post.averageSpeed)}</Text>
+                <Text style={styles.statValue}>{formatSpeed(item.averageSpeed)}</Text>
               </View>
             </View>
 
             {/* Like and Comment Buttons */}
-            <View style={styles.actions}>
-              <TouchableOpacity onPress={() => handleLike(post._id)} style={styles.button}>
+            <View style={styles.interactionBar}>
+              <TouchableOpacity 
+                style={[
+                  styles.interactionButton,
+                  item.likedByCurrentUser && styles.likedButton
+                ]} 
+                onPress={() => handleLike(item._id)}
+              >
                 <FontAwesome 
-                  name={(post.likes || []).includes(post.userName) ? "heart" : "heart-o"} 
-                  size={20} 
-                  color="red" 
+                  name={item.likedByCurrentUser ? "heart" : "heart-o"} 
+                  size={24} 
+                  color={item.likedByCurrentUser ? "#FF4500" : "#666"} 
                 />
-                <Text style={styles.buttonText}>{post.likes?.length || 0} Likes</Text>
+                <Text style={[
+                  styles.interactionText,
+                  item.likedByCurrentUser && styles.likedText
+                ]}>
+                  {item.likeCount || 0} {item.likeCount === 1 ? 'Like' : 'Likes'}
+                </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.button}>
-                <FontAwesome name="comment-o" size={20} color="#666" />
-                <Text style={styles.buttonText}>{post.comments?.length || 0} Comments</Text>
+              <TouchableOpacity style={styles.interactionButton}>
+                <FontAwesome name="comment-o" size={24} color="#666" />
+                <Text style={styles.interactionText}>{item.comments?.length || 0} Comments</Text>
               </TouchableOpacity>
             </View>
 
             {/* Comments Section */}
             <View style={styles.commentsSection}>
-              {post.comments?.map((comment, index) => (
+              {item.comments?.map((comment, index) => (
                 <View key={index} style={styles.commentContainer}>
                   <Text style={styles.commentUser}>{comment.userName || 'Anonymous'}</Text>
                   <Text style={styles.commentText}>{comment.text}</Text>
@@ -355,25 +423,28 @@ const Feed = () => {
               <TextInput
                 style={styles.commentInput}
                 placeholder="Write a comment..."
-                value={commentInputs[post._id] || ''}
-                onChangeText={(text) => setCommentInputs({ ...commentInputs, [post._id]: text })}
-                onSubmitEditing={() => handleComment(post._id)}
+                value={commentInputs[item._id] || ''}
+                onChangeText={(text) => setCommentInputs({ ...commentInputs, [item._id]: text })}
+                onSubmitEditing={() => handleComment(item._id)}
               />
               <TouchableOpacity 
                 style={styles.commentButton}
-                onPress={() => handleComment(post._id)}
+                onPress={() => handleComment(item._id)}
               >
                 <FontAwesome name="send" size={20} color="#FF4500" />
               </TouchableOpacity>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   header: {
     backgroundColor: 'lightGrey',
     padding: 10,
@@ -403,7 +474,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  postCard: {
+  postContainer: {
     backgroundColor: '#fff',
     padding: 15,
     borderBottomWidth: 1,
@@ -479,7 +550,7 @@ const styles = StyleSheet.create({
     color: '#333',
     marginTop: 2,
   },
-  actions: {
+  interactionBar: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingVertical: 10,
@@ -488,14 +559,20 @@ const styles = StyleSheet.create({
     borderColor: '#eee',
     marginVertical: 10,
   },
-  button: {
+  interactionButton: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  buttonText: {
+  interactionText: {
     marginLeft: 5,
     fontSize: 14,
     color: '#666',
+  },
+  likedButton: {
+    backgroundColor: 'white',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
   },
   commentsSection: {
     marginTop: 10,
@@ -556,9 +633,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-  },
-  lastPost: {
-    marginBottom: 105,
   },
 });
 
