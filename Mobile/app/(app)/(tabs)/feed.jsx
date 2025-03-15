@@ -1,11 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Dimensions, SafeAreaView, FlatList } from 'react-native';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import { FontAwesome5 } from '@expo/vector-icons';
 import axios from 'axios';
 import { API_URL } from '../../../config';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as geolib from 'geolib';
 import { auth } from '../../../firebase/config';
+
+const activityIcons = {
+  Running: 'running',
+  Walking: 'walking',
+  Cycling: 'bicycle',
+  Hiking: 'hiking',
+};
+
+const ratingIcons = {
+  Great: 'grin-beam',
+  Good: 'smile',
+  Average: 'meh',
+  Poor: 'frown',
+};
+
+const difficultyIcons = {
+  Easy: 'flag',
+  Medium: 'flag-checkered',
+  Hard: 'mountain',
+};
 
 const Feed = () => {
   const [posts, setPosts] = useState([]);
@@ -161,7 +181,7 @@ const Feed = () => {
             trackPoints.push({
               latitude: lat,
               longitude: lon
-            });
+            }); 
           }
         }
 
@@ -181,23 +201,71 @@ const Feed = () => {
   };
 
   const handleComment = async (postId) => {
+    const user = auth.currentUser;
+    if (!user) {
+      console.error('No authenticated user');
+      return;
+    }
+
     if (!commentInputs[postId]?.trim()) return;
 
     try {
+      const token = await user.getIdToken();
+      console.log('Adding comment to post:', postId, 'User:', user.email);
+      
       const response = await axios.post(`${API_URL}/api/activity-posts/comment/${postId}`, {
-        text: commentInputs[postId]
+        text: commentInputs[postId].trim(),
+        userEmail: user.email
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (response.data.success) {
-        setPosts(prevPosts =>
-          prevPosts.map(post =>
-            post._id === postId ? response.data.data : post
-          )
-        );
-        setCommentInputs(prevInputs => ({ ...prevInputs, [postId]: '' }));
+        console.log('Comment added successfully');
+        // Clear the comment input
+        setCommentInputs(prev => ({
+          ...prev,
+          [postId]: ''
+        }));
+        
+        // Refresh posts to show new comment
+        await fetchPosts(user);
+      } else {
+        console.error('Failed to add comment:', response.data);
       }
     } catch (error) {
-      console.error('Error adding comment:', error);
+      if (error.response?.status === 401) {
+        console.error('Authentication error. Token:', await user.getIdToken());
+        // Try to refresh token and retry
+        try {
+          const newToken = await user.getIdToken(true);
+          const retryResponse = await axios.post(`${API_URL}/api/activity-posts/comment/${postId}`, {
+            text: commentInputs[postId].trim(),
+            userEmail: user.email
+          }, {
+            headers: {
+              'Authorization': `Bearer ${newToken}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (retryResponse.data.success) {
+            console.log('Comment added successfully after token refresh');
+            setCommentInputs(prev => ({
+              ...prev,
+              [postId]: ''
+            }));
+            await fetchPosts(user);
+            return;
+          }
+        } catch (retryError) {
+          console.error('Error retrying comment after token refresh:', retryError.response?.data || retryError.message);
+        }
+      }
+      console.error('Error adding comment:', error.response?.data || error.message);
     }
   };
 
@@ -299,6 +367,27 @@ const Feed = () => {
             {/* Activity Details */}
             <Text style={styles.activityTitle}>{item.activityName}</Text>
             
+            {/* Activity Type, Rating, and Difficulty */}
+            <View style={styles.activityDetailsContainer}>
+              {item.activityType && activityIcons[item.activityType] && (
+                <View style={styles.detailItem}>
+                  <FontAwesome5 name={activityIcons[item.activityType]} size={14} color="#666" />
+                  <Text style={styles.detailText}>{item.activityType}</Text>
+                </View>
+              )}
+              {item.rating && ratingIcons[item.rating] && (
+                <View style={styles.detailItem}>
+                  <FontAwesome5 name={ratingIcons[item.rating]} size={14} color="#666" />
+                  <Text style={styles.detailText}>{item.rating}</Text>
+                </View>
+              )}
+              {item.difficulty && difficultyIcons[item.difficulty] && (
+                <View style={styles.detailItem}>
+                  <FontAwesome5 name={difficultyIcons[item.difficulty]} size={14} color="#666" />
+                  <Text style={styles.detailText}>{item.difficulty}</Text>
+                </View>
+              )}
+            </View>
 
             {/* Map and Images */}
             <ScrollView horizontal pagingEnabled style={styles.mediaScroller}>
@@ -336,7 +425,7 @@ const Feed = () => {
                     style={styles.zoomButton}
                     onPress={() => fitToRoute(item._id, item.route)}
                   >
-                    <FontAwesome name="compress" size={20} color="white" />
+                    <FontAwesome5 name="compress" size={20} color="white" />
                   </TouchableOpacity>
                 </View>
               ) : null}
@@ -359,22 +448,22 @@ const Feed = () => {
             {/* Stats Section */}
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
-                <FontAwesome name="clock-o" size={16} color="#666" />
+                <FontAwesome5 name="clock" size={16} color="#666" />
                 <Text style={styles.statLabel}>Duration</Text>
                 <Text style={styles.statValue}>{formatDuration(item.duration)}</Text>
               </View>
               <View style={styles.statItem}>
-                <FontAwesome name="road" size={16} color="#666" />
+                <FontAwesome5 name="road" size={16} color="#666" />
                 <Text style={styles.statLabel}>Distance</Text>
                 <Text style={styles.statValue}>{formatDistance(item.distance)}</Text>
               </View>
               <View style={styles.statItem}>
-                <FontAwesome name="arrow-up" size={16} color="#666" />
+                <FontAwesome5 name="mountain" size={16} color="#666" />
                 <Text style={styles.statLabel}>Elevation</Text>
                 <Text style={styles.statValue}>{formatElevation(item.elevationGain)}</Text>
               </View>
               <View style={styles.statItem}>
-                <FontAwesome name="flash" size={16} color="#666" />
+                <FontAwesome5 name="tachometer-alt" size={16} color="#666" />
                 <Text style={styles.statLabel}>Avg Speed</Text>
                 <Text style={styles.statValue}>{formatSpeed(item.averageSpeed)}</Text>
               </View>
@@ -389,8 +478,9 @@ const Feed = () => {
                 ]} 
                 onPress={() => handleLike(item._id)}
               >
-                <FontAwesome 
-                  name={item.likedByCurrentUser ? "heart" : "heart-o"} 
+                <FontAwesome5 
+                  name={item.likedByCurrentUser ? "heart" : "heart"} 
+                  solid={item.likedByCurrentUser}
                   size={24} 
                   color={item.likedByCurrentUser ? "#FF4500" : "#666"} 
                 />
@@ -403,7 +493,7 @@ const Feed = () => {
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.interactionButton}>
-                <FontAwesome name="comment-o" size={24} color="#666" />
+                <FontAwesome5 name="comment" size={24} color="#666" />
                 <Text style={styles.interactionText}>{item.comments?.length || 0} Comments</Text>
               </TouchableOpacity>
             </View>
@@ -431,7 +521,7 @@ const Feed = () => {
                 style={styles.commentButton}
                 onPress={() => handleComment(item._id)}
               >
-                <FontAwesome name="send" size={20} color="#FF4500" />
+                <FontAwesome5 name="paper-plane" size={20} color="#FF4500" />
               </TouchableOpacity>
             </View>
           </View>
@@ -527,6 +617,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     marginBottom: 10,
+  },
+  activityDetailsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingBottom: 10,
+    gap: 15,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#f5f5f5',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+  },
+  detailText: {
+    fontSize: 14,
+    color: '#666',
   },
   statsContainer: {
     flexDirection: 'row',

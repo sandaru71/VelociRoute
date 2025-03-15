@@ -269,9 +269,21 @@ const SaveActivityScreen = () => {
       activityData.append('activityType', selectedActivityType);
       activityData.append('rating', selectedActivityRating);
       activityData.append('difficulty', selectedDifficulty);
-      activityData.append('images', JSON.stringify(uploadedImageUrls));
+      
+      // Append each image URL individually
+      // uploadedImageUrls.forEach((url, index) => {
+      //   activityData.append(`imageUrls[${index}]`, url);
+      // });
 
-      // Convert route data to GPX format
+      selectedImages.forEach((image, index) => {
+        activityData.append('images', {
+          uri: image.uri,
+          type: 'image/jpeg',
+          name: `image${index}.jpg`,
+        });
+      });
+
+      // Convert route data to GPsX format
       if (routeData) {
         // Create GPX data
         const gpxData = `<?xml version="1.0" encoding="UTF-8"?>
