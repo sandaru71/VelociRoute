@@ -23,6 +23,7 @@ const RouteScreen = () => {
   const elevationProfile = params.elevationProfile ? JSON.parse(params.elevationProfile) : [];
   const elevationGain = params.elevationGain || 0;
   const selectedActivity = params.selectedActivity || 'cycling';
+  const routeConditions = params.routeConditions ? JSON.parse(params.routeConditions) : null;
 
   // Weather states
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -161,6 +162,51 @@ const RouteScreen = () => {
       ]).start();
       setIsEditing(false);
     }
+  };
+
+  const renderRoadConditions = () => {
+    if (!routeConditions) return null;
+
+    const getConditionIcon = (condition) => {
+      switch (condition) {
+        case 'smooth_asphalt':
+          return { icon: 'road', color: '#059669' };
+        case 'gravel':
+          return { icon: 'terrain', color: '#B45309' };
+        case 'broken':
+          return { icon: 'warning', color: '#DC2626' };
+        case 'wet':
+          return { icon: 'water', color: '#2563EB' };
+        default:
+          return { icon: 'help', color: '#6B7280' };
+      }
+    };
+
+    return (
+      <Card style={styles.sectionCard}>
+        <Card.Title title="Road Conditions" />
+        <Card.Content>
+          <Text style={styles.sectionText}>{routeConditions.summary}</Text>
+          <View style={styles.conditionsList}>
+            {Object.entries(routeConditions.condition_summary)
+              .sort(([, a], [, b]) => b - a)
+              .map(([condition, percentage]) => (
+                <View key={condition} style={styles.conditionItem}>
+                  <MaterialIcons
+                    name={getConditionIcon(condition).icon}
+                    size={24}
+                    color={getConditionIcon(condition).color}
+                  />
+                  <Text style={styles.conditionText}>
+                    {condition.replace('_', ' ')}: {Math.round(percentage)}%
+                  </Text>
+                </View>
+              ))
+            }
+          </View>
+        </Card.Content>
+      </Card>
+    );
   };
 
   return (
@@ -435,6 +481,40 @@ const RouteScreen = () => {
             )}
           </Card.Content>
         </Card>
+
+        {/* Road Conditions */}
+        {renderRoadConditions()}
+
+        {/* Map View */}
+        <Card style={styles.mapCard}>
+          <MapView
+            style={styles.map}
+            initialRegion={getMapRegion()}
+          >
+            {routeCoordinates.length > 0 && (
+              <Polyline
+                coordinates={routeCoordinates}
+                strokeColor="#4A90E2"
+                strokeWidth={3}
+              />
+            )}
+            {routeCoordinates.length > 0 && (
+              <>
+                <Marker
+                  coordinate={routeCoordinates[0]}
+                  pinColor="green"
+                  title="Start"
+                />
+                <Marker
+                  coordinate={routeCoordinates[routeCoordinates.length - 1]}
+                  pinColor="red"
+                  title="End"
+                />
+              </>
+            )}
+          </MapView>
+        </Card>
+
         {/* Add padding at the bottom */}
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -637,6 +717,31 @@ const styles = StyleSheet.create({
   },
   selectedDateText: {
     color: '#fff',
+  },
+  sectionCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+  },
+  sectionText: {
+    fontSize: 14,
+    color: '#4B5563',
+    marginBottom: 12,
+  },
+  conditionsList: {
+    marginTop: 8,
+  },
+  conditionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  conditionText: {
+    fontSize: 14,
+    color: '#1F2937',
+    marginLeft: 8,
+    textTransform: 'capitalize',
   },
   bottomPadding: {
     height: 32,

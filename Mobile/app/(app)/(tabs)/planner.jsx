@@ -661,7 +661,8 @@ const Planner = () => {
               routeDetails: JSON.stringify(routeDetails),
               elevationProfile: JSON.stringify(elevationData.profile || []),
               elevationGain: elevationData.totalGain || 0,
-              selectedActivity: selectedActivity
+              selectedActivity: selectedActivity,
+              routeConditions: routeConditions ? JSON.stringify(routeConditions) : null
             }
           });
         }}
