@@ -9,7 +9,7 @@ const app = express();
 
 // Enable CORS for all routes
 app.use(cors({
-  origin: '*',
+  origin: '*', // Allow all origins (replace with your frontend URL in production)
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -32,7 +32,7 @@ async function connectDB() {
       await client.connect();
       console.log('🚀 MongoDB Connected!');
     }
-    db = client.db('velocirouteDB'); // Change 'velocirouteDB' to your actual database name
+    db = client.db('routes_db'); // Connect to the "routes_db" database
     return true;
   } catch (err) {
     console.error('MongoDB connection error:', err);
@@ -50,11 +50,11 @@ app.use((req, res, next) => {
 });
 
 // API to Fetch Data from MongoDB
-app.get('/api/data', async (req, res) => {
+app.get('/api/posts', async (req, res) => {
   try {
-    const collection = db.collection("yourCollectionName"); // Change to your collection name
-    const data = await collection.find({}).toArray();
-    res.json(data);
+    const collection = db.collection("posts"); // Access the "posts" collection in "routes_db"
+    const data = await collection.find({}).toArray(); // Fetch all documents
+    res.json(data); // Send the data as JSON
   } catch (error) {
     console.error("Error fetching data:", error);
     res.status(500).json({ error: "Internal Server Error" });

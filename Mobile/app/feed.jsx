@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal } from 'react-native';
-import FontAwesome from 'react-native-vector-icons/FontAwesome';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator } from 'react-native';
+import FontAwesome from 'react-native-vector-icons/FontAwesome'; // Correct import
+import axios from 'axios';
 
 // Importing images from assets
 import map from '../assets/images/map.jpg';
@@ -19,40 +20,30 @@ const stories = [
   { id: 5, name: 'Manusha', image: maleCyclist },
 ];
 
-const posts = [
-  {
-    id: 1,
-    user: 'Sehara Fernando',
-    avatar: femaleCyclist,
-    caption: 'Morning ride 🚴‍♂️💨!',
-    location: 'Colombo, Sri Lanka',
-    likes: 15,
-    comments: ['Great ride! 🚴‍♂️', 'Keep pushing!'],
-    distance: '25 km',
-    time: '1h 10m',
-    achievements: 'Fastest ride this week!',
-    postImage: map,
-  },
-  {
-    id: 2,
-    user: 'Manusha Perera',
-    avatar: maleCyclist,
-    caption: 'Evening run 🏃‍♀️🌇!',
-    location: 'Colombo, Sri Lanka',
-    likes: 20,
-    comments: ['You are killing it! 🔥', 'Nice pace!'],
-    distance: '10 km',
-    time: '50 min',
-    achievements: 'New personal best!',
-    postImage: cyclist,
-  },
-];
-
 const Feed = () => {
-  const [updatedPosts, setUpdatedPosts] = useState(posts);
+  const [updatedPosts, setUpdatedPosts] = useState([]);
   const [commentInputs, setCommentInputs] = useState({});
   const [storyModalVisible, setStoryModalVisible] = useState(false);
   const [selectedStory, setSelectedStory] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch data from the backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get('http://localhost:3000/api/posts'); // Call the backend API
+        setUpdatedPosts(response.data); // Update state with fetched data
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setError('Failed to fetch data. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const handleLike = (postId) => {
     setUpdatedPosts((prevPosts) =>
@@ -68,7 +59,7 @@ const Feed = () => {
     setUpdatedPosts((prevPosts) =>
       prevPosts.map((post) =>
         post.id === postId
-          ? { ...post, comments: [...post.comments, commentInputs[postId]] }
+          ? { ...post, comments: [...post.comments, { text: commentInputs[postId] }] }
           : post
       )
     );
@@ -79,6 +70,23 @@ const Feed = () => {
     setSelectedStory(story);
     setStoryModalVisible(true);
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#0000ff" />
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -103,10 +111,10 @@ const Feed = () => {
 
       {/* Posts Section */}
       {updatedPosts.map((post) => (
-        <View key={post.id} style={styles.postCard}>
+        <View key={post._id} style={styles.postCard}>
           {/* User Info */}
           <View style={styles.userInfo}>
-            <Image source={post.avatar} style={styles.avatar} />
+            <Image source={{ uri: post.avatar }} style={styles.avatar} />
             <View>
               <Text style={styles.username}>{post.user}</Text>
               <Text style={styles.location}>{post.location}</Text>
@@ -115,7 +123,7 @@ const Feed = () => {
 
           {/* White Background Area with Map or Cyclist Image */}
           <View style={styles.whiteBackground}>
-            <Image source={post.postImage} style={styles.postImage} />
+            <Image source={{ uri: post.postImage }} style={styles.postImage} />
           </View>
 
           <Text style={styles.caption}>{post.caption}</Text>
@@ -129,12 +137,12 @@ const Feed = () => {
 
           {/* Like and Comment Buttons */}
           <View style={styles.actions}>
-            <TouchableOpacity onPress={() => handleLike(post.id)} style={styles.button}>
-              <FontAwesome name="heart" size={20} color="red" />
+            <TouchableOpacity onPress={() => handleLike(post._id)} style={styles.button}>
+              <FontAwesome name="heart" size={20} color="red" /> {/* Correct usage */}
               <Text style={styles.buttonText}>{post.likes} Likes</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.commentButton}>
-              <FontAwesome name="comment" size={20} color="gray" />
+              <FontAwesome name="comment" size={20} color="gray" /> {/* Correct usage */}
               <Text style={styles.buttonText}>{post.comments.length} Comments</Text>
             </TouchableOpacity>
           </View>
@@ -142,7 +150,7 @@ const Feed = () => {
           {/* Comments Section */}
           <View style={styles.commentsSection}>
             {post.comments.map((comment, index) => (
-              <Text key={index} style={styles.comment}>{comment}</Text>
+              <Text key={index} style={styles.comment}>{comment.text}</Text>
             ))}
           </View>
 
@@ -150,9 +158,9 @@ const Feed = () => {
           <TextInput
             style={styles.commentInput}
             placeholder="Write a comment..."
-            value={commentInputs[post.id] || ''}
-            onChangeText={(text) => setCommentInputs({ ...commentInputs, [post.id]: text })}
-            onSubmitEditing={() => handleComment(post.id)}
+            value={commentInputs[post._id] || ''}
+            onChangeText={(text) => setCommentInputs({ ...commentInputs, [post._id]: text })}
+            onSubmitEditing={() => handleComment(post._id)}
           />
         </View>
       ))}
@@ -194,6 +202,20 @@ const styles = StyleSheet.create({
   commentsSection: { marginTop: 10 },
   comment: { fontSize: 14, marginBottom: 5 },
   commentInput: { borderBottomWidth: 1, borderColor: '#ccc', padding: 5, marginTop: 5 },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 16,
+  },
 });
 
 export default Feed;
