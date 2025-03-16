@@ -19,11 +19,11 @@ def test_route():
     images = [
         {
             "url": "https://maps.googleapis.com/maps/api/streetview?size=640x640&location=6.9271,79.8612&heading=0&pitch=0&key=AIzaSyDvP_xQ39yqaHS74Je06nasmvEQ5ctSqK4",
-            "kilometer": 0
+            "kilometer": 0.0
         },
         {
             "url": "https://maps.googleapis.com/maps/api/streetview?size=640x640&location=6.918110213845387,79.86144972485464&heading=0&pitch=0&key=AIzaSyDvP_xQ39yqaHS74Je06nasmvEQ5ctSqK4",
-            "kilometer": 1
+            "kilometer": 1.0
         }
     ]
     

@@ -10,7 +10,8 @@ import {
   Alert, 
   ScrollView, 
   Animated, 
-  PanResponder 
+  PanResponder,
+  ActivityIndicator 
 } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
 import { Stack, useRouter } from 'expo-router';
@@ -48,6 +49,8 @@ const Planner = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [isScrollEnabled, setIsScrollEnabled] = useState(false);
   const [elevationData, setElevationData] = useState({ totalGain: 0, profile: [] });
+  const [routeConditions, setRouteConditions] = useState(null);
+  const [isAnalyzingRoad, setIsAnalyzingRoad] = useState(false);
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const lastGestureDy = useRef(0);
   const mapRef = useRef(null);
@@ -509,6 +512,80 @@ const Planner = () => {
     })();
   }, []);
 
+  const analyzeRoadConditions = async () => {
+    if (!routeCoordinates.length) return;
+    
+    setIsAnalyzingRoad(true);
+    try {
+      const response = await fetch('http://your-backend-url/road-conditions/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          route: {
+            coordinates: routeCoordinates
+          }
+        })
+      });
+
+      const data = await response.json();
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      setRouteConditions(data);
+      // Show the modal with results
+      lastGestureDy.current = SCREEN_HEIGHT - FULL_HEIGHT;
+      setIsScrollEnabled(true);
+      setModalVisible(true);
+      Animated.spring(translateY, {
+        toValue: SCREEN_HEIGHT - FULL_HEIGHT,
+        useNativeDriver: true,
+        bounciness: 4,
+      }).start();
+    } catch (error) {
+      Alert.alert(
+        "Road Analysis Failed",
+        "Unable to analyze road conditions. Please try again later.",
+        [{ text: "OK" }]
+      );
+    } finally {
+      setIsAnalyzingRoad(false);
+    }
+  };
+
+  const renderRoadConditions = () => {
+    if (!routeConditions) return null;
+
+    return (
+      <View style={styles.roadConditionsContainer}>
+        <Text style={styles.sectionTitle}>Road Conditions</Text>
+        <Text style={styles.conditionSummary}>{routeConditions.summary}</Text>
+        
+        {routeConditions.points.map((point, index) => (
+          <View key={index} style={styles.conditionPoint}>
+            <Text style={styles.kilometerText}>KM {point.kilometer}</Text>
+            {point.conditions && (
+              <View style={styles.conditionDetails}>
+                <Text style={styles.conditionText}>
+                  {point.conditions.condition} 
+                  ({Math.round(point.conditions.confidence * 100)}% confidence)
+                </Text>
+              </View>
+            )}
+          </View>
+        ))}
+        
+        {routeConditions.unavailablePoints.length > 0 && (
+          <Text style={styles.unavailableText}>
+            Note: Road condition data unavailable for {routeConditions.unavailablePoints.length} points along the route
+          </Text>
+        )}
+      </View>
+    );
+  };
+
   if (!currentLocation) {
     return (
       <View style={styles.loadingContainer}>
@@ -758,7 +835,56 @@ const Planner = () => {
           </View>
         )}
       </View>
-      {modalVisible && <RouteDetailsModal />}
+      {routeCoordinates.length > 0 && (
+        <TouchableOpacity
+          style={[
+            styles.analyzeButton,
+            isAnalyzingRoad && styles.analyzeButtonDisabled
+          ]}
+          onPress={analyzeRoadConditions}
+          disabled={isAnalyzingRoad}
+        >
+          {isAnalyzingRoad ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <MaterialIcons name="analytics" size={24} color="#fff" />
+              <Text style={styles.analyzeButtonText}>Analyze Road</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
+      {modalVisible && (
+        <Animated.View
+          style={[
+            styles.bottomSheet,
+            {
+              transform: [{ translateY }],
+            },
+          ]}
+          {...panResponder.panHandlers}
+        >
+          <View style={styles.bottomSheetHeader}>
+            <View style={styles.bottomSheetHandle} />
+          </View>
+          
+          <ScrollView
+            style={styles.bottomSheetContent}
+            scrollEnabled={isScrollEnabled}
+            showsVerticalScrollIndicator={false}
+          >
+            {routeDetails && (
+              <>
+                {/* Existing route details */}
+                <RouteDetailsModal />
+                
+                {/* Road conditions section */}
+                {renderRoadConditions()}
+              </>
+            )}
+          </ScrollView>
+        </Animated.View>
+      )}
     </View>
   );
 };
@@ -1033,6 +1159,73 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginRight: 4,
+  },
+  analyzeButton: {
+    position: 'absolute',
+    right: 16,
+    bottom: 180,
+    backgroundColor: '#4CAF50',
+    borderRadius: 8,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  analyzeButtonDisabled: {
+    opacity: 0.7,
+  },
+  analyzeButtonText: {
+    color: '#fff',
+    marginLeft: 8,
+    fontWeight: '600',
+  },
+  roadConditionsContainer: {
+    padding: 16,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: '#333',
+  },
+  conditionSummary: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 16,
+    lineHeight: 22,
+  },
+  conditionPoint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  kilometerText: {
+    width: 60,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+  },
+  conditionDetails: {
+    flex: 1,
+  },
+  conditionText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  unavailableText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
   },
 });
 

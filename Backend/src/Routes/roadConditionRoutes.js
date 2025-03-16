@@ -4,6 +4,8 @@ const { default: axios } = require('axios');
 const turf = require('@turf/turf');
 const { GOOGLE_MAPS_API_KEY } = require('../config/keys');
 
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
+
 // Utility function to generate points along route using Turf.js
 const generatePointsAlongRoute = (coordinates, interval = 1000) => {
   try {
@@ -76,7 +78,6 @@ router.post('/analyze', async (req, res) => {
     }
 
     console.log('Generating sampling points for route...');
-    // Generate points every 1km along the route
     const samplingPoints = generatePointsAlongRoute(route.coordinates, 1000);
     console.log(`Generated ${samplingPoints.length} sampling points`);
     
@@ -100,11 +101,62 @@ router.post('/analyze', async (req, res) => {
     console.log(`Found ${availablePoints.length} points with Street View images`);
     console.log(`${unavailablePoints.length} points without Street View images`);
 
+    // Send available images to ML service for classification
+    if (availablePoints.length > 0) {
+      try {
+        const mlResponse = await axios.post(`${ML_SERVICE_URL}/classify-route`, {
+          images: availablePoints.map(point => ({
+            url: point.streetView.url,
+            kilometer: point.kilometer
+          }))
+        });
+
+        // Generate a human-readable summary
+        const conditions = mlResponse.data.condition_summary;
+        let summary = 'Route Analysis: ';
+        for (const [condition, percentage] of Object.entries(conditions)) {
+          if (percentage > 0) {
+            summary += `${Math.round(percentage)}% ${condition.replace('_', ' ')}, `;
+          }
+        }
+        summary = summary.slice(0, -2); // Remove trailing comma
+
+        return res.json({
+          message: 'Route analysis completed',
+          summary,
+          totalPoints: samplingPoints.length,
+          availableImages: availablePoints.length,
+          mlAnalysis: mlResponse.data,
+          points: availablePoints.map(point => ({
+            ...point,
+            conditions: mlResponse.data.point_classifications.find(p => p.kilometer === point.kilometer)?.classification
+          })),
+          unavailablePoints: unavailablePoints.map(p => ({
+            kilometer: p.kilometer,
+            reason: p.streetView.reason
+          }))
+        });
+      } catch (mlError) {
+        console.error('ML Service error:', mlError);
+        return res.json({
+          message: 'Route analysis completed (ML analysis failed)',
+          error: 'ML service unavailable',
+          totalPoints: samplingPoints.length,
+          availableImages: availablePoints.length,
+          points: availablePoints,
+          unavailablePoints: unavailablePoints.map(p => ({
+            kilometer: p.kilometer,
+            reason: p.streetView.reason
+          }))
+        });
+      }
+    }
+
     res.json({
-      message: 'Route analysis completed',
+      message: 'Route analysis completed (no images available)',
       totalPoints: samplingPoints.length,
-      availableImages: availablePoints.length,
-      points: availablePoints,
+      availableImages: 0,
+      points: [],
       unavailablePoints: unavailablePoints.map(p => ({
         kilometer: p.kilometer,
         reason: p.streetView.reason
