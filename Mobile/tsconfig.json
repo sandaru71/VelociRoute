@@ -11,7 +11,13 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts"
-, "components/ColorList.jsx", "components/TabBar.jsx", "components/TabBarButton.jsx", "app/_layout.jsx", "app/(app)/record.jsx", "app/(app)/planner.jsx", "app/index.jsx", "app/(app)/profile.jsx"  ]
+    "components/ColorList.jsx",
+    "components/TabBar.jsx",
+    "components/TabBarButton.jsx",
+    "app/_layout.jsx",
+    "app/(app)/record.jsx",
+    "app/(app)/planner.jsx",
+    "app/index.jsx",
+    "app/(app)/profile.jsx"
+  ]
 }

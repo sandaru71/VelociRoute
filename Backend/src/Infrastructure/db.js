@@ -1,28 +1,28 @@
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const mongoose = require('mongoose');
 require('dotenv').config();
 
 const uri = process.env.MONGO_URI;
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
-});
 
 async function connectDB() {
   try {
-    await client.connect();
+    await mongoose.connect(uri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
     console.log("✅ Connected to MongoDB successfully!");
     
-    // Create a new database for the application
-    const db = client.db("routes_db"); // Changed back to routes_db for compatibility
+    // Get the database instance
+    const db = mongoose.connection.db;
     
     // Initialize collections
     const collections = {
       routes: db.collection('routes'),
-      activityPosts: db.collection('activityPosts')
+      activityPosts: db.collection('activityPosts'),
+      userProfiles: db.collection('userProfiles')
     };
+    
+    // Create indexes for userProfiles collection
+    await collections.userProfiles.createIndex({ email: 1 }, { unique: true });
     
     // Verify collections
     const collectionList = await db.listCollections().toArray();
@@ -35,4 +35,4 @@ async function connectDB() {
   }
 }
 
-module.exports = { connectDB, client };
+module.exports = { connectDB };

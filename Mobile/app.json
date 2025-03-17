@@ -29,7 +29,20 @@
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION"
-      ]
+      ],
+      "networkSecurityConfig": {
+        "cleartextTrafficPermitted": true,
+        "domainConfig": [
+          {
+            "domain": "api.cloudinary.com",
+            "cleartextTrafficPermitted": true
+          },
+          {
+            "domain": "res.cloudinary.com",
+            "cleartextTrafficPermitted": true
+          }
+        ]
+      }
     },
     "web": {
       "bundler": "metro",

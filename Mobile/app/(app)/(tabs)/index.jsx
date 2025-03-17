@@ -19,21 +19,12 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import MapView, { Polyline, Marker } from 'react-native-maps';
+import { API_URL } from '../../../config';
 
 // Configure axios base URL and defaults
-const LOCAL_IP = '10.197.231.196'; // Your computer's local IP address
-
-const API_BASE_URL = Platform.select({
-  android: __DEV__ ? `http://${LOCAL_IP}:3000/api` : 'https://your-production-api.com/api',
-  ios: __DEV__ ? `http://${LOCAL_IP}:3000/api` : 'https://your-production-api.com/api',
-  default: __DEV__ ? 'http://localhost:3000/api' : 'https://your-production-api.com/api'
-});
-
-console.log('Using API URL:', API_BASE_URL); // Debug log
-
 const axiosInstance = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 15000, // Increased timeout
+  baseURL: API_URL,
+  timeout: 15000,
   timeoutErrorMessage: 'Request timed out - please check your connection',
   headers: {
     'Content-Type': 'application/json',
@@ -48,7 +39,7 @@ axiosInstance.interceptors.request.use(
       url: config.url,
       method: config.method,
       headers: config.headers,
-      baseURL: config.baseURL // Added baseURL to debug output
+      baseURL: config.baseURL
     });
     return config;
   },
@@ -280,7 +271,7 @@ const DashboardScreen = () => {
           if (location) queryParams.append('location', location);
 
           console.log('Fetching routes with params:', queryParams.toString());
-          const response = await axiosInstance.get(`popular-routes?${queryParams}`);  
+          const response = await axiosInstance.get(`/api/v1/popular-routes?${queryParams}`);  
           console.log('Routes fetched successfully:', response.data.length, 'routes');
           setRoutes(response.data);
           setLoading(false);
@@ -290,7 +281,7 @@ const DashboardScreen = () => {
           console.log(`Attempt ${attempt + 1} failed:`, error.message);
           if (attempt < maxRetries - 1) {
             console.log('Waiting before retry...');
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Increased to 2 seconds
+            await new Promise(resolve => setTimeout(resolve, 2000)); 
           }
         }
       }

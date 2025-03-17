@@ -10,6 +10,7 @@ import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import Record from './(tabs)/record';
+import Constants from 'expo-constants';
 
 const SaveActivityScreen = () => {
   const router = useRouter();
@@ -57,25 +58,69 @@ const SaveActivityScreen = () => {
     Hard: 'mountain',
   };
 
-  const CLOUDINARY_CLOUD_NAME = 'velociroute';
-  const CLOUDINARY_UPLOAD_PRESET = 'ml_default';
+  // Get Cloudinary configuration from Expo environment variables
+  const CLOUDINARY_CLOUD_NAME = Constants.expoConfig.extra?.CLOUDINARY_CLOUD_NAME || 'dq1hjlghb';
+  const CLOUDINARY_UPLOAD_PRESET = Constants.expoConfig.extra?.CLOUDINARY_UPLOAD_PRESET || 'ml_default';
+
+  console.log('Cloudinary Config in post.jsx:', {
+    cloudName: CLOUDINARY_CLOUD_NAME,
+    uploadPreset: CLOUDINARY_UPLOAD_PRESET
+  });
 
   const uploadToCloudinary = async (imageUri) => {
     try {
+      console.log('Starting Cloudinary upload for:', imageUri);
+      
+      // Create form data
       const formData = new FormData();
+      
+      // Get the file extension
+      const fileExtension = imageUri.split('.').pop();
+      
+      // Create a unique filename
+      const filename = `image_${Date.now()}.${fileExtension}`;
+      
+      // Append the file
       formData.append('file', {
         uri: imageUri,
-        type: 'image/jpeg',
-        name: 'upload.jpg',
+        type: `image/${fileExtension}`,
+        name: filename,
       });
+      
+      // Add upload preset
       formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+      
+      console.log('Uploading to Cloudinary with config:', {
+        cloudName: CLOUDINARY_CLOUD_NAME,
+        preset: CLOUDINARY_UPLOAD_PRESET,
+        filename
+      });
 
-      const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+      // Make the upload request
+      const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
+      console.log('Upload URL:', uploadUrl);
+
+      const response = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
       const data = await response.json();
+      console.log('Cloudinary response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error?.message || 'Failed to upload to Cloudinary');
+      }
+
+      if (!data.secure_url) {
+        throw new Error('No secure URL received from Cloudinary');
+      }
+
+      console.log('Successfully uploaded to Cloudinary:', data.secure_url);
       return data.secure_url;
     } catch (error) {
       console.error('Error uploading to Cloudinary:', error);

@@ -10,6 +10,7 @@ const uploadRoutes = require('./src/Routes/uploadRoutes');
 const activityRoutes = require('./src/Routes/activityRoutes');
 const Activity = require('./src/Infrastructure/Models/Activity');
 const activityPostsRoutes = require('./src/Routes/activityPosts.js');
+const userProfileRoutes = require('./src/Routes/userProfileRoutes');
 
 const app = express();
 
@@ -39,6 +40,8 @@ if (!require('fs').existsSync(uploadsDir)) {
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Add request logging
@@ -69,6 +72,9 @@ app.use('/api/popular-routes', popularRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/activity-posts', activityPostsRoutes);
+
+// User Profile Routes
+app.use('/api/user', userProfileRoutes);
 
 app.get('/', (req, res) => {
   res.send("MongoDB Node.js Driver is running!");
