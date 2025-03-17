@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VelociRoute - Add Popular Route</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold mb-6">Add New Popular Route</h1>
+        <form id="routeForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Name</label>
+                <input type="text" name="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Description</label>
+                <textarea name="description" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Activity Type</label>
+                <select name="activityType" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="cycling">Cycling</option>
+                    <option value="running">Running</option>
+                    <option value="hiking">Hiking</option>
+                    <option value="walking">Walking</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Difficulty</label>
+                <select name="difficulty" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="easy">Easy</option>
+                    <option value="moderate">Moderate</option>
+                    <option value="hard">Hard</option>
+                    <option value="expert">Expert</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Distance (km)</label>
+                <input type="number" step="0.1" name="distance" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Elevation (meters)</label>
+                <input type="number" name="elevation" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Average Time (minutes)</label>
+                <input type="number" name="averageTime" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Location</label>
+                <input type="text" name="location" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Map File (GPX)</label>
+                <input type="file" name="mapFile" accept=".gpx" required class="mt-1 block w-full">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Images</label>
+                <input type="file" name="images" accept="image/*" multiple required class="mt-1 block w-full">
+            </div>
+            <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700">Add Route</button>
+        </form>
+        <div id="status" class="mt-4"></div>
+    </div>
+
+    <script>
+        document.getElementById('routeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = 'Uploading...';
+            
+            const formData = new FormData(e.target);
+            
+            try {
+                const response = await fetch('/api/routes/popular', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    statusDiv.textContent = 'Route added successfully!';
+                    statusDiv.className = 'mt-4 text-green-600';
+                    e.target.reset();
+                } else {
+                    throw new Error(result.message || 'Failed to add route');
+                }
+            } catch (error) {
+                statusDiv.textContent = `Error: ${error.message}`;
+                statusDiv.className = 'mt-4 text-red-600';
+            }
+        });
+    </script>
+</body>
+</html>
