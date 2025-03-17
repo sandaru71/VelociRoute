@@ -51,7 +51,7 @@ const Feed = () => {
         return;
       }
 
-      const response = await axios.get(`${API_URL}/api/v1/activity-posts`, {
+      const response = await axios.get(`${API_URL}/api/activity-posts`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

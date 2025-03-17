@@ -19,12 +19,21 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import MapView, { Polyline, Marker } from 'react-native-maps';
-import { API_URL } from '../../../config';
 
 // Configure axios base URL and defaults
+const LOCAL_IP = '192.168.18.4'; // Your computer's local IP address
+
+const API_BASE_URL = Platform.select({
+  android: __DEV__ ? `http://${LOCAL_IP}:3000/api` : 'https://your-production-api.com/api',
+  ios: __DEV__ ? `http://${LOCAL_IP}:3000/api` : 'https://your-production-api.com/api',
+  default: __DEV__ ? 'http://localhost:3000/api' : 'https://your-production-api.com/api'
+});
+
+console.log('Using API URL:', API_BASE_URL); // Debug log
+
 const axiosInstance = axios.create({
-  baseURL: API_URL,
-  timeout: 15000,
+  baseURL: API_BASE_URL,
+  timeout: 15000, // Increased timeout
   timeoutErrorMessage: 'Request timed out - please check your connection',
   headers: {
     'Content-Type': 'application/json',
@@ -39,7 +48,7 @@ axiosInstance.interceptors.request.use(
       url: config.url,
       method: config.method,
       headers: config.headers,
-      baseURL: config.baseURL
+      baseURL: config.baseURL // Added baseURL to debug output
     });
     return config;
   },
@@ -112,7 +121,7 @@ const parseGPX = (gpxContent) => {
   }
 };
 
-const RouteMapModal = ({ visible, onClose, mapUrl }) => { 
+const RouteMapModal = ({ visible, onClose, mapUrl }) => {
   const [loading, setLoading] = useState(true);
   const [routeData, setRouteData] = useState(null);
   const [error, setError] = useState(null);
@@ -270,10 +279,21 @@ const DashboardScreen = () => {
           if (distanceRange.max) queryParams.append('maxDistance', distanceRange.max);
           if (location) queryParams.append('location', location);
 
+          console.log('API Base URL:', API_BASE_URL);
           console.log('Fetching routes with params:', queryParams.toString());
-          const response = await axiosInstance.get(`/api/v1/popular-routes?${queryParams}`);  
-          console.log('Routes fetched successfully:', response.data.length, 'routes');
-          setRoutes(response.data);
+          
+          // First try without any filters
+          const response = await axiosInstance.get('popular-routes');
+          console.log('Routes response:', response.data);
+          
+          if (response.data && Array.isArray(response.data)) {
+            console.log('Routes fetched successfully:', response.data.length, 'routes');
+            setRoutes(response.data);
+          } else {
+            console.error('Unexpected response format:', response.data);
+            setRoutes([]);
+          }
+          
           setLoading(false);
           return;
         } catch (error) {
@@ -281,7 +301,7 @@ const DashboardScreen = () => {
           console.log(`Attempt ${attempt + 1} failed:`, error.message);
           if (attempt < maxRetries - 1) {
             console.log('Waiting before retry...');
-            await new Promise(resolve => setTimeout(resolve, 2000)); 
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Increased to 2 seconds
           }
         }
       }

@@ -1,4 +1,5 @@
 const cloudinary = require('cloudinary').v2;
+const PopularRoute = require('../Infrastructure/Models/PopularRoute');
 
 // Configure Cloudinary
 cloudinary.config({
@@ -17,6 +18,9 @@ exports.getPopularRoutes = async (req, res) => {
             location
         } = req.query;
 
+        // Log the incoming query parameters
+        console.log('Received query parameters:', req.query);
+
         let query = {};
 
         if (activityType && activityType.toLowerCase() !== 'all') {
@@ -34,8 +38,41 @@ exports.getPopularRoutes = async (req, res) => {
             if (maxDistance) query.distance.$lte = parseFloat(maxDistance);
         }
 
+        // Log the constructed MongoDB query
+        console.log('MongoDB query:', JSON.stringify(query, null, 2));
+
+        // Check both possible collection names
         const db = req.app.locals.db;
-        const routes = await db.collection('routes').find(query).toArray();
+        const collections = await db.listCollections().toArray();
+        console.log('Available collections:', collections.map(c => c.name));
+        
+        // Try both 'routes' and 'popularroutes' collections
+        let routes = [];
+        let totalRoutes = 0;
+        
+        if (collections.some(c => c.name === 'popularroutes')) {
+            console.log('Checking popularroutes collection...');
+            totalRoutes = await db.collection('popularroutes').countDocuments({});
+            console.log('Total routes in popularroutes:', totalRoutes);
+            if (totalRoutes > 0) {
+                routes = await db.collection('popularroutes').find(query).toArray();
+            }
+        }
+        
+        if (routes.length === 0 && collections.some(c => c.name === 'routes')) {
+            console.log('Checking routes collection...');
+            totalRoutes = await db.collection('routes').countDocuments({});
+            console.log('Total routes in routes:', totalRoutes);
+            if (totalRoutes > 0) {
+                routes = await db.collection('routes').find(query).toArray();
+            }
+        }
+
+        console.log('Found routes:', routes.length);
+        if (routes.length > 0) {
+            console.log('Sample route:', JSON.stringify(routes[0], null, 2));
+        }
+
         res.json(routes);
     } catch (error) {
         console.error('Error fetching routes:', error);
