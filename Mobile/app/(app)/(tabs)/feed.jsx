@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     marginVertical: 5,
   },
   activityDescription: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#333',
     marginBottom: 10,
   },
