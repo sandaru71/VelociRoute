@@ -35,6 +35,8 @@ const MINIMIZED_HEIGHT = 80;
 const HALF_HEIGHT = SCREEN_HEIGHT * 0.5;
 const FULL_HEIGHT = SCREEN_HEIGHT * 0.9;
 
+const API_BASE_URL = 'http://192.168.18.32:5000';
+
 const Planner = () => {
   const router = useRouter();
   const [currentLocation, setCurrentLocation] = useState(null);
@@ -513,14 +515,24 @@ const Planner = () => {
   }, []);
 
   const analyzeRoadConditions = async () => {
-    if (!routeCoordinates.length) return;
+    if (!routeCoordinates.length) {
+      Alert.alert(
+        "No Route Found",
+        "Please create a route before analyzing road conditions.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
     
     setIsAnalyzingRoad(true);
     try {
-      const response = await fetch('http://your-backend-url/road-conditions/analyze', {
+      // First try the backend
+      console.log('Sending request to backend...');
+      const response = await fetch(`${API_BASE_URL}/road-conditions/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
           route: {
@@ -528,6 +540,11 @@ const Planner = () => {
           }
         })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server responded with status ${response.status}`);
+      }
 
       const data = await response.json();
       if (data.error) {
@@ -545,9 +562,10 @@ const Planner = () => {
         bounciness: 4,
       }).start();
     } catch (error) {
+      console.error('Road analysis error:', error);
       Alert.alert(
         "Road Analysis Failed",
-        "Unable to analyze road conditions. Please try again later.",
+        `Unable to analyze road conditions: ${error.message}. Please ensure all services are running and try again.`,
         [{ text: "OK" }]
       );
     } finally {
