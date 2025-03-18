@@ -25,6 +25,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Create API router with prefix
+api_router = FastAPI(title="VelociRoute API")
+app.mount("/api", api_router)
+
 # Load the ResNet50 model
 print("Loading ResNet50 model...")
 model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V2)
@@ -140,7 +144,7 @@ def classify_road_condition(predictions: torch.Tensor) -> Dict:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Classification error: {str(e)}")
 
-@app.post("/classify-image", response_model=RoadCondition)
+@api_router.post("/classify-image", response_model=RoadCondition)
 async def classify_single_image(image_url: ImageURL):
     try:
         # Download image from URL
@@ -163,7 +167,7 @@ async def classify_single_image(image_url: ImageURL):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/classify-route", response_model=RouteAnalysis)
+@api_router.post("/classify-route", response_model=RouteAnalysis)
 async def classify_route(route_data: RouteImages):
     try:
         results = []
@@ -232,4 +236,4 @@ async def classify_route(route_data: RouteImages):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=3000)
