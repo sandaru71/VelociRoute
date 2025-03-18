@@ -82,13 +82,14 @@ const userProfileController = {
     getUserProfile: async (req, res) => {
         try {
             const userEmail = req.user.email;
-            console.log('Fetching profile for email:', userEmail);
+            console.log('Controller: Getting profile for email:', userEmail);
+            console.log('Request user object:', req.user);
             
             let profile = await UserProfile.findOne({ email: userEmail });
-            console.log('Found profile:', profile);
+            console.log('Found profile for email:', userEmail, profile ? 'exists' : 'not found');
             
             if (!profile) {
-                console.log('Profile not found, creating empty profile for:', userEmail);
+                console.log('Creating new profile for email:', userEmail);
                 try {
                     // Create a new empty profile
                     profile = new UserProfile({
@@ -96,9 +97,9 @@ const userProfileController = {
                         // All other fields will use schema defaults
                     });
                     await profile.save();
-                    console.log('Empty profile created successfully:', profile);
+                    console.log('Created new profile:', profile);
                 } catch (createError) {
-                    console.error('Error creating empty profile:', createError);
+                    console.error('Error creating profile:', createError);
                     throw createError;
                 }
             }

@@ -11,6 +11,8 @@ import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplet
 import Constants from 'expo-constants';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { auth } from '../../firebase/config';
+import axios from 'axios';
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyDvP_xQ39yqaHS74Je06nasmvEQ5ctSqK4';
 const Stack = createNativeStackNavigator();
@@ -61,23 +63,40 @@ const EditProfile = () => {
     try {
       setIsInitialLoading(true);
       console.log('Fetching profile data for edit...');
-      const response = await fetch(`${API_URL}/api/user/profile`);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch profile data');
+      
+      const user = auth.currentUser;
+      if (!user) {
+        console.error('No authenticated user');
+        return;
       }
 
-      const data = await response.json();
-      console.log('Received profile data:', data);
+      const token = await user.getIdToken();
+      if (!token) {
+        console.error('No authentication token found');
+        return;
+      }
 
-      setFormData({
-        firstName: data.firstName || '',
-        lastName: data.lastName || '',
-        preferredActivity: data.preferredActivity || 'Cycling',
-        location: data.location || '',
-        profilePhoto: data.profilePhoto || null,
-        coverPhoto: data.coverPhoto || null,
+      console.log('Current user:', { email: user.email, uid: user.uid });
+
+      const response = await axios.get(`${API_URL}/api/user/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
+ 
+      console.log('Response:', response.data);
+
+      if (response.data) {
+        setFormData({
+          firstName: response.data.firstName || '',
+          lastName: response.data.lastName || '',
+          preferredActivity: response.data.preferredActivity || 'Cycling',
+          location: response.data.location || '',
+          profilePhoto: response.data.profilePhoto || null,
+          coverPhoto: response.data.coverPhoto || null,
+        });
+      }
     } catch (error) {
       console.error('Error fetching profile data:', error);
       Alert.alert('Error', 'Failed to load profile data');
@@ -93,6 +112,18 @@ const EditProfile = () => {
 
     try {
       setIsLoading(true);
+
+      const user = auth.currentUser;
+      if (!user) {
+        console.error('No authenticated user');
+        return;
+      }
+
+      const token = await user.getIdToken();
+      if (!token) {
+        console.error('No authentication token found');
+        return;
+      }
 
       // Upload images to our backend server first
       let profilePhotoUrl = formData.profilePhoto;
@@ -136,38 +167,20 @@ const EditProfile = () => {
       console.log('Saving profile with data:', updatedData);
       console.log('API URL:', API_URL);
 
-      const response = await fetch(`${API_URL}/api/user/profile`, {
-        method: 'PUT',
+      const response = await axios.put(`${API_URL}/api/user/profile`, updatedData, {
         headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatedData),
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
-      console.log('Response status:', response.status);
-      const responseText = await response.text();
-      console.log('Response text:', responseText);
+      console.log('Response:', response.data);
 
-      if (!response.ok) {
-        let errorMessage = 'Failed to update profile';
-        try {
-          const errorData = JSON.parse(responseText);
-          errorMessage = errorData.message || errorMessage;
-          console.error('Server error:', errorData);
-        } catch (parseError) {
-          console.error('Error parsing response:', responseText);
-          errorMessage = 'Server returned an invalid response';
-        }
-        throw new Error(errorMessage);
+      if (response.data) {
+        Alert.alert('Success', 'Profile updated successfully', [
+          { text: 'OK', onPress: () => router.back() }
+        ]);
       }
-
-      const data = JSON.parse(responseText);
-      console.log('Profile updated successfully:', data);
-
-      Alert.alert('Success', 'Profile updated successfully', [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
     } catch (error) {
       console.error('Error updating profile:', error);
       Alert.alert('Error', `Error updating profile: ${error.message}`);
@@ -192,6 +205,18 @@ const EditProfile = () => {
     try {
       console.log('Starting image upload for:', uri);
 
+      const user = auth.currentUser;
+      if (!user) {
+        console.error('No authenticated user');
+        throw new Error('Authentication error');
+      }
+
+      const token = await user.getIdToken();
+      if (!token) {
+        console.error('No authentication token found');
+        throw new Error('Authentication error');
+      }
+
       // Convert image to base64
       const response = await fetch(uri);
       const blob = await response.blob();
@@ -206,32 +231,23 @@ const EditProfile = () => {
             console.log('Image converted to base64, uploading to server...');
 
             // Upload to our backend server
-            const uploadResponse = await fetch(`${API_URL}/api/user/upload-image`, {
-              method: 'POST',
+            const uploadResponse = await axios.post(`${API_URL}/api/user/upload-image`, {
+              image: base64Data,
+              imageType: blob.type
+            }, {
               headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-              },
-              body: JSON.stringify({
-                image: base64Data,
-                imageType: blob.type
-              })
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
             });
 
-            if (!uploadResponse.ok) {
-              const errorText = await uploadResponse.text();
-              console.error('Server upload error response:', errorText);
-              throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
-            }
+            console.log('Upload response:', uploadResponse.data);
 
-            const data = await uploadResponse.json();
-            console.log('Upload successful:', data);
-
-            if (!data.url) {
+            if (!uploadResponse.data.url) {
               throw new Error('No URL received from server');
             }
 
-            resolve(data.url);
+            resolve(uploadResponse.data.url);
           } catch (error) {
             console.error('Error in upload process:', error);
             reject(error);
@@ -314,18 +330,11 @@ const EditProfile = () => {
           <Text style={styles.loadingText}>Loading profile...</Text>
         </View>
       ) : (
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1 }}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 25}
-        >
+        <ScrollView style={{flex: 1}}>
           <View style={styles.mainContent}>
+            
             {/* Cover Photo Section */}
-            <TouchableOpacity
-              style={styles.coverPhotoContainer}
-              onPress={() => pickImage('cover')}
-              activeOpacity={0.9}
-            >
+            <View style={styles.coverPhotoContainer}>
               {imageLoading.cover && (
                 <View style={[styles.imageLoadingOverlay, styles.coverLoadingOverlay]}>
                   <ActivityIndicator size="large" color="#FFFFFF" />
@@ -345,49 +354,47 @@ const EditProfile = () => {
                   setImageLoading(prev => ({ ...prev, cover: false }));
                 }}
               />
-              <View style={styles.uploadIconContainer}>
-                <MaterialIcons name="camera-alt" size={24} color="#FFFFFF" />
-                <Text style={styles.uploadText}>Upload Cover</Text>
-              </View>
-            </TouchableOpacity>
+              {/* Cover Edit button */}
+              <TouchableOpacity
+                style={styles.coverEditButton}
+                onPress={() => pickImage('cover')}
+                activeOpacity={0.9}
+              >
+                <MaterialIcons name="edit" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
 
             {/* Profile Photo Section */}
-            <TouchableOpacity
-              style={styles.profilePhotoContainer}
-              onPress={() => pickImage('profile')}
-              activeOpacity={0.9}
-            >
-              {imageLoading.profile && (
-                <View style={[styles.imageLoadingOverlay, styles.profileLoadingOverlay]}>
-                  <ActivityIndicator size="large" color="#FFFFFF" />
-                </View>
-              )}
-              <Image
-                source={
-                  formData.profilePhoto
-                    ? { uri: formData.profilePhoto }
-                    : require('../../assets/galle face green.png')
-                }
-                style={styles.profilePhoto}
-                onLoadStart={() => setImageLoading(prev => ({ ...prev, profile: true }))}
-                onLoadEnd={() => setImageLoading(prev => ({ ...prev, profile: false }))}
-                onError={(e) => {
-                  console.error('Error loading profile photo:', e.nativeEvent.error);
-                  setImageLoading(prev => ({ ...prev, profile: false }));
-                }}
-              />
-              <View style={styles.uploadIconContainer}>
-                <MaterialIcons name="camera-alt" size={24} color="#FFFFFF" />
-                <Text style={styles.uploadText}>Upload Photo</Text>
+            <View style={styles.profilePhotoContainer}>
+                {imageLoading.profile && (
+                  <View style={[styles.imageLoadingOverlay, styles.profileLoadingOverlay]}>
+                    <ActivityIndicator size="large" color="#FFFFFF" />
+                  </View>
+                )}
+                <Image
+                  source={
+                    formData.profilePhoto
+                      ? { uri: formData.profilePhoto }
+                      : require('../../assets/galle face green.png')
+                  }
+                  style={styles.profilePhoto}
+                  onLoadStart={() => setImageLoading(prev => ({ ...prev, profile: true }))}
+                  onLoadEnd={() => setImageLoading(prev => ({ ...prev, profile: false }))}
+                  onError={(e) => {
+                    console.error('Error loading profile photo:', e.nativeEvent.error);
+                    setImageLoading(prev => ({ ...prev, profile: false }));
+                  }}
+                />
+                
+                {/* Profile photo Edit button */}
+                <TouchableOpacity
+                  style={styles.profileEditButton}
+                  onPress={() => pickImage('profile')}
+                  activeOpacity={0.9}>
+                    <MaterialIcons name="edit" size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
               </View>
-            </TouchableOpacity>
 
-            <KeyboardAwareScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollViewContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
               <View style={styles.formSection}>
                 <TextInput
                   ref={firstNameRef}
@@ -422,8 +429,17 @@ const EditProfile = () => {
                   </Picker>
                 </View>
 
+                <TextInput
+                  ref={locationRef}
+                  style={styles.input}
+                  placeholder="Location"
+                  placeholderTextColor="#999999"
+                  value={formData.location}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, location: text }))}
+                  returnKeyType="done"
+                />
                 {/* Location search outside ScrollView */}
-                <View style={styles.locationContainer}>
+                {/* <View style={styles.locationContainer}>
                   <GooglePlacesAutocomplete
                     placeholder={formData.location || "Enter your location"}
                     onPress={(data) => {
@@ -443,10 +459,11 @@ const EditProfile = () => {
                     fetchDetails={true}
                     debounce={300}
                   />
-                </View>
+                </View> */}
+
               </View>
 
-              <View style={styles.buttonSection}>
+            <View style={styles.buttonSection}>
               {isLoading ? (
                 <ActivityIndicator size="large" color="#4A90E2" />
               ) : (
@@ -460,9 +477,8 @@ const EditProfile = () => {
                 </TouchableOpacity>
               )}
             </View>
-            </KeyboardAwareScrollView>
           </View>
-        </KeyboardAvoidingView>
+        </ScrollView>
       )}
     </SafeAreaView>
   );
@@ -632,6 +648,25 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  coverEditButton: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 8,
+    borderRadius: 20,
+    zIndex: 10,
+    elevation: 2,
+  },
+  profileEditButton: {
+    position: 'absolute',
+    top: 35,
+    right: 35,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    padding: 8,
+    borderRadius: 20,
+    zIndex: 10,
+  }
 });
 
 export default EditProfile;

@@ -6,6 +6,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { Calendar } from "react-native-calendars";
 import { API_URL } from '../../../config';
 import { useRouter, useFocusEffect } from "expo-router";
+import { auth } from '../../../firebase/config';
 
 const Profile = () => {
   const router = useRouter();
@@ -34,8 +35,28 @@ const Profile = () => {
   const fetchProfileData = async () => {
     try {
       setIsLoading(true);
+
+      const user = auth.currentUser;
+      if (!user) {
+        console.error('No authenticated user');
+        return;
+      }
+      
+      const token = await user.getIdToken();
+      if (!token) {
+        console.error('Failure to retrieve token.');
+        return;
+      }
+      
       console.log('Fetching profile data from:', `${API_URL}/user/profile`);
-      const response = await fetch(`${API_URL}/api/user/profile`);
+
+      const response = await fetch(`${API_URL}/api/user/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+      });
+
       console.log('Profile response:', response.status);
       
       if (response.ok) {

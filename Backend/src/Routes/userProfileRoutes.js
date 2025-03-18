@@ -9,10 +9,11 @@ router.use((req, res, next) => {
     const devIPs = ['localhost', '127.0.0.1', '10.0.2.2', '10.137.28.196', '192.168.18.4'];
     const host = req.get('host').split(':')[0];
     
-    if (devIPs.includes(host)) {
+    if (devIPs.includes(host) && !req.headers.authorization) {
+        console.log('Development environment detected. Injecting test user');
         // Set test user for development
         req.user = { email: 'test@example.com' };
-        next();
+        return next();
     } else {
         // Use real authentication for production
         authenticateToken(req, res, next);
