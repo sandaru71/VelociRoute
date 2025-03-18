@@ -323,7 +323,7 @@ const EditProfile = () => {
   
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {isInitialLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
@@ -331,7 +331,7 @@ const EditProfile = () => {
         </View>
       ) : (
         <ScrollView style={{flex: 1}}>
-          <View style={styles.mainContent}>
+          {/* <View style={styles.mainContent}> */}
             
             {/* Cover Photo Section */}
             <View style={styles.coverPhotoContainer}>
@@ -359,6 +359,7 @@ const EditProfile = () => {
                 style={styles.coverEditButton}
                 onPress={() => pickImage('cover')}
                 activeOpacity={0.9}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <MaterialIcons name="edit" size={24} color="#FFFFFF" />
               </TouchableOpacity>
@@ -390,9 +391,11 @@ const EditProfile = () => {
                 <TouchableOpacity
                   style={styles.profileEditButton}
                   onPress={() => pickImage('profile')}
-                  activeOpacity={0.9}>
+                  activeOpacity={0.9}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
                     <MaterialIcons name="edit" size={24} color="#FFFFFF" />
-                  </TouchableOpacity>
+                </TouchableOpacity>
               </View>
 
               <View style={styles.formSection}>
@@ -407,7 +410,7 @@ const EditProfile = () => {
                   onSubmitEditing={() => lastNameRef.current?.focus()}
                 />
 
-                <TextInput
+                <TextInput  
                   ref={lastNameRef}
                   style={styles.input}
                   placeholder="Last Name"
@@ -417,6 +420,7 @@ const EditProfile = () => {
                   returnKeyType="next"
                 />
 
+                {/* Preferred Activity Picker */}
                 <View style={styles.pickerContainer}>
                   <Picker
                     selectedValue={formData.preferredActivity}
@@ -438,49 +442,26 @@ const EditProfile = () => {
                   onChangeText={(text) => setFormData(prev => ({ ...prev, location: text }))}
                   returnKeyType="done"
                 />
-                {/* Location search outside ScrollView */}
-                {/* <View style={styles.locationContainer}>
-                  <GooglePlacesAutocomplete
-                    placeholder={formData.location || "Enter your location"}
-                    onPress={(data) => {
-                      setFormData(prev => ({ ...prev, location: data.description }));
-                    }}
-                    query={{
-                      key: GOOGLE_MAPS_API_KEY,
-                      language: 'en',
-                      types: '(cities)',
-                    }}
-                    styles={{
-                      textInput: styles.input,
-                      container: { flex: 0 },
-                      listView: { backgroundColor: 'white' }
-                    }}
-                    enablePoweredByContainer={false}
-                    fetchDetails={true}
-                    debounce={300}
-                  />
-                </View> */}
-
               </View>
 
-            <View style={styles.buttonSection}>
-              {isLoading ? (
-                <ActivityIndicator size="large" color="#4A90E2" />
-              ) : (
-                <TouchableOpacity
-                  style={styles.saveButton}
-                  onPress={handleSave}
-                  activeOpacity={0.8}
-                >
-                  <MaterialIcons name="save" size={20} color="#FFFFFF" />
-                  <Text style={styles.saveButtonText}>Save Changes</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
+              {/* Save Changes Button */}
+              <View style={styles.buttonSection}>
+                {isLoading ? (
+                  <ActivityIndicator size="large" color="#4A90E2" />
+                ) : (
+                  <TouchableOpacity
+                    style={styles.saveButton}
+                    onPress={handleSave}
+                    activeOpacity={0.8}
+                  >
+                    <MaterialIcons name="save" size={20} color="#FFFFFF" />
+                    <Text style={styles.saveButtonText}>Save Changes</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
         </ScrollView>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -497,6 +478,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
     position: 'relative',
+    zIndex: 1, 
   },
   coverPhoto: {
     width: '100%',
@@ -510,10 +492,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#E1E1E1',
     borderWidth: 3,
     borderColor: '#FFFFFF',
-    overflow: 'hidden',
+    overflow: 'visible', // <-- IMPORTANT: allow edit icon outside bounds
     marginTop: -60,
     marginLeft: 20,
     position: 'relative',
+    zIndex: 2,
   },
   profilePhoto: {
     width: '100%',
@@ -568,7 +551,7 @@ const styles = StyleSheet.create({
   },
   locationContainer: {
     marginBottom: 0,
-    zIndex: 1,
+    // zIndex: 1,
   },
   placesContainer: {
     flex: 0,
@@ -652,21 +635,22 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 12,
     right: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Darker for better contrast
+    padding: 10,
     borderRadius: 20,
     zIndex: 10,
-    elevation: 2,
+    elevation: 10,
   },
   profileEditButton: {
     position: 'absolute',
-    top: 35,
-    right: 35,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    bottom: -5, // <-- Move to bottom corner of the circle
+    right: -5,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     padding: 8,
     borderRadius: 20,
     zIndex: 10,
-  }
+    elevation: 10,
+  },
 });
 
 export default EditProfile;
