@@ -15,6 +15,7 @@ Mobile/*.key
 Mobile/*.mobileprovision
 Mobile/*.orig.*
 Mobile/web-build/
+Mobile/node_modules/
 
 # Environment files
 .env
@@ -42,9 +43,37 @@ out/
 
 # ML related
 ml-service/models/
+ml-service/data/
+ml-service/checkpoints/
 *.h5
 *.pkl
 *.model
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.pb
+*.savedmodel
+*.tar.gz
+*.zip
+*.rar
+
+# Large media files
+*.mp4
+*.mov
+*.avi
+*.wmv
+*.flv
+*.mkv
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.ico
+*.pdf
+*.psd
+*.ai
+*.eps
 
 # OS specific
 .DS_Store
