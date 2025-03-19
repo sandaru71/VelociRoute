@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { MaterialIcons } from "@expo/vector-icons";
-import { Calendar } from "react-native-calendars";
 import { API_URL } from '../../../config';
 import { useRouter, useFocusEffect } from "expo-router";
 import { auth } from '../../../firebase/config';
+import axios from "axios";
 
 const Profile = () => {
   const router = useRouter();
@@ -23,14 +23,12 @@ const Profile = () => {
     profilePhoto: null,
     coverPhoto: null,
   });
-  const [activeTab, setActiveTab] = useState('posts');
+  const [loading, setLoading] = useState(true);
+  const [currentUserEmail, setCurrentUserEmail] = useState(null);
 
-  // Fetch profile data when screen comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchProfileData();
-    }, [])
-  );
+  useEffect(() => {
+    fetchProfileData();
+  }, []);
 
   const fetchProfileData = async () => {
     try {
@@ -85,57 +83,32 @@ const Profile = () => {
     router.push('/editProfile');
   };
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'posts':
-        return (
-          <View style={styles.tabContent}>
-            <Text style={styles.emptyStateText}>No posts yet</Text>
-          </View>
-        );
-      case 'saved':
-        return (
-          <View style={styles.tabContent}>
-            <Text style={styles.emptyStateText}>No saved routes</Text>
-          </View>
-        );
-      case 'planned':
-        return (
-          <View style={styles.tabContent}>
-            <Text style={styles.emptyStateText}>No planned routes</Text>
-          </View>
-        );
-      default:
-        return null;
-    }
-  };
-
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
           <ActivityIndicator size="large" color="#4A90E2" />
-          <Text style={styles.loadingText}>Loading profile...</Text>
+          <Text style={{ marginTop: 12, fontSize: 16, color: '#4A90E2' }}>Loading profile...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <StatusBar backgroundColor="#808080" />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={{ padding: 0 }}>
         {/* Cover Image */}
-        <View style={styles.coverContainer}>
+        <View style={{ width: '100%', height: 228 }}>
           {imageLoading.cover && (
-            <View style={styles.coverLoadingOverlay}>
+            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 1 }}>
               <ActivityIndicator size="large" color="#FFFFFF" />
             </View>
           )}
           <Image
             source={profileData.coverPhoto ? { uri: profileData.coverPhoto } : require('../../../assets/galle face green.png')}
-            style={styles.coverImage}
+            style={{ height: '100%', width: '100%', resizeMode: 'cover' }}
             onLoadStart={() => setImageLoading(prev => ({ ...prev, cover: true }))}
             onLoadEnd={() => setImageLoading(prev => ({ ...prev, cover: false }))}
             onError={() => setImageLoading(prev => ({ ...prev, cover: false }))}
@@ -143,277 +116,83 @@ const Profile = () => {
         </View>
 
         {/* Profile Section */}
-        <View style={styles.profileSection}>
-          <View style={styles.profileImageContainer}>
+        <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 16 }}>
+          <View style={{ position: 'relative', marginTop: -77.5 }}>
             {imageLoading.profile && (
-              <View style={styles.profileLoadingOverlay}>
+              <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center', borderRadius: 77.5, zIndex: 1 }}>
                 <ActivityIndicator size="large" color="#FFFFFF" />
               </View>
             )}
             <Image
               source={profileData.profilePhoto ? { uri: profileData.profilePhoto } : require('../../../assets/galle face green.png')}
-              style={styles.profileImage}
+              style={{ height: 155, width: 155, borderRadius: 77.5, borderColor: '#4A90E2', borderWidth: 3 }}
               onLoadStart={() => setImageLoading(prev => ({ ...prev, profile: true }))}
               onLoadEnd={() => setImageLoading(prev => ({ ...prev, profile: false }))}
               onError={() => setImageLoading(prev => ({ ...prev, profile: false }))}
             />
           </View>
 
-          <Text style={styles.userName}>
+          <Text style={{ fontSize: 24, color: '#000000', marginVertical: 8, fontWeight: 'bold', textAlign: 'center' }}>
             {profileData.firstName} {profileData.lastName}
           </Text>
           
-          <Text style={styles.activityText}>
+          <Text style={{ color: '#4A90E2', fontSize: 16, marginBottom: 8 }}>
             {profileData.preferredActivity || 'Add your preferred activity'}
           </Text>
 
           {/* Location */}
-          <View style={styles.locationContainer}>
+          <View style={{ flexDirection: 'row', marginVertical: 8, alignItems: 'center' }}>
             <MaterialIcons name="location-on" size={24} color="#4A90E2" />
-            <Text style={styles.locationText}>
+            <Text style={{ fontSize: 16, marginLeft: 8, color: '#666666' }}>
               {profileData.location || 'Add your location'}
             </Text>
           </View>
 
           {/* Stats Section */}
-          <View style={styles.statsContainer}>
+          <View style={{ flexDirection: 'row', paddingVertical: 16, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#E1E1E1', marginVertical: 16, width: '100%', justifyContent: 'center' }}>
             {/* Activities */}
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>5</Text>
-              <Text style={styles.statLabel}>Activities</Text>
+            <View style={{ alignItems: 'center', paddingHorizontal: 24 }}>
+              <Text style={{ fontSize: 24, color: '#4A90E2', fontWeight: 'bold' }}>5</Text>
+              <Text style={{ fontSize: 14, color: '#666666', marginTop: 4 }}>Activities</Text>
             </View>
           </View>
 
           {/* Edit Profile Button */}
           <TouchableOpacity
-            style={styles.editButton}
+            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#4A90E2', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 25, marginVertical: 16 }}
             onPress={handleEditProfile}
           >
             <MaterialIcons name="edit" size={20} color="#FFFFFF" />
-            <Text style={styles.editButtonText}>Edit Profile</Text>
+            <Text style={{ fontSize: 16, color: '#FFFFFF', fontWeight: 'bold', marginLeft: 8 }}>Edit Profile</Text>
           </TouchableOpacity>
 
-          {/* Tabs Section */}
-          <View style={styles.tabsContainer}>
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'posts' && styles.activeTab]}
-              onPress={() => setActiveTab('posts')}
-            >
-              <MaterialIcons 
-                name="article" 
-                size={24} 
-                color={activeTab === 'posts' ? '#4A90E2' : '#666666'} 
-              />
-              <Text style={[styles.tabText, activeTab === 'posts' && styles.activeTabText]}>
-                Posts
-              </Text>
-            </TouchableOpacity>
+          {/* View My Posts Button */}
+          <TouchableOpacity
+            style={{ backgroundColor: '#4A90E2', padding: 12, borderRadius: 8, marginTop: 16, marginHorizontal: 16, alignItems: 'center' }}
+            onPress={() => router.push({ pathname: '/(app)/(tabs)/feed', params: { showUserPosts: 'true' } })}
+          >
+            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>View My Posts</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'saved' && styles.activeTab]}
-              onPress={() => setActiveTab('saved')}
-            >
-              <MaterialIcons 
-                name="bookmark" 
-                size={24} 
-                color={activeTab === 'saved' ? '#4A90E2' : '#666666'} 
-              />
-              <Text style={[styles.tabText, activeTab === 'saved' && styles.activeTabText]}>
-                Saved
-              </Text>
-            </TouchableOpacity>
+          {/* View saved activities Button */}
+          <TouchableOpacity
+            style={{ backgroundColor: '#4A90E2', padding: 12, borderRadius: 8, marginTop: 16, marginHorizontal: 16, alignItems: 'center' }}
+            onPress={() => router.push('../savedActivities')}
+          >
+            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>Saved Activities</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.tab, activeTab === 'planned' && styles.activeTab]}
-              onPress={() => setActiveTab('planned')}
-            >
-              <MaterialIcons 
-                name="map" 
-                size={24} 
-                color={activeTab === 'planned' ? '#4A90E2' : '#666666'} 
-              />
-              <Text style={[styles.tabText, activeTab === 'planned' && styles.activeTabText]}>
-                Planned
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Tab Content */}
-          {renderTabContent()}
+          {/* View My Posts Button */}
+          <TouchableOpacity
+            style={{ backgroundColor: '#4A90E2', padding: 12, borderRadius: 8, marginTop: 16, marginHorizontal: 16, alignItems: 'center' }}
+            onPress={() => router.push({ pathname: '/(app)/(tabs)/feed', params: { showUserPosts: 'true' } })}
+          >
+            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>Planned Routes</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
-};
-
-const styles = {
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  scrollContent: {
-    padding: 0,
-  },
-  coverContainer: {
-    width: '100%',
-    height: 228,
-  },
-  coverImage: {
-    height: '100%',
-    width: '100%',
-    resizeMode: 'cover',
-  },
-  profileSection: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: 16,
-  },
-  profileImageContainer: {
-    position: 'relative',
-    marginTop: -77.5,
-  },
-  profileImage: {
-    height: 155,
-    width: 155,
-    borderRadius: 77.5,
-    borderColor: '#4A90E2',
-    borderWidth: 3,
-  },
-  userName: {
-    fontSize: 24,
-    color: '#000000',
-    marginVertical: 8,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  activityText: {
-    color: '#4A90E2',
-    fontSize: 16,
-    marginBottom: 8,
-  },
-  locationContainer: {
-    flexDirection: 'row',
-    marginVertical: 8,
-    alignItems: 'center',
-  },
-  locationText: {
-    fontSize: 16,
-    marginLeft: 8,
-    color: '#666666',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#E1E1E1',
-    marginVertical: 16,
-    width: '100%',
-    justifyContent: 'center',
-  },
-  statItem: {
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-  statNumber: {
-    fontSize: 24,
-    color: '#4A90E2',
-    fontWeight: 'bold',
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#666666',
-    marginTop: 4,
-  },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#4A90E2',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 25,
-    marginVertical: 16,
-  },
-  editButtonText: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    marginTop: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E1E1E1',
-  },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 12,
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#4A90E2',
-  },
-  tabText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#666666',
-  },
-  activeTabText: {
-    color: '#4A90E2',
-    fontWeight: '600',
-  },
-  tabContent: {
-    width: '100%',
-    minHeight: 200,
-    paddingVertical: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: '#666666',
-    textAlign: 'center',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#4A90E2',
-  },
-  coverLoadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  profileLoadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 77.5,
-    zIndex: 1,
-  },
 };
 
 export default Profile;

@@ -20,7 +20,7 @@ const getApiUrl = () => {
         apiUrl = 'http://localhost:3000';
     } else {
         // For local network development or testing on physical devices
-        apiUrl = 'http://10.197.231.196:3000';
+        apiUrl = 'http://10.235.240.196:3000';
     }
     
     console.log('Using platform-specific API URL:', apiUrl);

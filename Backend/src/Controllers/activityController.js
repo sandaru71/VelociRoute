@@ -2,6 +2,7 @@ const Activity = require('../Infrastructure/Models/Activity');
 const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
 const admin = require('firebase-admin');
+const { error } = require('console');
 
 // Configure Cloudinary
 cloudinary.config({
@@ -43,7 +44,33 @@ const saveGpxFile = async (gpxData, filename) => {
   }
 };
 
-exports.saveActivity = async (req, res) => {
+const getAllActivities = async (req, res) => {
+  try{
+    // Decode firebase token to get user email.
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const token = authHeader(' ')[1];
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const userEmail = decodedToken.email;
+
+    if(!userEmail) {
+      return res.status(401).json({error: 'User email not found'});
+    }
+
+    const collection = Activity.getCollection(req.app.locals.db);
+    const userActivities = await collection.find({userEmail}).toArray();
+
+    res.status(200).json(userActivities);
+  } catch (err) {
+    console.error('Error fetching activities: ', err);
+    res.status(500).json({error: err.message})
+  }
+};
+
+const saveActivity = async (req, res) => {
   try {
     // Get Firebase token from Authorization header
     const authHeader = req.headers.authorization;
@@ -148,3 +175,8 @@ exports.saveActivity = async (req, res) => {
     });
   }
 };
+
+module.exports = {
+  saveActivity,
+  getAllActivities
+}

@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E1E1E1',
     borderWidth: 3,
     borderColor: '#FFFFFF',
-    overflow: 'visible', // <-- IMPORTANT: allow edit icon outside bounds
+    overflow: 'visible',
     marginTop: -60,
     marginLeft: 20,
     position: 'relative',
@@ -635,7 +635,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 12,
     right: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Darker for better contrast
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', 
     padding: 10,
     borderRadius: 20,
     zIndex: 10,
@@ -643,7 +643,7 @@ const styles = StyleSheet.create({
   },
   profileEditButton: {
     position: 'absolute',
-    bottom: -5, // <-- Move to bottom corner of the circle
+    bottom: -5,   
     right: -5,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     padding: 8,

@@ -4,8 +4,8 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import axios from 'axios';
 import { API_URL } from '../../../config';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import * as geolib from 'geolib';
 import { auth } from '../../../firebase/config';
+import { useLocalSearchParams } from 'expo-router';
 
 const activityIcons = {
   Running: 'running',
@@ -35,6 +35,12 @@ const Feed = () => {
   const [storyModalVisible, setStoryModalVisible] = useState(false);
   const mapRefs = useRef({});
   const [currentUserEmail, setCurrentUserEmail] = useState(null);
+  const [showUserPosts, setShowUserPosts] = useState(false);
+  const { showUserPosts: showUserPostsParam } = useLocalSearchParams();
+
+  useEffect(() => {
+    setShowUserPosts(showUserPostsParam === 'true');
+  }, [showUserPostsParam]);
 
   const fetchPosts = async (user = auth.currentUser) => {
     if (!user) {
@@ -59,7 +65,7 @@ const Feed = () => {
       });
 
       if (response.data.success) {
-        const postsWithProcessedData = response.data.data.map(post => {
+        let postsWithProcessedData = response.data.data.map(post => {
           // Process route data
           let processedRoute = null;
           if (post.route) {
@@ -89,7 +95,6 @@ const Feed = () => {
           // Process likes data
           const likes = Array.isArray(post.likes) ? post.likes : [];
           const likedByCurrentUser = likes.includes(user.email);
-          console.log(`Post ${post._id} - Likes:`, likes, 'Current user:', user.email, 'Liked:', likedByCurrentUser);
 
           return {
             ...post,
@@ -100,6 +105,11 @@ const Feed = () => {
             likeCount: likes.length
           };
         });
+
+        // Filter posts if showUserPosts is true
+        if (showUserPosts && user.email) {
+          postsWithProcessedData = postsWithProcessedData.filter(post => post.userEmail === user.email);
+        }
 
         setPosts(postsWithProcessedData);
       }
