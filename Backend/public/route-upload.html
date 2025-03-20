@@ -53,8 +53,8 @@
                 <input type="text" name="location" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700">Map File (GPX)</label>
-                <input type="file" name="mapFile" accept=".gpx" required class="mt-1 block w-full">
+                <label class="block text-sm font-medium text-gray-700">Map File (GPX, KML, or KMZ)</label>
+                <input type="file" name="mapFile" accept=".gpx,.kml,.kmz" required class="mt-1 block w-full">
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700">Images</label>
@@ -73,24 +73,37 @@
             
             const formData = new FormData(e.target);
             
+            // Log form data for debugging
+            console.log('Form data being sent:');
+            for (let [key, value] of formData.entries()) {
+                console.log(key, value);
+            }
+            
             try {
-                const response = await fetch('/api/routes/popular', {
+                const response = await fetch('/api/popular-routes', {
                     method: 'POST',
                     body: formData
                 });
                 
-                const result = await response.json();
+                const result = await response.text();
+                console.log('Server response:', result);
                 
-                if (response.ok) {
-                    statusDiv.textContent = 'Route added successfully!';
-                    statusDiv.className = 'mt-4 text-green-600';
-                    e.target.reset();
-                } else {
-                    throw new Error(result.message || 'Failed to add route');
+                try {
+                    const jsonResult = JSON.parse(result);
+                    if (response.ok) {
+                        statusDiv.textContent = 'Route added successfully!';
+                        statusDiv.className = 'mt-4 text-green-600';
+                        e.target.reset();
+                    } else {
+                        throw new Error(jsonResult.message || 'Failed to add route');
+                    }
+                } catch (parseError) {
+                    throw new Error('Server error: ' + result);
                 }
             } catch (error) {
                 statusDiv.textContent = `Error: ${error.message}`;
                 statusDiv.className = 'mt-4 text-red-600';
+                console.error('Upload error:', error);
             }
         });
     </script>

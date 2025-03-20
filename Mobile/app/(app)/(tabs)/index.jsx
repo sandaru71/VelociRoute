@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -21,7 +21,7 @@ import axios from 'axios';
 import MapView, { Polyline, Marker } from 'react-native-maps';
 
 // Configure axios base URL and defaults
-const LOCAL_IP = '10.197.231.196'; // Your computer's local IP address
+const LOCAL_IP = '10.235.240.170'; // Your computer's local IP address
 
 const API_BASE_URL = Platform.select({
   android: __DEV__ ? `http://${LOCAL_IP}:3000/api` : 'https://your-production-api.com/api',
@@ -125,12 +125,45 @@ const RouteMapModal = ({ visible, onClose, mapUrl }) => {
   const [loading, setLoading] = useState(true);
   const [routeData, setRouteData] = useState(null);
   const [error, setError] = useState(null);
+  const [currentRegion, setCurrentRegion] = useState(null);
+  const mapRef = useRef(null);
 
   useEffect(() => {
     if (visible && mapUrl) {
+      setLoading(true);
+      setError(null);
       fetchAndParseGpx();
     }
   }, [visible, mapUrl]);
+
+  useEffect(() => {
+    if (routeData?.coordinates && mapRef.current) {
+      // Calculate the bounding box for all coordinates
+      const latitudes = routeData.coordinates.map(coord => coord.latitude);
+      const longitudes = routeData.coordinates.map(coord => coord.longitude);
+      
+      const minLat = Math.min(...latitudes);
+      const maxLat = Math.max(...latitudes);
+      const minLng = Math.min(...longitudes);
+      const maxLng = Math.max(...longitudes);
+
+      // Add padding to the region
+      const PADDING = 0.1;
+      const latDelta = (maxLat - minLat) * (1 + PADDING);
+      const lngDelta = (maxLng - minLng) * (1 + PADDING);
+
+      const region = {
+        latitude: (minLat + maxLat) / 2,
+        longitude: (minLng + maxLng) / 2,
+        latitudeDelta: Math.max(latDelta, 0.02),
+        longitudeDelta: Math.max(lngDelta, 0.02),
+      };
+
+      setCurrentRegion(region);
+      // Animate to the calculated region
+      mapRef.current.animateToRegion(region, 1000);
+    }
+  }, [routeData?.coordinates]);
 
   const fetchAndParseGpx = async () => {
     try {
@@ -184,26 +217,61 @@ const RouteMapModal = ({ visible, onClose, mapUrl }) => {
             </TouchableOpacity>
           </View>
         ) : (
-          <MapView
-            style={styles.map}
-            initialRegion={routeData.initialRegion}
-          >
-            <Polyline
-              coordinates={routeData.coordinates}
-              strokeColor="#4CAF50"
-              strokeWidth={3}
-            />
-            <Marker
-              coordinate={routeData.startPoint}
-              title="Start"
-              pinColor="#4CAF50"
-            />
-            <Marker
-              coordinate={routeData.endPoint}
-              title="End"
-              pinColor="#f44336"
-            />
-          </MapView>
+          <View style={styles.mapContainer}>
+            <MapView
+              style={styles.map}
+              initialRegion={routeData.initialRegion}
+              region={currentRegion}
+              onRegionChangeComplete={setCurrentRegion}
+              ref={mapRef}
+            >
+              <Polyline
+                coordinates={routeData.coordinates}
+                strokeColor="#4CAF50"
+                strokeWidth={3}
+              />
+              <Marker
+                coordinate={routeData.startPoint}
+                title="Start"
+                pinColor="#4CAF50"
+              />
+              <Marker
+                coordinate={routeData.endPoint}
+                title="End"
+                pinColor="#f44336"
+              />
+            </MapView>
+            <View style={styles.zoomButtonsContainer}>
+              <TouchableOpacity 
+                style={styles.zoomButton}
+                onPress={() => {
+                  const region = {
+                    ...currentRegion,
+                    latitudeDelta: currentRegion.latitudeDelta / 2,
+                    longitudeDelta: currentRegion.longitudeDelta / 2,
+                  };
+                  setCurrentRegion(region);
+                  mapRef.current?.animateToRegion(region, 300);
+                }}
+              >
+                <Text style={styles.zoomButtonText}>+</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.zoomButton}
+                onPress={() => {
+                  const region = {
+                    ...currentRegion,
+                    latitudeDelta: currentRegion.latitudeDelta * 2,
+                    longitudeDelta: currentRegion.longitudeDelta * 2,
+                  };
+                  setCurrentRegion(region);
+                  mapRef.current?.animateToRegion(region, 300);
+                }}
+              >
+                <Text style={styles.zoomButtonText}>-</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         )}
       </View>
     </Modal>
@@ -708,8 +776,37 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 8,
   },
+  mapContainer: {
+    flex: 1,
+  },
   map: {
     flex: 1,
+  },
+  zoomButtonsContainer: {
+    position: 'absolute',
+    right: 16,
+    bottom: 16,
+    backgroundColor: 'transparent',
+    zIndex: 999,
+  },
+  zoomButton: {
+    width: 40,
+    height: 40,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  zoomButtonText: {
+    fontSize: 24,
+    color: '#333',
+    fontWeight: 'bold',
   },
   retryButton: {
     marginTop: 20,
