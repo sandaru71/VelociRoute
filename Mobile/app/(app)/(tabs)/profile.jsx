@@ -177,7 +177,7 @@ const Profile = () => {
           {/* View saved activities Button */}
           <TouchableOpacity
             style={{ backgroundColor: '#4A90E2', padding: 12, borderRadius: 8, marginTop: 16, marginHorizontal: 16, alignItems: 'center' }}
-            onPress={() => router.push('../savedActivities')}
+            onPress={() => router.push('../SavedActivities')}
           >
             <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>Saved Activities</Text>
           </TouchableOpacity>

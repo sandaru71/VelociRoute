@@ -33,6 +33,7 @@ const Feed = () => {
   const [commentInputs, setCommentInputs] = useState({});
   const mapRefs = useRef({});
   const [currentUserEmail, setCurrentUserEmail] = useState(null);
+  const [userProfiles, setUserProfiles] = useState([]);
   const [showUserPosts, setShowUserPosts] = useState(false);
   const { showUserPosts: showUserPostsParam } = useLocalSearchParams();
 
@@ -117,6 +118,59 @@ const Feed = () => {
       setLoading(false);
     }
   };
+
+  const fetchUserProfiles = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        console.error('No authenticated user');
+        return;
+      }
+
+      const token = await user.getIdToken();
+
+      // Get all unique email addresses from posts
+      const uniqueEmails = [...new Set(posts.map(post => post.userEmail))];
+      console.log('Fetching profiles for emails:', uniqueEmails);
+
+      // Fetch profiles using the batch endpoint
+      const response = await axios.get(`${API_URL}/api/user/profiles/batch`, {
+        params: { emails: uniqueEmails.join(',') },
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      console.log('Profile response:', response.data);
+
+      if (response.data && Array.isArray(response.data)) {
+        const profileMap = {};
+        
+        // Process each profile from the response
+        response.data.forEach(profile => {
+          if (profile && profile.email) {
+            profileMap[profile.email] = {
+              email: profile.email,
+              firstName: profile.firstName || '',
+              lastName: profile.lastName || '',
+              profilePhoto: profile.profilePhoto || null
+            };
+          }
+        });
+
+        console.log('Final profile map:', profileMap);
+        setUserProfiles(profileMap);
+      }
+    } catch (error) {
+      console.error('Error fetching user profiles:', error.response?.data || error.message);
+    }
+  };
+
+  useEffect(() => {
+    if (posts && posts.length > 0) {
+      fetchUserProfiles();
+    }
+  }, [posts]);
 
   const handleLike = async (postId) => {
     const user = auth.currentUser;
@@ -204,8 +258,40 @@ const Feed = () => {
     }
   };
 
-  const handleImageError = (error, type, url) => {
-    console.error(`Error loading ${type} image:`, url, error.nativeEvent.error);
+  const optimizeCloudinaryUrl = (url) => {
+    if (!url || !url.includes('cloudinary.com')) return url;
+    
+    try {
+      // Split the URL at 'upload/'
+      const [baseUrl, options] = url.split('upload/');
+      if (!baseUrl || !options) return url;
+
+      return `${baseUrl}upload/c_fill,g_face,w_80,h_80,q_auto/${options}`;
+    } catch (error) {
+      console.error('Error optimizing Cloudinary URL:', error);
+      return url;
+    }
+  };
+
+  const getProfileImage = (email) => {
+    const profile = userProfiles[email];
+    if (profile?.profilePhoto) {
+      return {
+        uri: optimizeCloudinaryUrl(profile.profilePhoto),
+        headers: {
+          'Cache-Control': 'max-age=86400'
+        }
+      };
+    }
+    return null;
+  };
+
+  const handleImageError = (error, email) => {
+    console.error('Error loading profile image:', {
+      error,
+      email,
+      apiUrl: API_URL
+    });
   };
 
   const handleComment = async (postId) => {
@@ -309,6 +395,15 @@ const Feed = () => {
     return `${Math.round(meters)}m`;
   };
 
+  const getDisplayName = (email) => {
+    const profile = userProfiles[email];
+    if (profile && (profile.firstName || profile.lastName)) {
+      const name = `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
+      return name || email;
+    }
+    return email;
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -346,7 +441,11 @@ const Feed = () => {
       </View>
     );
   }
-
+  const getImageUrl = (url) => {
+    if (!url) return null;
+    // Replace .avif with .jpg in the Cloudinary URL
+    return url.replace(/\.(avif|AVIF)$/, '.jpg');
+  };
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* Header */}
@@ -362,13 +461,24 @@ const Feed = () => {
             {/* User Info */}
             <View style={styles.userInfo}>
               <View style={[styles.avatar, styles.defaultAvatar]}>
-                <Text style={styles.avatarText}>
-                  {item.userName?.charAt(0).toUpperCase() || 'U'}
-                </Text>
-              </View>
+                {getProfileImage(item.userEmail) ? (
+                  <Image 
+                    source={getProfileImage(item.userEmail)}
+                    style={styles.avatarImage}
+                    resizeMode="cover"
+                    onError={(error) => handleImageError(error, item.userEmail)}
+                  />
+                ) : (
+                  <Text style={styles.avatarText}>
+                    {(userProfiles[item.userEmail]?.firstName?.charAt(0) || item.userEmail.charAt(0)).toUpperCase()}
+                  </Text>
+                )}
+              </View>  
+
               <View>
-                <Text style={styles.username}>{item.userName || 'Anonymous'}</Text>
-                {/* <Text style={styles.location}>{item.activityName}</Text> */}
+                <Text style={styles.username}>
+                  {getDisplayName(item.userEmail)}
+                </Text>
               </View>
             </View>
 
@@ -441,7 +551,7 @@ const Feed = () => {
                 typeof imageUrl === "string" && imageUrl.trim() !== '' ? (
                 <Image 
                   key={index}
-                  source={{ uri: imageUrl }}
+                  source={{ uri: getImageUrl(imageUrl) }}
                   style={styles.postImage}
                   resizeMode="cover"
                   onError={(error) => handleImageError(error, 'activity', imageUrl)}
@@ -510,7 +620,7 @@ const Feed = () => {
             <View style={styles.commentsSection}>
               {item.comments?.map((comment, index) => (
                 <View key={index} style={styles.commentContainer}>
-                  <Text style={styles.commentUser}>{comment.userName || 'Anonymous'}</Text>
+                  {/* <Text style={styles.commentUser}>{comment.userName || 'Anonymous'}</Text> */}
                   <Text style={styles.commentText}>{comment.text}</Text>
                 </View>
               ))}
@@ -588,16 +698,23 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     marginRight: 10,
-  },
-  defaultAvatar: {
-    backgroundColor: '#FF4500',
+    overflow: 'hidden',
+    backgroundColor: '#e1e1e1',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 20,
+  },
   avatarText: {
-    color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+    color: '#666',
+  },
+  defaultAvatar: {
+    backgroundColor: '#e1e1e1',
   },
   username: {
     fontSize: 16,

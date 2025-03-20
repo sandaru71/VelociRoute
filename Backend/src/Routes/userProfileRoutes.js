@@ -23,6 +23,9 @@ router.use((req, res, next) => {
 // Upload image to Cloudinary
 router.post('/upload-image', userProfileController.uploadImage);
 
+// Get batch of user profiles
+router.get('/profiles/batch', userProfileController.getBatchProfiles);
+
 // Get user profile
 router.get('/profile', userProfileController.getUserProfile);
 

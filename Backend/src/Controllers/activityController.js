@@ -2,7 +2,8 @@ const Activity = require('../Infrastructure/Models/Activity');
 const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
 const admin = require('firebase-admin');
-const { error } = require('console');
+const axios = require('axios');
+const xml2js = require('xml2js');
 
 // Configure Cloudinary
 cloudinary.config({
@@ -44,6 +45,29 @@ const saveGpxFile = async (gpxData, filename) => {
   }
 };
 
+const parseGpxToJson = async (gpxContent) => {
+  try {
+    const parser = new xml2js.Parser();
+    const result = await parser.parseStringPromise(gpxContent);
+    
+    const trk = result?.gpx?.trk?.[0];
+    const trkseg = trk?.trkseg?.[0];
+    const trkpts = trkseg?.trkpt;
+
+    if (!trkpts || !Array.isArray(trkpts)) {
+      return [];
+    }
+
+    return trkpts.map(pt => ({
+      latitude: parseFloat(pt.$.lat),
+      longitude: parseFloat(pt.$.lon)
+    }));
+  } catch (error) {
+    console.error('Error parsing GPX:', error);
+    return [];
+  }
+};
+
 const getAllActivities = async (req, res) => {
   try{
     // Decode firebase token to get user email.
@@ -61,9 +85,27 @@ const getAllActivities = async (req, res) => {
     }
 
     const collection = Activity.getCollection(req.app.locals.db);
-    const userActivities = await collection.find({userEmail}).toArray();
+    const activities = await collection.find({ userEmail }).toArray();
+    
+    // Parse GPX data for each activity
+    const activitiesWithRoutes = await Promise.all(
+      activities.map(async (activity) => {
+        const activityObj = {...activity};
+        if (activityObj.gpxUrl) {
+          try {
+            const gpxResponse = await axios.get(activityObj.gpxUrl);
+            const coordinates = await parseGpxToJson(gpxResponse.data);
+            activityObj.routeCoordinates = coordinates;
+          } catch (error) {
+            console.error(`Error processing GPX for activity ${activity._id}:`, error);
+            activityObj.routeCoordinates = [];
+          }
+        }
+        return activityObj;
+      })
+    );
 
-    res.status(200).json(userActivities);
+    res.status(200).json(activitiesWithRoutes);
   } catch (err) {
     console.error('Error fetching activities: ', err);
     res.status(500).json({error: err.message})

@@ -195,7 +195,51 @@ const userProfileController = {
                 body: req.body
             });
         }
-    }
+    },
+
+    // Get multiple user profiles by email
+    getBatchProfiles: async (req, res) => {
+        try {
+            // Get emails from query params
+            const emailsParam = req.query.emails;
+            if (!emailsParam) {
+                return res.status(400).json({ message: 'No emails provided' });
+            }
+
+            const emails = emailsParam.split(',');
+            console.log('Fetching profiles for emails:', emails);
+
+            // Find all profiles that match the provided emails
+            const profiles = await UserProfile.find({ email: { $in: emails } });
+            console.log(`Found ${profiles.length} profiles`);
+
+            // Create a map for quick lookup
+            const profileMap = {};
+            profiles.forEach(profile => {
+                profileMap[profile.email] = {
+                    email: profile.email,
+                    firstName: profile.firstName || '',
+                    lastName: profile.lastName || '',
+                    profilePhoto: profile.profilePhoto || null
+                };
+            });
+
+            // Ensure we return a result for every requested email
+            const results = emails.map(email => {
+                return profileMap[email] || {
+                    email: email,
+                    firstName: '',
+                    lastName: '',
+                    profilePhoto: null
+                };
+            });
+
+            res.json(results);
+        } catch (error) {
+            console.error('Error in getBatchProfiles:', error);
+            res.status(500).json({ message: 'Error fetching profiles', error: error.message });
+        }
+    },
 };
 
 module.exports = userProfileController;
