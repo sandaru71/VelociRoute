@@ -31,8 +31,6 @@ const Feed = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [commentInputs, setCommentInputs] = useState({});
-  const [selectedStory, setSelectedStory] = useState(null);
-  const [storyModalVisible, setStoryModalVisible] = useState(false);
   const mapRefs = useRef({});
   const [currentUserEmail, setCurrentUserEmail] = useState(null);
   const [showUserPosts, setShowUserPosts] = useState(false);

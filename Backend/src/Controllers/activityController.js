@@ -52,7 +52,7 @@ const getAllActivities = async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const token = authHeader(' ')[1];
+    const token = req.headers.authorization?.split(" ")[1];
     const decodedToken = await admin.auth().verifyIdToken(token);
     const userEmail = decodedToken.email;
 
