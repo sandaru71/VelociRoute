@@ -5,8 +5,8 @@ import axios from 'axios';
 import { API_URL } from '../../config/';
 import { auth } from '../../firebase/config';
 import { FontAwesome5 } from "@expo/vector-icons";
-import * as FileSystem from 'expo-file-system';
-import {parseString} from 'react-native-xml2js';
+// import * as FileSystem from 'expo-file-system';
+// import {parseString} from 'react-native-xml2js';
 
 
 const {width} = Dimensions.get('window');

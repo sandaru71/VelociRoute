@@ -20,8 +20,8 @@ const Profile = () => {
     lastName: '',
     preferredActivity: '',
     location: '',
-    profilePhoto: null,
-    coverPhoto: null,
+    profilePhoto: 'https://placehold.co/400x400',
+    coverPhoto: 'https://placehold.co/800x200',
   });
   const [loading, setLoading] = useState(true);
   const [currentUserEmail, setCurrentUserEmail] = useState(null);
@@ -107,7 +107,7 @@ const Profile = () => {
             </View>
           )}
           <Image
-            source={profileData.coverPhoto ? { uri: profileData.coverPhoto } : require('../../../assets/galle face green.png')}
+            source={{ uri: profileData.coverPhoto || 'https://placehold.co/800x200' }}
             style={{ height: '100%', width: '100%', resizeMode: 'cover' }}
             onLoadStart={() => setImageLoading(prev => ({ ...prev, cover: true }))}
             onLoadEnd={() => setImageLoading(prev => ({ ...prev, cover: false }))}
@@ -124,7 +124,7 @@ const Profile = () => {
               </View>
             )}
             <Image
-              source={profileData.profilePhoto ? { uri: profileData.profilePhoto } : require('../../../assets/galle face green.png')}
+              source={{ uri: profileData.profilePhoto || 'https://placehold.co/400x400' }}
               style={{ height: 155, width: 155, borderRadius: 77.5, borderColor: '#4A90E2', borderWidth: 3 }}
               onLoadStart={() => setImageLoading(prev => ({ ...prev, profile: true }))}
               onLoadEnd={() => setImageLoading(prev => ({ ...prev, profile: false }))}
