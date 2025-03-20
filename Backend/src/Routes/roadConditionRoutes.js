@@ -6,6 +6,11 @@ const { GOOGLE_MAPS_API_KEY } = require('../config/keys');
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
 
+// Debug log the configuration
+console.log('Road Condition Service Configuration:');
+console.log('ML_SERVICE_URL:', ML_SERVICE_URL);
+console.log('GOOGLE_MAPS_API_KEY exists:', !!GOOGLE_MAPS_API_KEY);
+
 // Utility function to generate points along route using Turf.js
 const generatePointsAlongRoute = (coordinates, interval = 1000) => {
   try {
@@ -104,12 +109,22 @@ router.post('/analyze', async (req, res) => {
     // Send available images to ML service for classification
     if (availablePoints.length > 0) {
       try {
+        console.log('Sending request to ML service:', `${ML_SERVICE_URL}/classify-route`);
+        console.log('Request payload:', {
+          images: availablePoints.map(point => ({
+            url: point.streetView.url,
+            kilometer: point.kilometer
+          }))
+        });
+        
         const mlResponse = await axios.post(`${ML_SERVICE_URL}/classify-route`, {
           images: availablePoints.map(point => ({
             url: point.streetView.url,
             kilometer: point.kilometer
           }))
         });
+
+        console.log('ML service response:', mlResponse.data);
 
         // Generate a human-readable summary
         const conditions = mlResponse.data.condition_summary;

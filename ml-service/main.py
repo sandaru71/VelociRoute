@@ -19,7 +19,7 @@ app = FastAPI(title="VelociRoute Road Condition Classifier")
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://10.54.219.97:3000", "http://10.54.219.97:8000", "http://localhost:3000", "http://localhost:19006"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
