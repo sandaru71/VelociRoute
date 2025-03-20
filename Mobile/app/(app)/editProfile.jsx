@@ -51,8 +51,8 @@ const EditProfile = () => {
     lastName: '',
     preferredActivity: 'Cycling',
     location: '',
-    profilePhoto: null,
-    coverPhoto: null,
+    profilePhoto: 'https://placehold.co/400x400',
+    coverPhoto: 'https://placehold.co/800x200',
   });
 
   useEffect(() => {
@@ -93,8 +93,8 @@ const EditProfile = () => {
           lastName: response.data.lastName || '',
           preferredActivity: response.data.preferredActivity || 'Cycling',
           location: response.data.location || '',
-          profilePhoto: response.data.profilePhoto || null,
-          coverPhoto: response.data.coverPhoto || null,
+          profilePhoto: response.data.profilePhoto || 'https://placehold.co/400x400',
+          coverPhoto: response.data.coverPhoto || 'https://placehold.co/800x200',
         });
       }
     } catch (error) {
@@ -344,7 +344,7 @@ const EditProfile = () => {
                 source={
                   formData.coverPhoto
                     ? { uri: formData.coverPhoto }
-                    : require('../../assets/galle face green.png')
+                    : require('../../assets/Screenshot_20221026_142847_com.google.android.apps.photos.jpg')
                 }
                 style={styles.coverPhoto}
                 onLoadStart={() => setImageLoading(prev => ({ ...prev, cover: true }))}
@@ -376,7 +376,7 @@ const EditProfile = () => {
                   source={
                     formData.profilePhoto
                       ? { uri: formData.profilePhoto }
-                      : require('../../assets/galle face green.png')
+                      : require('../../assets/Screenshot_20221026_142847_com.google.android.apps.photos.jpg')
                   }
                   style={styles.profilePhoto}
                   onLoadStart={() => setImageLoading(prev => ({ ...prev, profile: true }))}

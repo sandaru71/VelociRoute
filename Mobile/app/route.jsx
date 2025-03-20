@@ -435,6 +435,26 @@ const RouteScreen = () => {
             )}
           </Card.Content>
         </Card>
+
+        {/* Route Actions */}
+        <View style={styles.actionButtonsContainer}>
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.saveButton]}
+            onPress={() => {/* Save functionality will be added later */}}
+          >
+            <MaterialIcons name="bookmark" size={24} color="#fff" />
+            <Text style={styles.actionButtonText}>Save Route</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.deleteButton]}
+            onPress={() => {/* Delete functionality will be added later */}}
+          >
+            <MaterialIcons name="delete" size={24} color="#fff" />
+            <Text style={styles.actionButtonText}>Delete Route</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Add padding at the bottom */}
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -637,6 +657,38 @@ const styles = StyleSheet.create({
   },
   selectedDateText: {
     color: '#fff',
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginVertical: 16,
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    gap: 8,
+  },
+  saveButton: {
+    backgroundColor: '#4CAF50',
+  },
+  deleteButton: {
+    backgroundColor: '#FF5252',
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   bottomPadding: {
     height: 32,
