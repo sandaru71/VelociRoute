@@ -7,6 +7,7 @@ import { LineChart } from 'react-native-chart-kit';
 import { Card, Surface, Button, Modal, Portal, Dialog, Snackbar } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import moment from 'moment';
+import { Buffer } from 'buffer';
 import { TOMORROW_API_KEY } from '../config/keys';
 import { ActivityIndicator } from 'react-native';
 import { API_URL } from '../config';
@@ -183,8 +184,12 @@ const RouteScreen = () => {
       }
 
       // Get fresh token
-      const token = await user.getIdToken(true); // Force refresh the token
+      const token = await user.getIdToken(true);
       console.log('Got fresh user token');
+
+      // Create GPX string
+      const gpxString = generateGPX(routeCoordinates, routeName || 'Untitled Route');
+      console.log('Generated GPX string');
 
       // Create form data
       const formData = new FormData();
@@ -194,26 +199,50 @@ const RouteScreen = () => {
       formData.append('avgSpeed', selectedActivity === 'cycling' ? '15 km/h' : '5 km/h');
       formData.append('elevationGain', elevationGain.toString());
 
-      // Create GPX string
-      const gpxString = generateGPX(routeCoordinates, routeName || 'Untitled Route');
-      console.log('Generated GPX string');
-
-      // Create GPX file blob
+      // Create GPX file
       const gpxBlob = new Blob([gpxString], { type: 'application/gpx+xml' });
-      const gpxFile = {
-        uri: Platform.OS === 'android' ? 'gpx-uri' : 'gpx-uri',
+      const base64Gpx = Buffer.from(gpxString).toString('base64');
+      const gpxUri = Platform.OS === 'android' ? 
+        `data:application/gpx+xml;base64,${base64Gpx}` :
+        'data:application/gpx+xml;base64,' + base64Gpx;
+
+      formData.append('gpxData', {
+        uri: gpxUri,
         name: `${(routeName || 'route').replace(/\s+/g, '_')}.gpx`,
         type: 'application/gpx+xml'
-      };
-      formData.append('gpxData', gpxFile);
+      });
 
-      // Create elevation profile image (placeholder for now)
-      const elevationFile = {
-        uri: Platform.OS === 'android' ? 'elevation-uri' : 'elevation-uri',
-        name: `${(routeName || 'route').replace(/\s+/g, '_')}_elevation.png`,
-        type: 'image/png'
-      };
-      formData.append('elevationProfileImage', elevationFile);
+      // Create elevation profile image
+      // Convert elevation data to a simple line chart
+      const elevationData = elevationProfile.map(point => point.elevation);
+      const maxElevation = Math.max(...elevationData);
+      const minElevation = Math.min(...elevationData);
+      const height = 200;
+      const width = elevationData.length;
+      
+      // Create a simple SVG line chart
+      const points = elevationData.map((elevation, index) => {
+        const x = (index / (elevationData.length - 1)) * width;
+        const y = height - ((elevation - minElevation) / (maxElevation - minElevation)) * height;
+        return `${x},${y}`;
+      }).join(' ');
+
+      const svgString = `
+        <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+          <polyline points="${points}" fill="none" stroke="black" stroke-width="2"/>
+        </svg>
+      `;
+
+      const base64Svg = Buffer.from(svgString).toString('base64');
+      const elevationUri = Platform.OS === 'android' ?
+        `data:image/svg+xml;base64,${base64Svg}` :
+        'data:image/svg+xml;base64,' + base64Svg;
+
+      formData.append('elevationProfileImage', {
+        uri: elevationUri,
+        name: `${(routeName || 'route').replace(/\s+/g, '_')}_elevation.svg`,
+        type: 'image/svg+xml'
+      });
 
       console.log('Form data prepared');
       console.log('Sending request to:', `${API_URL}/api/saved-routes/save`);

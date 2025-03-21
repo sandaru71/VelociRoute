@@ -8,18 +8,34 @@ const saveRoute = async (req, res) => {
         console.log('Request body:', req.body);
         console.log('Request files:', req.files);
 
+        // Validate required fields
         const { routeName, distance, duration, avgSpeed, elevationGain } = req.body;
-        const { gpxData, elevationProfileImage } = req.files;
-        const userId = req.user.uid;
+        if (!routeName || !distance || !duration) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields'
+            });
+        }
 
-        console.log('Extracted data:', {
-            routeName,
-            distance,
-            duration,
-            avgSpeed,
-            elevationGain,
-            userId
-        });
+        // Check for required files
+        const { gpxData, elevationProfileImage } = req.files;
+        if (!gpxData || !elevationProfileImage) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required files'
+            });
+        }
+
+        // Get user email from authenticated request
+        const userEmail = req.user.email;
+        if (!userEmail) {
+            return res.status(401).json({
+                success: false,
+                message: 'User email not found'
+            });
+        }
+
+        console.log('Processing request for user:', userEmail);
 
         // Upload GPX file to Cloudinary
         console.log('Uploading GPX file to Cloudinary...');
@@ -28,7 +44,7 @@ const saveRoute = async (req, res) => {
                 {
                     resource_type: 'raw',
                     folder: 'gpx_files',
-                    public_id: `${userId}_${routeName}_${Date.now()}`,
+                    public_id: `${userEmail}_${routeName}_${Date.now()}`,
                     format: 'gpx'
                 },
                 (error, result) => {
@@ -42,7 +58,7 @@ const saveRoute = async (req, res) => {
                 }
             );
 
-            const stream = Readable.from(gpxData.buffer);
+            const stream = Readable.from(gpxData[0].buffer);
             stream.pipe(uploadStream);
         });
 
@@ -52,7 +68,7 @@ const saveRoute = async (req, res) => {
             const uploadStream = cloudinary.uploader.upload_stream(
                 {
                     folder: 'elevation_profiles',
-                    public_id: `${userId}_${routeName}_elevation_${Date.now()}`
+                    public_id: `${userEmail}_${routeName}_elevation_${Date.now()}`
                 },
                 (error, result) => {
                     if (error) {
@@ -65,14 +81,14 @@ const saveRoute = async (req, res) => {
                 }
             );
 
-            const stream = Readable.from(elevationProfileImage.buffer);
+            const stream = Readable.from(elevationProfileImage[0].buffer);
             stream.pipe(uploadStream);
         });
 
         // Save route data to MongoDB
         console.log('Saving route data to MongoDB...');
         const routeData = {
-            userId,
+            userEmail,
             routeName,
             distance,
             duration,
@@ -83,6 +99,12 @@ const saveRoute = async (req, res) => {
         };
 
         console.log('Route data to save:', routeData);
+        
+        // Check if database connection exists
+        if (!req.app.locals.db) {
+            throw new Error('Database connection not found');
+        }
+
         const result = await SavedRoute.create(req.app.locals.db, routeData);
         console.log('MongoDB save result:', result);
 
@@ -104,16 +126,12 @@ const saveRoute = async (req, res) => {
 
 const deleteRoute = async (req, res) => {
     try {
-        console.log('Starting route delete process...');
-        const { routeId } = req.params;
-        const userId = req.user.uid;
+        const routeId = req.params.routeId;
+        const userEmail = req.user.email;
 
-        console.log('Deleting route:', { routeId, userId });
-        const result = await SavedRoute.delete(req.app.locals.db, routeId, userId);
-        console.log('Delete result:', result);
-
+        const result = await SavedRoute.delete(req.app.locals.db, routeId, userEmail);
+        
         if (result.deletedCount === 0) {
-            console.log('Route not found or unauthorized');
             return res.status(404).json({
                 success: false,
                 message: 'Route not found or unauthorized'
@@ -124,7 +142,6 @@ const deleteRoute = async (req, res) => {
             success: true,
             message: 'Route deleted successfully'
         });
-
     } catch (error) {
         console.error('Error in deleteRoute controller:', error);
         res.status(500).json({
@@ -137,23 +154,18 @@ const deleteRoute = async (req, res) => {
 
 const getUserRoutes = async (req, res) => {
     try {
-        console.log('Fetching user routes...');
-        const userId = req.user.uid;
-        console.log('User ID:', userId);
-
-        const routes = await SavedRoute.findByUserId(req.app.locals.db, userId);
-        console.log('Found routes:', routes);
-
+        const userEmail = req.user.email;
+        const routes = await SavedRoute.findByUserEmail(req.app.locals.db, userEmail);
+        
         res.json({
             success: true,
             routes
         });
-
     } catch (error) {
         console.error('Error in getUserRoutes controller:', error);
         res.status(500).json({
             success: false,
-            message: 'Error fetching user routes',
+            message: 'Error fetching routes',
             error: error.message
         });
     }
