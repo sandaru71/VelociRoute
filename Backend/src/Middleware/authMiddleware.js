@@ -1,43 +1,50 @@
-const admin = require('firebase-admin');
+const { admin, getFirebaseApp } = require('../Config/firebase');
 
 // Authentication middleware that validates Firebase token
 const authenticateToken = async (req, res, next) => {
-    // Log all headers for debugging
-    console.log('Request headers:', req.headers);
-    
-    const authHeader = req.headers['authorization'];
-    console.log('Auth header:', authHeader);
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        // For development environments (localhost, emulator IPs)
-        const devIPs = ['localhost', '127.0.0.1', '10.0.2.2', '10.137.28.196', '192.168.18.4'];
-        const host = req.get('host');
-        const hostWithoutPort = host ? host.split(':')[0] : '';
-        console.log('Host:', host, 'Host without port:', hostWithoutPort);
-        console.log('Is dev IP:', devIPs.includes(hostWithoutPort));
-        
-        if (devIPs.includes(hostWithoutPort)) {
-            console.log('No token but in dev environment');
-            return res.status(401).json({ error: 'No auth token provided' });
-        }
-        return res.status(401).json({ error: 'No auth token provided' });
-    }
-
     try {
-        const token = authHeader.split(' ')[1];
-        const decodedToken = await admin.auth().verifyIdToken(token);
-        console.log('Decoded token:', decodedToken);
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'No authorization header' 
+            });
+        }
 
-        // Set user email in request object
-        req.user = { email: decodedToken.email };
-        console.log('Set user email in request:', req.user.email);
-        next();
+        // Get the ID token
+        const token = authHeader.split('Bearer ')[1];
+        if (!token) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'No token provided' 
+            });
+        }
+
+        try {
+            // Initialize Firebase if not already initialized
+            getFirebaseApp();
+            
+            // Verify the token
+            const decodedToken = await admin.auth().verifyIdToken(token);
+            req.user = decodedToken;
+            console.log('User authenticated:', decodedToken.uid);
+            next();
+        } catch (error) {
+            console.error('Token verification failed:', error);
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Invalid token',
+                error: error.message 
+            });
+        }
     } catch (error) {
-        console.error('Error verifying token:', error);
-        return res.status(403).json({ error: 'Invalid token' });
+        console.error('Authentication error:', error);
+        return res.status(500).json({ 
+            success: false, 
+            message: 'Authentication failed',
+            error: error.message 
+        });
     }
 };
 
-module.exports = {
-    authenticateToken
-};
+module.exports = { authenticateToken };
