@@ -229,6 +229,7 @@ const FilterModal = ({ visible, onClose, title, options, selectedValue, onSelect
                 selectedValue === option && styles.selectedOption,
               ]}
               onPress={() => {
+                console.log(`Selected ${title.toLowerCase()}: ${option}`);
                 onSelect(option);
                 onClose();
               }}
@@ -273,21 +274,37 @@ const DashboardScreen = () => {
       for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
           let queryParams = new URLSearchParams();
-          if (selectedActivity !== 'All') queryParams.append('activityType', selectedActivity.toLowerCase());
-          if (selectedDifficulty !== 'All') queryParams.append('difficulty', selectedDifficulty.toLowerCase());
+          
+          // Convert activity type and difficulty to lowercase before sending
+          if (selectedActivity !== 'All') {
+            const activity = selectedActivity.toLowerCase();
+            queryParams.append('activityType', activity);
+            console.log('Adding activity filter:', activity);
+          }
+          
+          if (selectedDifficulty !== 'All') {
+            const difficulty = selectedDifficulty.toLowerCase();
+            queryParams.append('difficulty', difficulty);
+            console.log('Adding difficulty filter:', difficulty);
+          }
+
           if (distanceRange.min) queryParams.append('minDistance', distanceRange.min);
           if (distanceRange.max) queryParams.append('maxDistance', distanceRange.max);
           if (location) queryParams.append('location', location);
 
-          console.log('API Base URL:', API_BASE_URL);
-          console.log('Fetching routes with params:', queryParams.toString());
+          const queryString = queryParams.toString();
+          const endpoint = `popular-routes${queryString ? `?${queryString}` : ''}`;
           
-          // First try without any filters
-          const response = await axiosInstance.get('popular-routes');
-          console.log('Routes response:', response.data);
+          console.log('Making request to:', `${API_BASE_URL}/${endpoint}`);
+          const response = await axiosInstance.get(endpoint);
           
           if (response.data && Array.isArray(response.data)) {
-            console.log('Routes fetched successfully:', response.data.length, 'routes');
+            console.log('Routes fetched:', response.data.length);
+            console.log('Filters applied:', {
+              activity: selectedActivity,
+              difficulty: selectedDifficulty,
+              queryParams: queryString
+            });
             setRoutes(response.data);
           } else {
             console.error('Unexpected response format:', response.data);
@@ -298,10 +315,16 @@ const DashboardScreen = () => {
           return;
         } catch (error) {
           lastError = error;
-          console.log(`Attempt ${attempt + 1} failed:`, error.message);
+          console.error(`Attempt ${attempt + 1} failed:`, error);
+          console.error('Error details:', {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status
+          });
+          
           if (attempt < maxRetries - 1) {
             console.log('Waiting before retry...');
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Increased to 2 seconds
+            await new Promise(resolve => setTimeout(resolve, 2000));
           }
         }
       }
@@ -317,6 +340,13 @@ const DashboardScreen = () => {
       );
     }
   };
+
+  useEffect(() => {
+    console.log('Filter changed:', {
+      activity: selectedActivity,
+      difficulty: selectedDifficulty
+    });
+  }, [selectedActivity, selectedDifficulty]);
 
   const handleViewMap = (route) => {
     setSelectedRoute(route);
@@ -462,19 +492,27 @@ const DashboardScreen = () => {
       <FilterModal
         visible={activityModalVisible}
         onClose={() => setActivityModalVisible(false)}
-        title="Select Activity"
+        title="Activity Type"
         options={activityTypes}
         selectedValue={selectedActivity}
-        onSelect={setSelectedActivity}
+        onSelect={(value) => {
+          console.log('Setting activity type:', value);
+          setSelectedActivity(value);
+          fetchRoutes();
+        }}
       />
 
       <FilterModal
         visible={difficultyModalVisible}
         onClose={() => setDifficultyModalVisible(false)}
-        title="Select Difficulty"
+        title="Difficulty Level"
         options={difficultyLevels}
         selectedValue={selectedDifficulty}
-        onSelect={setSelectedDifficulty}
+        onSelect={(value) => {
+          console.log('Setting difficulty:', value);
+          setSelectedDifficulty(value);
+          fetchRoutes();
+        }}
       />
 
       <RouteMapModal
