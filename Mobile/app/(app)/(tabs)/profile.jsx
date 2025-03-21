@@ -20,8 +20,8 @@ const Profile = () => {
     lastName: '',
     preferredActivity: '',
     location: '',
-    profilePhoto: 'https://placehold.co/400x400',
-    coverPhoto: 'https://placehold.co/800x200',
+    profilePhoto: null,
+    coverPhoto: null,
   });
   const [loading, setLoading] = useState(true);
   const [currentUserEmail, setCurrentUserEmail] = useState(null);
@@ -64,23 +64,23 @@ const Profile = () => {
         
         // Check if this is a first-time user (no profile data set)
         if (!data.firstName && !data.lastName && !data.preferredActivity && !data.location) {
-          router.push('/editProfile');
+          router.push('editProfile');
         }
       } else if (response.status === 404) {
         // User profile not found, treat as first-time user
-        router.push('/editProfile');
+        router.push('editProfile');
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
       // If there's an error fetching profile, might be first-time user
-      router.push('/editProfile');
+      router.push('editProfile');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleEditProfile = () => {
-    router.push('/editProfile');
+    router.push('editProfile');
   };
 
   if (isLoading) {
@@ -107,7 +107,7 @@ const Profile = () => {
             </View>
           )}
           <Image
-            source={{ uri: profileData.coverPhoto || 'https://placehold.co/800x200' }}
+            source={profileData.coverPhoto ? { uri: profileData.coverPhoto } : require('../../../assets/galle face green.png')}
             style={{ height: '100%', width: '100%', resizeMode: 'cover' }}
             onLoadStart={() => setImageLoading(prev => ({ ...prev, cover: true }))}
             onLoadEnd={() => setImageLoading(prev => ({ ...prev, cover: false }))}
@@ -124,7 +124,7 @@ const Profile = () => {
               </View>
             )}
             <Image
-              source={{ uri: profileData.profilePhoto || 'https://placehold.co/400x400' }}
+              source={profileData.profilePhoto ? { uri: profileData.profilePhoto } : require('../../../assets/galle face green.png')}
               style={{ height: 155, width: 155, borderRadius: 77.5, borderColor: '#4A90E2', borderWidth: 3 }}
               onLoadStart={() => setImageLoading(prev => ({ ...prev, profile: true }))}
               onLoadEnd={() => setImageLoading(prev => ({ ...prev, profile: false }))}
@@ -177,7 +177,7 @@ const Profile = () => {
           {/* View saved activities Button */}
           <TouchableOpacity
             style={{ backgroundColor: '#4A90E2', padding: 12, borderRadius: 8, marginTop: 16, marginHorizontal: 16, alignItems: 'center' }}
-            onPress={() => router.push('../SavedActivities')}
+            onPress={() => router.push('../savedActivities')}
           >
             <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>Saved Activities</Text>
           </TouchableOpacity>

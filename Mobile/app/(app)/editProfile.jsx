@@ -7,7 +7,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from "expo-router";
 import { API_URL } from '../../config';
 import { Picker } from '@react-native-picker/picker';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import Constants from 'expo-constants';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -93,8 +92,8 @@ const EditProfile = () => {
           lastName: response.data.lastName || '',
           preferredActivity: response.data.preferredActivity || 'Cycling',
           location: response.data.location || '',
-          profilePhoto: response.data.profilePhoto || 'https://placehold.co/400x400',
-          coverPhoto: response.data.coverPhoto || 'https://placehold.co/800x200',
+          profilePhoto: response.data.profilePhoto || '',
+          coverPhoto: response.data.coverPhoto || '',
         });
       }
     } catch (error) {
@@ -344,7 +343,7 @@ const EditProfile = () => {
                 source={
                   formData.coverPhoto
                     ? { uri: formData.coverPhoto }
-                    : require('../../assets/Screenshot_20221026_142847_com.google.android.apps.photos.jpg')
+                    : require('../../assets/galle face green.png')
                 }
                 style={styles.coverPhoto}
                 onLoadStart={() => setImageLoading(prev => ({ ...prev, cover: true }))}
@@ -376,7 +375,7 @@ const EditProfile = () => {
                   source={
                     formData.profilePhoto
                       ? { uri: formData.profilePhoto }
-                      : require('../../assets/Screenshot_20221026_142847_com.google.android.apps.photos.jpg')
+                      : require('../../assets/galle face green.png')
                   }
                   style={styles.profilePhoto}
                   onLoadStart={() => setImageLoading(prev => ({ ...prev, profile: true }))}
