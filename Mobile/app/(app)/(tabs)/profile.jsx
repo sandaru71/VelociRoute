@@ -46,7 +46,7 @@ const Profile = () => {
         return;
       }
       
-      console.log('Fetching profile data from:', `${API_URL}/user/profile`);
+      console.log('Fetching profile data from:', `${API_URL}/api/user/profile`);
 
       const response = await fetch(`${API_URL}/api/user/profile`, {
         headers: {
