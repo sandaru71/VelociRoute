@@ -11,9 +11,7 @@
     "test": "jest --watchAll",
     "lint": "expo lint"
   },
-  "jest": {
-    "preset": "jest-expo"
-  },
+  
   "dependencies": {
     "@expo/vector-icons": "^14.0.4",
     "@mapbox/polyline": "^1.2.1",
