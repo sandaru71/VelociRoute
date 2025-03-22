@@ -38,10 +38,20 @@ export default function TabBarButton({
   const IconComponent = icons[routeName] || null;
 
   return (
+<<<<<<< HEAD
     <Pressable onPress={onPress} style={styles.container}>
       {IconComponent && (
         <Animated.View style={animatedIconStyle}>
           <IconComponent color={color} />
+=======
+    <Pressable {...props} style={styles.container}>
+        <Animated.View style={[animatedIconStyle]}>
+            {
+                icons[routeName] 
+                ? icons[routeName]({ color }) 
+                : null 
+            }
+>>>>>>> 88677a46cfe6b31fc65727a61632357378f514d7
         </Animated.View>
       )}
       <Animated.Text style={[{ color, fontSize: 11 }, animatedTextStyle]}>
