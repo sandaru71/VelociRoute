@@ -86,53 +86,15 @@ const Profile = () => {
     router.push('editProfile');
   };
 
-  const deleteAccount = async () => {
+  const handleLogout = async () => {
     try {
-      const user = auth.currentUser;
-      if (!user) {
-        Alert.alert("Error", "No authenticated user found.");
-        return;
-      }
-  
-      // Show confirmation alert before deleting
-      Alert.alert(
-        "Confirm Deletion",
-        "Are you sure you want to delete your account? This action cannot be undone.",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: async () => {
-              try {
-                await user.delete();
-                Alert.alert("Success", "Your account has been deleted.");
-                
-                // Redirect to login screen
-                router.push("/login");
-              } catch (error) {
-                if (error.code === "auth/requires-recent-login") {
-                  Alert.alert(
-                    "Re-authentication Required",
-                    "Please log in again to delete your account."
-                  );
-                  await signOut(auth);
-                  router.push("/login"); // Redirect to login for re-authentication
-                } else {
-                  console.error("Error deleting account:", error);
-                  Alert.alert("Error", "Failed to delete account. Try again later.");
-                }
-              }
-            },
-          },
-        ]
-      );
+      await auth.signOut();
+      router.replace('/(auth)/start');
     } catch (error) {
-      console.error("Delete account error:", error);
-      Alert.alert("Error", "Something went wrong.");
+      console.error('Error signing out:', error);
     }
   };
-  
+
   if (isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
@@ -148,22 +110,17 @@ const Profile = () => {
     <>
     <Stack.Screen 
       options={{
-        headerLeft: () => (
-          <TouchableOpacity
-            style={{ marginLeft: 15 }}
-            onPress={() => router.push('/(app)/(tabs)/')}
-          >
-            <Ionicons name="arrow-back" size={24} color="black" />
-          </TouchableOpacity>
-        ),
+        headerTitle: "Profile",
         headerRight: () => (
-          <TouchableOpacity
-            style={{ marginRight: 15 }}
-            onPress={fetchProfileData}
-          >
-            <Ionicons name="refresh" size={24} color="black" />
-          </TouchableOpacity>
-        )
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginRight: 10 }}>
+            <TouchableOpacity onPress={fetchProfileData}>
+              <Ionicons name="reload" size={24} color="#000" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={24} color="#000" />
+            </TouchableOpacity>
+          </View>
+        ),
       }}
     />
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
