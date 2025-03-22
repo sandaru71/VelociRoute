@@ -106,6 +106,53 @@ const Profile = () => {
     );
   }
 
+  const deleteAccount = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert("Error", "No authenticated user found.");
+        return;
+      }
+  
+      // Show confirmation alert before deleting
+      Alert.alert(
+        "Confirm Deletion",
+        "Are you sure you want to delete your account? This action cannot be undone.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await user.delete();
+                Alert.alert("Success", "Your account has been deleted.");
+                
+                // Redirect to login screen
+                router.push("/login");
+              } catch (error) {
+                if (error.code === "auth/requires-recent-login") {
+                  Alert.alert(
+                    "Re-authentication Required",
+                    "Please log in again to delete your account."
+                  );
+                  await signOut(auth);
+                  router.push("/login"); // Redirect to login for re-authentication
+                } else {
+                  console.error("Error deleting account:", error);
+                  Alert.alert("Error", "Failed to delete account. Try again later.");
+                }
+              }
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error("Delete account error:", error);
+      Alert.alert("Error", "Something went wrong.");
+    }
+  };
+
   return (
     <>
     <Stack.Screen 
