@@ -1,54 +1,28 @@
-const Activity = require('../Infrastructure/Models/Activity');
-const cloudinary = require('cloudinary').v2;
-const fs = require('fs');
-const admin = require('firebase-admin');
+const Activity = require('../models/Activity');
+const cloudinary = require('../config/cloudinary');
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
-const saveGpxFile = async (gpxData, filename) => {
-  const filePath = `./uploads/${filename}`;
-  
-  // Ensure uploads directory exists
-  if (!fs.existsSync('./uploads')) {
-    fs.mkdirSync('./uploads', { recursive: true });
-  }
-
-  // Save GPX data to a temporary file
-  fs.writeFileSync(filePath, gpxData);
-
-  try {
-    // Upload to Cloudinary
-    const result = await cloudinary.uploader.upload(filePath, {
-      folder: 'velociroute_gpx',
-      resource_type: 'raw',
-      public_id: filename.replace('.gpx', '')
-    });
-
-    // Delete temporary file
-    fs.unlinkSync(filePath);
-
-    return result.secure_url;
-  } catch (error) {
-    // Clean up temporary file in case of error
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-    throw error;
-  }
+const uploadImages = async (images) => {
+  const uploadPromises = images.map(image => 
+    cloudinary.uploader.upload(image, {
+      folder: 'velociroute_activities',
+      transformation: { quality: 'auto:good' }
+    })
+  );
+  const results = await Promise.all(uploadPromises);
+  return results.map(result => result.secure_url);
 };
 
 const getActivities = async (req, res) => {
   try {
-    const { userId } = req.query;
-    const query = userId ? { userId } : {};
+    const { userEmail, activityType } = req.query;
+    const query = { userEmail };
+    
+    if (activityType) {
+      query.activityType = activityType;
+    }
     
     const activities = await Activity.find(query)
-      .sort({ startTime: -1 });
+      .sort({ createdAt: -1 });
 
     res.status(200).json(activities);
   } catch (error) {
@@ -59,25 +33,45 @@ const getActivities = async (req, res) => {
 
 const recordActivity = async (req, res) => {
   try {
-    const activityData = req.body;
+    const {
+      userEmail,
+      activityName,
+      activityType,
+      difficulty,
+      description,
+      stats,
+      images
+    } = req.body;
 
-    // Handle GPX file if present
-    if (req.body.gpxData) {
-      const gpxUrl = await saveGpxFile(req.body.gpxData, `activity_${Date.now()}.gpx`);
-      activityData.gpxUrl = gpxUrl;
+    // Validate required fields
+    if (!userEmail || !activityName || !activityType || !difficulty) {
+      return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const activity = new Activity(activityData);
-    await activity.save();
+    // Upload images if provided
+    let imageUrls = [];
+    if (images && images.length > 0) {
+      imageUrls = await uploadImages(images);
+    }
 
-    res.status(201).json(activity);
+    const activity = new Activity({
+      userEmail,
+      activityName,
+      activityType,
+      difficulty,
+      description,
+      stats,
+      images: imageUrls
+    });
+
+    const savedActivity = await activity.save();
+    res.status(201).json(savedActivity);
   } catch (error) {
+    console.error('Error recording activity:', error);
     if (error.name === 'ValidationError') {
-      res.status(400).json({ error: error.message });
-    } else {
-      console.error('Error recording activity:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return res.status(400).json({ error: error.message });
     }
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 

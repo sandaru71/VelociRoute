@@ -1,7 +1,8 @@
-const { setupTestDB, closeTestDB, mockRequest, mockResponse } = require('../utils/testUtils');
-const { recordActivity, getActivities } = require('../../src/Controllers/activityController');
-const Activity = require('../../src/Infrastructure/Models/Activity');
+const { mockRequest, mockResponse } = require('../utils/testUtils');
+const { recordActivity, getActivities } = require('../../src/controllers/activityController');
+const Activity = require('../../src/models/Activity');
 
+// Mock Cloudinary
 jest.mock('cloudinary', () => ({
   v2: {
     config: jest.fn(),
@@ -12,35 +13,28 @@ jest.mock('cloudinary', () => ({
 }));
 
 describe('ActivityController', () => {
-  let db;
-
-  beforeAll(async () => {
-    await setupTestDB();
-    db = global.__MONGO_DB__;
-  });
-
-  afterAll(async () => {
-    await closeTestDB();
-  });
-
-  afterEach(async () => {
+  beforeEach(async () => {
     await Activity.deleteMany({});
   });
 
   describe('recordActivity', () => {
     it('should record a new activity successfully', async () => {
       const activityData = {
-        userId: '123',
+        userEmail: 'test@example.com',
+        activityName: 'Morning Ride',
         activityType: 'cycling',
-        distance: 15.5,
-        duration: 3600,
-        averageSpeed: 15.5,
-        elevationGain: 100,
-        startTime: new Date().toISOString(),
-        endTime: new Date().toISOString()
+        difficulty: 'medium',
+        stats: {
+          distance: 15.5,
+          duration: 3600,
+          averageSpeed: 15.5,
+          elevationGain: 100,
+          startTime: new Date().toISOString(),
+          endTime: new Date().toISOString()
+        }
       };
 
-      const req = mockRequest({ body: activityData, app: { locals: { db } } });
+      const req = mockRequest({ body: activityData });
       const res = mockResponse();
 
       await recordActivity(req, res);
@@ -48,22 +42,20 @@ describe('ActivityController', () => {
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          userId: activityData.userId,
+          userEmail: activityData.userEmail,
           activityType: activityData.activityType,
-          distance: activityData.distance
+          difficulty: activityData.difficulty
         })
       );
     });
 
-    it('should handle validation errors', async () => {
-      const req = mockRequest({
-        body: {
-          userId: '123',
-          activityType: 'invalid-type',
-          distance: -1
-        },
-        app: { locals: { db } }
-      });
+    it('should return 400 for missing required fields', async () => {
+      const invalidActivityData = {
+        activityName: 'Morning Ride',
+        activityType: 'cycling'
+      };
+
+      const req = mockRequest({ body: invalidActivityData });
       const res = mockResponse();
 
       await recordActivity(req, res);
@@ -71,7 +63,53 @@ describe('ActivityController', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: expect.any(String)
+          error: expect.stringContaining('required')
+        })
+      );
+    });
+
+    it('should return 400 for invalid activity type', async () => {
+      const invalidActivityData = {
+        userEmail: 'test@example.com',
+        activityName: 'Morning Ride',
+        activityType: 'invalid',
+        difficulty: 'medium'
+      };
+
+      const req = mockRequest({ body: invalidActivityData });
+      const res = mockResponse();
+
+      await recordActivity(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.stringContaining('activityType')
+        })
+      );
+    });
+
+    it('should handle image uploads', async () => {
+      const activityData = {
+        userEmail: 'test@example.com',
+        activityName: 'Morning Ride',
+        activityType: 'cycling',
+        difficulty: 'medium',
+        images: ['test-image-1.jpg', 'test-image-2.jpg']
+      };
+
+      const req = mockRequest({ body: activityData });
+      const res = mockResponse();
+
+      await recordActivity(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          images: expect.arrayContaining([
+            'https://cloudinary.com/test-image.jpg',
+            'https://cloudinary.com/test-image.jpg'
+          ])
         })
       );
     });
@@ -79,35 +117,36 @@ describe('ActivityController', () => {
 
   describe('getActivities', () => {
     beforeEach(async () => {
-      await Activity.create([
+      const activities = [
         {
-          userId: '123',
+          userEmail: 'test@example.com',
+          activityName: 'Morning Ride',
           activityType: 'cycling',
-          distance: 15.5,
-          duration: 3600,
-          startTime: new Date()
+          difficulty: 'medium',
+          stats: {
+            distance: 15.5,
+            duration: 3600,
+            averageSpeed: 15.5
+          }
         },
         {
-          userId: '123',
+          userEmail: 'test@example.com',
+          activityName: 'Evening Run',
           activityType: 'running',
-          distance: 5.0,
-          duration: 1800,
-          startTime: new Date()
-        },
-        {
-          userId: '456',
-          activityType: 'cycling',
-          distance: 20.0,
-          duration: 4500,
-          startTime: new Date()
+          difficulty: 'hard',
+          stats: {
+            distance: 10,
+            duration: 3000,
+            averageSpeed: 12
+          }
         }
-      ]);
+      ];
+      await Activity.create(activities);
     });
 
-    it('should get activities for a specific user', async () => {
+    it('should get all activities for a user', async () => {
       const req = mockRequest({
-        query: { userId: '123' },
-        app: { locals: { db } }
+        query: { userEmail: 'test@example.com' }
       });
       const res = mockResponse();
 
@@ -116,17 +155,24 @@ describe('ActivityController', () => {
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
         expect.arrayContaining([
-          expect.objectContaining({ userId: '123' })
+          expect.objectContaining({
+            userEmail: 'test@example.com',
+            activityType: 'cycling'
+          }),
+          expect.objectContaining({
+            userEmail: 'test@example.com',
+            activityType: 'running'
+          })
         ])
       );
-      const activities = res.json.mock.calls[0][0];
-      expect(activities).toHaveLength(2);
     });
 
-    it('should get all activities when no userId is provided', async () => {
+    it('should filter activities by type', async () => {
       const req = mockRequest({
-        query: {},
-        app: { locals: { db } }
+        query: {
+          userEmail: 'test@example.com',
+          activityType: 'cycling'
+        }
       });
       const res = mockResponse();
 
@@ -134,7 +180,21 @@ describe('ActivityController', () => {
 
       expect(res.status).toHaveBeenCalledWith(200);
       const activities = res.json.mock.calls[0][0];
-      expect(activities).toHaveLength(3);
+      expect(activities).toHaveLength(1);
+      expect(activities[0].activityType).toBe('cycling');
+    });
+
+    it('should return empty array for non-existent user', async () => {
+      const req = mockRequest({
+        query: { userEmail: 'nonexistent@example.com' }
+      });
+      const res = mockResponse();
+
+      await getActivities(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      const activities = res.json.mock.calls[0][0];
+      expect(activities).toHaveLength(0);
     });
   });
 });

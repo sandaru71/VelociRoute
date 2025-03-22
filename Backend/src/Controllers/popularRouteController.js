@@ -1,5 +1,5 @@
 const cloudinary = require('cloudinary').v2;
-const PopularRoute = require('../Infrastructure/Models/PopularRoute');
+const PopularRoute = require('../models/PopularRoute');
 
 // Configure Cloudinary
 cloudinary.config({
@@ -26,53 +26,80 @@ const getRoutes = async (req, res) => {
         if (difficulty && difficulty.toLowerCase() !== 'all') {
             query.difficulty = difficulty.toLowerCase();
         }
-        if (minDistance) {
-            query.distance = { $gte: parseFloat(minDistance) };
-        }
-        if (maxDistance) {
-            query.distance = { ...query.distance, $lte: parseFloat(maxDistance) };
+        if (minDistance || maxDistance) {
+            query.distance = {};
+            if (minDistance) query.distance.$gte = parseFloat(minDistance);
+            if (maxDistance) query.distance.$lte = parseFloat(maxDistance);
         }
         if (location) {
-            query.location = { $regex: location, $options: 'i' };
+            query.location = new RegExp(location, 'i');
         }
 
-        const routes = await PopularRoute.find(query);
+        const routes = await PopularRoute.find(query)
+            .sort({ averageRating: -1, createdAt: -1 })
+            .select('-__v');
+
         res.status(200).json(routes);
     } catch (error) {
-        console.error('Error getting popular routes:', error);
+        console.error('Error getting routes:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
 
 const createRoute = async (req, res) => {
     try {
-        const routeData = req.body;
+        const {
+            name,
+            description,
+            activityType,
+            difficulty,
+            distance,
+            elevation,
+            averageTime,
+            location,
+            coordinates
+        } = req.body;
 
-        // Handle image uploads if present
-        if (req.files && req.files.length > 0) {
-            const imageUrls = [];
-            for (const file of req.files) {
-                const result = await cloudinary.uploader.upload(file.path, {
-                    folder: 'velociroute_routes'
-                });
-                imageUrls.push(result.secure_url);
-                // Clean up local file
-                fs.unlinkSync(file.path);
-            }
-            routeData.images = imageUrls;
+        // Validate required fields
+        if (!name || !activityType || !difficulty || !distance || !location) {
+            return res.status(400).json({
+                error: 'Missing required fields: name, activityType, difficulty, distance, and location are required'
+            });
         }
 
-        const route = new PopularRoute(routeData);
-        await route.save();
+        // Handle image upload if provided
+        let imageUrl;
+        if (req.file) {
+            try {
+                const result = await cloudinary.uploader.upload(req.file.path);
+                imageUrl = result.secure_url;
+            } catch (uploadError) {
+                console.error('Error uploading image:', uploadError);
+                return res.status(500).json({ error: 'Error uploading image' });
+            }
+        }
 
+        const route = new PopularRoute({
+            name,
+            description,
+            activityType: activityType.toLowerCase(),
+            difficulty: difficulty.toLowerCase(),
+            distance: parseFloat(distance),
+            elevation: elevation ? parseFloat(elevation) : undefined,
+            averageTime: averageTime ? parseInt(averageTime) : undefined,
+            location,
+            coordinates,
+            images: imageUrl ? [imageUrl] : []
+        });
+
+        await route.save();
         res.status(201).json(route);
     } catch (error) {
+        console.error('Error creating route:', error);
         if (error.name === 'ValidationError') {
-            res.status(400).json({ error: error.message });
-        } else {
-            console.error('Error creating route:', error);
-            res.status(500).json({ error: 'Internal server error' });
+            return res.status(400).json({ error: error.message });
         }
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 

@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for src/Controllers/activityController.js</title>
+    <title>Code coverage report for src/controllers/activityController.js</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../../prettify.css" />
     <link rel="stylesheet" href="../../base.css" />
@@ -19,34 +19,34 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/Controllers</a> activityController.js</h1>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/controllers</a> activityController.js</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">56.41% </span>
+                <span class="strong">23.07% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>22/39</span>
+                <span class='fraction'>9/39</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">40% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>4/10</span>
+                <span class='fraction'>0/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">66.66% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>2/3</span>
+                <span class='fraction'>0/3</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">56.41% </span>
+                <span class="strong">23.07% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>22/39</span>
+                <span class='fraction'>9/39</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line medium'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -194,14 +194,14 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -209,22 +209,22 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -279,39 +279,39 @@ const saveGpxFile = <span class="fstat-no" title="function not covered" >as</spa
   }
 };
 &nbsp;
-const getActivities = async (req, res) =&gt; {
-  try {
-    const { userId } = req.query;
-    const query = userId ? { userId } : {};
+const getActivities = <span class="fstat-no" title="function not covered" >as</span>ync (req, res) =&gt; {
+<span class="cstat-no" title="statement not covered" >  try {</span>
+    const { userId } = <span class="cstat-no" title="statement not covered" >req.query;</span>
+    const query = <span class="cstat-no" title="statement not covered" >userId ? { userId } : {};</span>
     
-    const activities = await Activity.find(query)
+    const activities = <span class="cstat-no" title="statement not covered" >await Activity.find(query)</span>
       .sort({ startTime: -1 });
 &nbsp;
-    res.status(200).json(activities);
+<span class="cstat-no" title="statement not covered" >    res.status(200).json(activities);</span>
   } catch (error) {
 <span class="cstat-no" title="statement not covered" >    console.error('Error getting activities:', error);</span>
 <span class="cstat-no" title="statement not covered" >    res.status(500).json({ error: 'Internal server error' });</span>
   }
 };
 &nbsp;
-const recordActivity = async (req, res) =&gt; {
-  try {
-    const activityData = req.body;
+const recordActivity = <span class="fstat-no" title="function not covered" >as</span>ync (req, res) =&gt; {
+<span class="cstat-no" title="statement not covered" >  try {</span>
+    const activityData = <span class="cstat-no" title="statement not covered" >req.body;</span>
 &nbsp;
     // Handle GPX file if present
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (req.body.gpxData) {
+<span class="cstat-no" title="statement not covered" >    if (req.body.gpxData) {</span>
       const gpxUrl = <span class="cstat-no" title="statement not covered" >await saveGpxFile(req.body.gpxData, `activity_${Date.now()}.gpx`);</span>
 <span class="cstat-no" title="statement not covered" >      activityData.gpxUrl = gpxUrl;</span>
     }
 &nbsp;
-    const activity = new Activity(activityData);
-    await activity.save();
+    const activity = <span class="cstat-no" title="statement not covered" >new Activity(activityData);</span>
+<span class="cstat-no" title="statement not covered" >    await activity.save();</span>
 &nbsp;
-    res.status(201).json(activity);
+<span class="cstat-no" title="statement not covered" >    res.status(201).json(activity);</span>
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      res.status(400).json({ error: error.message });
-    } else <span class="missing-if-branch" title="else path not taken" >E</span>{
+<span class="cstat-no" title="statement not covered" >    if (error.name === 'ValidationError') {</span>
+<span class="cstat-no" title="statement not covered" >      res.status(400).json({ error: error.message });</span>
+    } else {
 <span class="cstat-no" title="statement not covered" >      console.error('Error recording activity:', error);</span>
 <span class="cstat-no" title="statement not covered" >      res.status(500).json({ error: 'Internal server error' });</span>
     }
@@ -328,7 +328,7 @@ module.exports = {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-03-22T10:55:58.661Z
+                at 2025-03-22T11:47:03.553Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

@@ -1,42 +1,65 @@
-const { MongoClient } = require('mongodb');
-const { MongoMemoryServer } = require('mongodb-memory-server');
 const mongoose = require('mongoose');
+const { setupTestDB, closeTestDB, clearTestDB } = require('./utils/testDB');
 
-// Import all mocks
-require('./mocks/models');
-require('./mocks/services');
-
-// Configure test environment
+// Mock environment variables
 process.env.NODE_ENV = 'test';
+process.env.MONGODB_URI = 'mongodb://localhost:27017/test';
+process.env.CLOUDINARY_CLOUD_NAME = 'test-cloud';
+process.env.CLOUDINARY_API_KEY = 'test-key';
+process.env.CLOUDINARY_API_SECRET = 'test-secret';
+process.env.FIREBASE_PROJECT_ID = 'test-project';
+process.env.FIREBASE_PRIVATE_KEY = 'test-key';
+process.env.FIREBASE_CLIENT_EMAIL = 'test@email.com';
 
-let mongoServer;
+// Mock Firebase Admin
+jest.mock('firebase-admin', () => ({
+  apps: [],
+  initializeApp: jest.fn(),
+  credential: {
+    cert: jest.fn()
+  },
+  auth: () => ({
+    verifyIdToken: jest.fn().mockImplementation((token) => {
+      if (token === 'valid-token') {
+        return Promise.resolve({
+          uid: 'test-uid',
+          email: 'test@example.com'
+        });
+      }
+      throw new Error('Invalid token');
+    })
+  })
+}));
+
+// Mock firebase-admin-key.json
+jest.mock('../firebase-admin-key.json', () => ({
+  type: 'service_account',
+  project_id: 'test-project',
+  private_key: '-----BEGIN PRIVATE KEY-----\nTESTKEY\n-----END PRIVATE KEY-----\n',
+  client_email: 'test@test.com'
+}), { virtual: true });
+
+// Mock Cloudinary
+jest.mock('cloudinary', () => ({
+  v2: {
+    config: jest.fn(),
+    uploader: {
+      upload: jest.fn().mockResolvedValue({
+        secure_url: 'https://cloudinary.com/test-image.jpg'
+      })
+    }
+  }
+}));
 
 beforeAll(async () => {
-  // Start MongoDB Memory Server
-  mongoServer = await MongoMemoryServer.create();
-  const mongoUri = mongoServer.getUri();
-
-  // Connect mongoose to the memory server
-  await mongoose.connect(mongoUri);
-
-  // Make db available globally for tests
-  global.__MONGO_URI__ = mongoUri;
-  global.__MONGO_DB__ = mongoose.connection.db;
-});
-
-afterAll(async () => {
-  // Clean up
-  await mongoose.disconnect();
-  await mongoServer.stop();
+  await setupTestDB();
 });
 
 beforeEach(async () => {
-  // Clear all collections before each test
-  const collections = mongoose.connection.collections;
-  for (const key in collections) {
-    await collections[key].deleteMany();
-  }
-  
-  // Clear all mocks
+  await clearTestDB();
   jest.clearAllMocks();
+});
+
+afterAll(async () => {
+  await closeTestDB();
 });

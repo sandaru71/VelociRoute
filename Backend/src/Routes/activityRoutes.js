@@ -1,12 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const { saveActivity, getAllActivities } = require('../Controllers/activityController');
-const upload = require('../Utils/multerConfig');
-const auth = require('../Infrastructure/Middleware/auth'); // Assuming you have auth middleware
+const { recordActivity, getActivities } = require('../controllers/activityController');
+const multer = require('multer');
+const auth = require('../middleware/auth');
 
-// Route to save activity with multiple images
-router.post('/save', auth, upload.array('images', 10), saveActivity);
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  }
+});
 
-router.get('/all', auth, getAllActivities);
+// Record a new activity with optional images
+router.post('/', auth, upload.array('images', 10), recordActivity);
+
+// Get activities with optional filters
+router.get('/', auth, getActivities);
 
 module.exports = router;

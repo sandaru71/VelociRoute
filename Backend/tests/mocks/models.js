@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const PopularRoute = require('./popularRoute.mock');
 
 // Mock models
-jest.mock('../../src/Infrastructure/Models/Activity', () => {
+jest.mock('../../src/models/Activity', () => {
   const mongoose = require('mongoose');
   const mockSchema = new mongoose.Schema({
     userId: { type: String, required: true },
@@ -19,11 +19,11 @@ jest.mock('../../src/Infrastructure/Models/Activity', () => {
   return mongoose.models.Activity || mongoose.model('Activity', mockSchema);
 });
 
-jest.mock('../../src/Infrastructure/Models/ActivityPosts', () => {
+jest.mock('../../src/models/ActivityPosts', () => {
   const mongoose = require('mongoose');
   const mockSchema = new mongoose.Schema({
     userId: { type: String, required: true },
-    activityId: { type: String, required: true },
+    activityId: { type: mongoose.Schema.Types.ObjectId, required: true },
     caption: { type: String },
     activityType: { type: String, enum: ['cycling', 'running'], required: true },
     distance: { type: Number },
@@ -31,44 +31,70 @@ jest.mock('../../src/Infrastructure/Models/ActivityPosts', () => {
     location: { type: String },
     images: [{ type: String }],
     likes: { type: Number, default: 0 },
-    comments: [{ type: Object }],
-    createdAt: { type: Date, default: Date.now }
+    comments: [{
+      userId: { type: String, required: true },
+      text: { type: String, required: true },
+      createdAt: { type: Date, default: Date.now }
+    }]
   });
   return mongoose.models.ActivityPosts || mongoose.model('ActivityPosts', mockSchema);
 });
 
-jest.mock('../../src/Infrastructure/Models/PopularRoute', () => {
+jest.mock('../../src/models/PopularRoute', () => {
   const mongoose = require('mongoose');
   const mockSchema = new mongoose.Schema({
     name: { type: String, required: true },
     description: { type: String },
     activityType: { type: String, enum: ['cycling', 'running'], required: true },
     difficulty: { type: String, enum: ['easy', 'medium', 'hard'], required: true },
-    distance: { type: Number, required: true, min: 0 },
+    distance: { type: Number, required: true },
     elevation: { type: Number },
     averageTime: { type: Number },
     location: { type: String, required: true },
-    mapUrl: { type: String },
-    images: [{ type: String }],
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now }
+    coordinates: {
+      start: {
+        latitude: Number,
+        longitude: Number
+      },
+      end: {
+        latitude: Number,
+        longitude: Number
+      },
+      waypoints: [{
+        latitude: Number,
+        longitude: Number,
+        elevation: Number
+      }]
+    },
+    images: [{ type: String }]
+  }, {
+    timestamps: true
   });
   return mongoose.models.PopularRoute || mongoose.model('PopularRoute', mockSchema);
 });
 
-jest.mock('../../src/Infrastructure/Models/UserProfile', () => {
+jest.mock('../../src/models/UserProfile', () => {
   const mongoose = require('mongoose');
   const mockSchema = new mongoose.Schema({
-    userId: { type: String, required: true },
+    userId: { type: String, required: true, unique: true },
     displayName: { type: String, required: true },
-    email: { type: String, required: true, match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
     bio: { type: String },
-    preferredActivities: [{ type: String, enum: ['cycling', 'running'] }],
-    profileImage: { type: String },
-    totalDistance: { type: Number, default: 0, min: 0 },
-    totalActivities: { type: Number, default: 0, min: 0 },
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now }
+    profilePicture: { type: String },
+    location: { type: String },
+    preferences: {
+      activityTypes: [{ type: String, enum: ['cycling', 'running'] }],
+      privacySettings: {
+        profileVisibility: { type: String, enum: ['public', 'private'], default: 'public' },
+        activityVisibility: { type: String, enum: ['public', 'private'], default: 'public' }
+      }
+    }
+  }, {
+    timestamps: true
   });
   return mongoose.models.UserProfile || mongoose.model('UserProfile', mockSchema);
 });
+
+// Export mock models
+module.exports = {
+  PopularRoute
+};

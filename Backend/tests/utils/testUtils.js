@@ -1,49 +1,59 @@
-const { MongoClient } = require('mongodb');
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const mongoose = require('mongoose');
 
-let mongoServer;
-let connection;
-let db;
-
-const setupTestDB = async () => {
-  mongoServer = await MongoMemoryServer.create();
-  const mongoUri = mongoServer.getUri();
-  connection = await MongoClient.connect(mongoUri);
-  db = connection.db();
-  return { mongoServer, connection, db };
+// Mock request object with auth token
+const mockRequest = (data = {}) => {
+  return {
+    ...data,
+    body: data.body || {},
+    query: data.query || {},
+    params: data.params || {},
+    headers: {
+      authorization: 'Bearer valid-token',
+      ...data.headers
+    },
+    user: data.user || {
+      uid: 'test-uid',
+      email: 'test@example.com'
+    }
+  };
 };
 
-const closeTestDB = async () => {
-  if (connection) await connection.close();
-  if (mongoServer) await mongoServer.stop();
-};
-
-const clearCollections = async (db) => {
-  const collections = await db.listCollections().toArray();
-  for (const collection of collections) {
-    await db.collection(collection.name).deleteMany({});
-  }
-};
-
-const mockRequest = (overrides = {}) => ({
-  query: {},
-  body: {},
-  files: [],
-  app: { locals: { db } },
-  ...overrides
-});
-
+// Mock response object
 const mockResponse = () => {
   const res = {};
   res.status = jest.fn().mockReturnValue(res);
   res.json = jest.fn().mockReturnValue(res);
+  res.send = jest.fn().mockReturnValue(res);
   return res;
 };
 
+// Mock next function
+const mockNext = jest.fn();
+
+// Clear all collections in the test database
+const clearCollections = async () => {
+  const collections = mongoose.connection.collections;
+  for (const key in collections) {
+    await collections[key].deleteMany();
+  }
+};
+
+// Create test data
+const createTestData = async (Model, data) => {
+  const documents = Array.isArray(data) ? data : [data];
+  return await Model.create(documents);
+};
+
+// Delete test data
+const deleteTestData = async (Model) => {
+  await Model.deleteMany({});
+};
+
 module.exports = {
-  setupTestDB,
-  closeTestDB,
-  clearCollections,
   mockRequest,
-  mockResponse
+  mockResponse,
+  mockNext,
+  clearCollections,
+  createTestData,
+  deleteTestData
 };

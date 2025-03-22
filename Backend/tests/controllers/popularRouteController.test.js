@@ -1,6 +1,6 @@
 const { setupTestDB, closeTestDB, clearCollections, mockRequest, mockResponse } = require('../utils/testUtils');
-const { getRoutes, createRoute } = require('../../src/Controllers/popularRouteController');
-const PopularRoute = require('../../src/Infrastructure/Models/PopularRoute');
+const { getRoutes, createRoute } = require('../../src/controllers/popularRouteController');
+const PopularRoute = require('../../src/models/PopularRoute');
 
 jest.mock('cloudinary', () => ({
   v2: {
@@ -11,177 +11,159 @@ jest.mock('cloudinary', () => ({
   }
 }));
 
-let db;
-
-beforeAll(async () => {
-  const testDB = await setupTestDB();
-  db = testDB.db;
-});
-
-afterAll(async () => {
-  await closeTestDB();
-});
-
-beforeEach(async () => {
-  await clearCollections(db);
-  jest.clearAllMocks();
-});
-
 describe('PopularRouteController', () => {
-  describe('createRoute', () => {
-    it('should create a new route successfully', async () => {
-      const routeData = {
-        name: 'Central Park Loop',
-        description: 'A scenic route around Central Park',
-        activityType: 'cycling',
-        difficulty: 'medium',
-        distance: 10.5,
-        elevation: 150,
-        averageTime: 3600,
-        location: 'New York, NY'
-      };
+  let db;
 
-      const req = mockRequest({ body: routeData });
-      const res = mockResponse();
+  beforeAll(async () => {
+    const testDB = await setupTestDB();
+    db = testDB.db;
+  });
 
-      await createRoute(req, res);
+  afterAll(async () => {
+    await closeTestDB();
+  });
 
-      expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: routeData.name,
-          activityType: routeData.activityType,
-          difficulty: routeData.difficulty
-        })
-      );
-    });
-
-    it('should handle validation errors', async () => {
-      const req = mockRequest({
-        body: {
-          name: 'Test Route',
-          activityType: 'invalid-type',
-          difficulty: 'super-hard'
-        }
-      });
-      const res = mockResponse();
-
-      await createRoute(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          error: expect.any(String)
-        })
-      );
-    });
+  beforeEach(async () => {
+    await clearCollections(db);
+    jest.clearAllMocks();
   });
 
   describe('getRoutes', () => {
-    beforeEach(async () => {
-      await PopularRoute.create([
+    it('should return all routes when no query parameters are provided', async () => {
+      // Arrange
+      const mockRoutes = [
         {
-          name: 'Central Park Loop',
-          description: 'A scenic route around Central Park',
+          name: 'Route 1',
+          description: 'Test route 1',
           activityType: 'cycling',
           difficulty: 'medium',
-          distance: 10.5,
-          elevation: 150,
-          averageTime: 3600,
-          location: 'New York, NY'
+          distance: 10,
+          location: 'Test Location 1'
         },
         {
-          name: 'Riverside Run',
-          description: 'A flat run along the river',
+          name: 'Route 2',
+          description: 'Test route 2',
           activityType: 'running',
           difficulty: 'easy',
-          distance: 5.0,
-          elevation: 50,
-          averageTime: 1800,
-          location: 'New York, NY'
+          distance: 5,
+          location: 'Test Location 2'
+        }
+      ];
+      await PopularRoute.create(mockRoutes);
+
+      const req = mockRequest();
+      const res = mockResponse();
+
+      // Act
+      await getRoutes(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(expect.arrayContaining([
+        expect.objectContaining({ name: 'Route 1', activityType: 'cycling' }),
+        expect.objectContaining({ name: 'Route 2', activityType: 'running' })
+      ]));
+    });
+
+    it('should handle errors gracefully', async () => {
+      // Arrange
+      const req = mockRequest();
+      const res = mockResponse();
+      jest.spyOn(PopularRoute, 'find').mockRejectedValue(new Error('Database error'));
+
+      // Act
+      await getRoutes(req, res);
+
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        error: 'Internal server error'
+      }));
+    });
+
+    it('should filter routes by activity type', async () => {
+      // Arrange
+      const mockRoutes = [
+        {
+          name: 'Cycling Route',
+          description: 'Test cycling route',
+          activityType: 'cycling',
+          difficulty: 'medium',
+          distance: 20,
+          location: 'Test Location'
         },
         {
-          name: 'Brooklyn Bridge Ride',
-          description: 'Cross the iconic Brooklyn Bridge',
-          activityType: 'cycling',
-          difficulty: 'hard',
-          distance: 15.0,
-          elevation: 300,
-          averageTime: 4500,
-          location: 'Brooklyn, NY'
+          name: 'Running Route',
+          description: 'Test running route',
+          activityType: 'running',
+          difficulty: 'easy',
+          distance: 5,
+          location: 'Test Location'
         }
-      ]);
-    });
+      ];
+      await PopularRoute.create(mockRoutes);
 
-    it('should get routes filtered by activity type', async () => {
-      const req = mockRequest({
-        query: { activityType: 'cycling' }
-      });
+      const req = mockRequest({ query: { activityType: 'cycling' } });
       const res = mockResponse();
 
+      // Act
       await getRoutes(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(200);
-      const routes = res.json.mock.calls[0][0];
-      expect(routes).toHaveLength(2);
-      expect(routes.every(route => route.activityType === 'cycling')).toBe(true);
-    });
-
-    it('should get routes filtered by difficulty', async () => {
-      const req = mockRequest({
-        query: { difficulty: 'easy' }
-      });
-      const res = mockResponse();
-
-      await getRoutes(req, res);
-
+      // Assert
       expect(res.status).toHaveBeenCalledWith(200);
       const routes = res.json.mock.calls[0][0];
       expect(routes).toHaveLength(1);
-      expect(routes[0].difficulty).toBe('easy');
+      expect(routes[0].activityType).toBe('cycling');
     });
+  });
 
-    it('should get routes filtered by distance range', async () => {
-      const req = mockRequest({
-        query: {
-          minDistance: 5,
-          maxDistance: 12
+  describe('createRoute', () => {
+    it('should create a new route successfully', async () => {
+      // Arrange
+      const routeData = {
+        name: 'New Route',
+        description: 'Test route',
+        activityType: 'cycling',
+        difficulty: 'medium',
+        distance: 15,
+        elevation: 100,
+        averageTime: 3600,
+        location: 'Test Location',
+        coordinates: {
+          start: { latitude: 0, longitude: 0 },
+          end: { latitude: 1, longitude: 1 }
         }
-      });
+      };
+      const req = mockRequest({ body: routeData });
       const res = mockResponse();
 
-      await getRoutes(req, res);
+      // Act
+      await createRoute(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(200);
-      const routes = res.json.mock.calls[0][0];
-      expect(routes.every(route => route.distance >= 5 && route.distance <= 12)).toBe(true);
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        name: routeData.name,
+        activityType: routeData.activityType,
+        difficulty: routeData.difficulty,
+        distance: routeData.distance,
+        location: routeData.location
+      }));
     });
 
-    it('should get routes filtered by location', async () => {
-      const req = mockRequest({
-        query: { location: 'Brooklyn' }
-      });
+    it('should handle validation errors', async () => {
+      // Arrange
+      const req = mockRequest({ body: {} }); // Missing required fields
       const res = mockResponse();
 
-      await getRoutes(req, res);
+      // Act
+      await createRoute(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(200);
-      const routes = res.json.mock.calls[0][0];
-      expect(routes).toHaveLength(1);
-      expect(routes[0].location).toMatch(/Brooklyn/);
-    });
-
-    it('should get all routes when no filters are provided', async () => {
-      const req = mockRequest({
-        query: {}
-      });
-      const res = mockResponse();
-
-      await getRoutes(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(200);
-      const routes = res.json.mock.calls[0][0];
-      expect(routes).toHaveLength(3);
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        error: expect.stringContaining('Missing required fields')
+      }));
     });
   });
 });

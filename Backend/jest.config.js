@@ -1,21 +1,22 @@
 module.exports = {
   testEnvironment: 'node',
-  testMatch: ['**/tests/**/*.test.js'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
+  testMatch: ['**/__tests__/**/*.js?(x)', '**/?(*.)+(spec|test).js?(x)'],
   collectCoverage: true,
   coverageDirectory: 'coverage',
   coveragePathIgnorePatterns: [
     '/node_modules/',
+    '/tests/mocks/',
     '/tests/utils/'
   ],
-  setupFilesAfterEnv: ['./tests/setup.js'],
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
-    '^@test/(.*)$': '<rootDir>/tests/$1'
+    '^@/(.*)$': '<rootDir>/src/$1'
   },
+  testPathIgnorePatterns: ['/node_modules/'],
+  verbose: true,
   testTimeout: 30000,
+  moduleFileExtensions: ['js', 'json'],
   clearMocks: true,
   restoreMocks: true,
-  verbose: true,
-  // Mock environment variables
-  setupFiles: ['<rootDir>/tests/env.setup.js']
+  resetMocks: true
 };
