@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 
 // Get the appropriate API URL based on the platform and environment
 const getApiUrl = () => {
-    // First check for environment variable
+    // Use environment variable if available
     const envUrl = Constants.expoConfig?.extra?.API_URL;
     if (envUrl) {
         console.log('Using environment API URL:', envUrl);
@@ -19,11 +19,11 @@ const getApiUrl = () => {
         // iOS Simulator can use localhost directly
         apiUrl = 'http://localhost:3000';
     } else {
-        // For local network development or testing on physical devices
-        apiUrl = 'http://10.235.240.196:3000';
+        // Default to localhost for web
+        apiUrl = 'http://localhost:3000';
     }
-    
-    console.log('Using platform-specific API URL:', apiUrl);
+
+    console.log('Using API URL:', apiUrl);
     return apiUrl;
 };
 

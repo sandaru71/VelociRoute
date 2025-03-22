@@ -4,11 +4,14 @@ import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import MapView, { Polyline, Marker } from 'react-native-maps';
 import { LineChart } from 'react-native-chart-kit';
-import { Card, Surface, Button, Modal, Portal, Dialog } from 'react-native-paper';
+import { Card, Surface, Button, Modal, Portal, Dialog, Snackbar } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import moment from 'moment';
+import { Buffer } from 'buffer';
 import { TOMORROW_API_KEY } from '../config/keys';
 import { ActivityIndicator } from 'react-native';
+import { API_URL } from '../config';
+import { auth } from '../firebase/config';
 
 const RouteScreen = () => {
   const router = useRouter();
@@ -16,7 +19,10 @@ const RouteScreen = () => {
   const [routeName, setRouteName] = useState('');
   const [isEditing, setIsEditing] = useState(true);
   const [fadeAnim] = useState(new Animated.Value(1));
-  
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
   // Get route data from planner
   const routeCoordinates = params.routeCoordinates ? JSON.parse(params.routeCoordinates) : [];
   const routeDetails = params.routeDetails ? JSON.parse(params.routeDetails) : null;
@@ -161,6 +167,133 @@ const RouteScreen = () => {
       ]).start();
       setIsEditing(false);
     }
+  };
+
+  const handleSaveRoute = async () => {
+    try {
+      setIsSaving(true);
+      console.log('Starting route save process...');
+
+      // Get current user
+      const user = auth.currentUser;
+      if (!user) {
+        console.error('No user logged in');
+        setSnackbarMessage('Please log in to save routes');
+        setSnackbarVisible(true);
+        return;
+      }
+
+      // Get fresh token
+      const token = await user.getIdToken(true);
+      console.log('Got fresh user token');
+
+      // Create GPX string
+      const gpxString = generateGPX(routeCoordinates, routeName || 'Untitled Route');
+      console.log('Generated GPX string');
+
+      // Create form data
+      const formData = new FormData();
+      formData.append('routeName', routeName || 'Untitled Route');
+      formData.append('distance', routeDetails?.legs?.[0]?.distance?.text || '0 km');
+      formData.append('duration', routeDetails?.legs?.[0]?.duration?.text || '0 min');
+      formData.append('avgSpeed', selectedActivity === 'cycling' ? '15 km/h' : '5 km/h');
+      formData.append('elevationGain', elevationGain.toString());
+
+      // Create GPX file
+      const gpxBlob = new Blob([gpxString], { type: 'application/gpx+xml' });
+      const base64Gpx = Buffer.from(gpxString).toString('base64');
+      const gpxUri = Platform.OS === 'android' ? 
+        `data:application/gpx+xml;base64,${base64Gpx}` :
+        'data:application/gpx+xml;base64,' + base64Gpx;
+
+      formData.append('gpxData', {
+        uri: gpxUri,
+        name: `${(routeName || 'route').replace(/\s+/g, '_')}.gpx`,
+        type: 'application/gpx+xml'
+      });
+
+      // Create elevation profile image
+      // Convert elevation data to a simple line chart
+      const elevationData = elevationProfile.map(point => point.elevation);
+      const maxElevation = Math.max(...elevationData);
+      const minElevation = Math.min(...elevationData);
+      const height = 200;
+      const width = elevationData.length;
+      
+      // Create a simple SVG line chart
+      const points = elevationData.map((elevation, index) => {
+        const x = (index / (elevationData.length - 1)) * width;
+        const y = height - ((elevation - minElevation) / (maxElevation - minElevation)) * height;
+        return `${x},${y}`;
+      }).join(' ');
+
+      const svgString = `
+        <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+          <polyline points="${points}" fill="none" stroke="black" stroke-width="2"/>
+        </svg>
+      `;
+
+      const base64Svg = Buffer.from(svgString).toString('base64');
+      const elevationUri = Platform.OS === 'android' ?
+        `data:image/svg+xml;base64,${base64Svg}` :
+        'data:image/svg+xml;base64,' + base64Svg;
+
+      formData.append('elevationProfileImage', {
+        uri: elevationUri,
+        name: `${(routeName || 'route').replace(/\s+/g, '_')}_elevation.svg`,
+        type: 'image/svg+xml'
+      });
+
+      console.log('Form data prepared');
+      console.log('Sending request to:', `${API_URL}/api/saved-routes/save`);
+
+      const response = await fetch(`${API_URL}/api/saved-routes/save`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'multipart/form-data'
+        },
+        body: formData
+      });
+
+      console.log('Response status:', response.status);
+      const result = await response.json();
+      console.log('Save route response:', result);
+
+      if (result.success) {
+        setSnackbarMessage('Route saved successfully!');
+      } else {
+        setSnackbarMessage(result.message || 'Failed to save route. Please try again.');
+      }
+      setSnackbarVisible(true);
+
+    } catch (error) {
+      console.error('Error saving route:', error);
+      setSnackbarMessage('Error saving route. Please try again.');
+      setSnackbarVisible(true);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const generateGPX = (coordinates, name) => {
+    const header = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+      '<gpx version="1.1" creator="VelociRoute">\n' +
+      `<trk><name>${name}</name><trkseg>\n`;
+
+    const points = coordinates.map(coord => 
+      `<trkpt lat="${coord.latitude}" lon="${coord.longitude}"></trkpt>`
+    ).join('\n');
+
+    const footer = '\n</trkseg></trk></gpx>';
+    return header + points + footer;
+  };
+
+  const convertChartToImage = async () => {
+    // This is a placeholder - in a real implementation, you'd use something like
+    // react-native-view-shot to capture the chart as an image
+    return '';
   };
 
   return (
@@ -440,10 +573,17 @@ const RouteScreen = () => {
         <View style={styles.actionButtonsContainer}>
           <TouchableOpacity 
             style={[styles.actionButton, styles.saveButton]}
-            onPress={() => {/* Save functionality will be added later */}}
+            onPress={handleSaveRoute}
+            disabled={isSaving}
           >
-            <MaterialIcons name="bookmark" size={24} color="#fff" />
-            <Text style={styles.actionButtonText}>Save Route</Text>
+            {isSaving ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <MaterialIcons name="bookmark" size={24} color="#fff" />
+                <Text style={styles.actionButtonText}>Save Route</Text>
+              </>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -454,6 +594,17 @@ const RouteScreen = () => {
             <Text style={styles.actionButtonText}>Delete Route</Text>
           </TouchableOpacity>
         </View>
+
+        <Snackbar
+          visible={snackbarVisible}
+          onDismiss={() => setSnackbarVisible(false)}
+          duration={3000}
+          action={{
+            label: 'OK',
+            onPress: () => setSnackbarVisible(false),
+          }}>
+          {snackbarMessage}
+        </Snackbar>
 
         {/* Add padding at the bottom */}
         <View style={styles.bottomPadding} />

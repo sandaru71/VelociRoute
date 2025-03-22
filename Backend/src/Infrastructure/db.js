@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const { MongoClient, ServerApiVersion } = require('mongodb');
 require('dotenv').config();
+const SavedRoute = require('./Models/SavedRoute');
 
 const uri = process.env.MONGO_URI;
 
@@ -29,43 +30,34 @@ async function connectDB() {
     // Get both database instances
     const mongooseDb = mongoose.connection.db;
     const nativeDb = client.db("routes_db");
-    
-    // Initialize collections using the appropriate connection
-    const collections = {
-      // Use native client for routes and posts
-      routes: nativeDb.collection('routes'),
-      activityPosts: nativeDb.collection('activityPosts'),
-      // Use mongoose for user profiles
-      userProfiles: mongooseDb.collection('userProfiles')
-    };
-    
-    // Create indexes for userProfiles collection
-    await collections.userProfiles.createIndex({ email: 1 }, { unique: true });
-    
-    // Verify collections in both databases
-    const mongooseCollections = await mongooseDb.listCollections().toArray();
-    const nativeCollections = await nativeDb.listCollections().toArray();
-    
-    console.log("📚 Mongoose collections:", mongooseCollections.map(c => c.name));
-    console.log("📚 Native collections:", nativeCollections.map(c => c.name));
-    
-    // Return the native db for routes and posts
-    return nativeDb;
+
+    // Initialize collections
+    console.log("Initializing collections...");
+    try {
+      await SavedRoute.initialize(nativeDb);
+      console.log("✅ Saved routes collection initialized successfully!");
+    } catch (error) {
+      console.error("Error initializing saved routes collection:", error);
+    }
+
+    // Store database instances in app.locals
+    global.mongooseDb = mongooseDb;
+    global.nativeDb = nativeDb;
+
+    return { mongooseDb, nativeDb };
   } catch (error) {
     console.error("❌ MongoDB connection error:", error);
-    throw error;
+    process.exit(1);
   }
 }
 
-// Cleanup function to close both connections
 async function closeConnections() {
   try {
     await mongoose.connection.close();
     await client.close();
-    console.log("✅ All MongoDB connections closed successfully!");
+    console.log("✅ MongoDB connections closed successfully!");
   } catch (error) {
     console.error("❌ Error closing MongoDB connections:", error);
-    throw error;
   }
 }
 

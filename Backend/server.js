@@ -11,26 +11,26 @@ const activityRoutes = require('./src/Routes/activityRoutes');
 const Activity = require('./src/Infrastructure/Models/Activity');
 const activityPostsRoutes = require('./src/Routes/activityPosts.js');
 const userProfileRoutes = require('./src/Routes/userProfileRoutes');
+const savedRoutes = require('./src/Routes/savedRoutes');
 
 const app = express();
 
-// Enable CORS with specific options
+// Enable CORS for all origins
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   credentials: true,
   optionsSuccessStatus: 200
 }));
 
+// Increase payload size limit
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
 app.use(morgan("dev"));
-app.use(bodyParser.json({ limit: "5mb" }));
-app.use(
-  bodyParser.urlencoded({
-    limit: "5mb",
-    extended: true,
-  })
-);
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -50,57 +50,57 @@ app.use((req, res, next) => {
   next();
 });
 
-// Connect to MongoDB and store connection in app.locals
-connectDB().then(async database => {
-  app.locals.db = database;
-  console.log("🚀 Database Ready!");
-  
-  // Create indexes after connection
-  try {
-    await Activity.createIndexes(database);
-    console.log("✅ Database indexes created successfully!");
-  } catch (error) {
-    console.error("❌ Error creating indexes:", error);
-  }
-}).catch(err => {
-  console.error("❌ Database connection error:", err);
-  process.exit(1);
-});
-
 // Register routes
 app.use('/api/popular-routes', popularRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/activity-posts', activityPostsRoutes);
-
-// User Profile Routes
 app.use('/api/user', userProfileRoutes);
+app.use('/api/saved-routes', savedRoutes);
 
+// Basic route for testing
 app.get('/', (req, res) => {
   res.send("MongoDB Node.js Driver is running!");
 });
 
-app.use(express.json());
-app.use(express.urlencoded({extended: true}));
-
-// Add error handling middleware
+// Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   res.status(500).json({ error: 'Internal Server Error', message: err.message });
 });
 
-const port = process.env.APP_PORT || 3000;
-const host = '0.0.0.0'; // Listen on all network interfaces
+// Initialize database connection
+connectDB().then(({ nativeDb }) => {
+  console.log('Database connection established');
+  
+  // Store db instance in app.locals
+  app.locals.db = nativeDb;
 
-app.listen(port, host, () => {
-  console.log(`\n🚀 Server is running!`);
-  console.log(`📱 API Endpoints:`);
-  console.log(`   • Local Development: http://localhost:${port}/api`);
-  console.log(`   • Android Emulator: http://10.0.2.2:${port}/api`);
-  console.log(`   • iOS Simulator: http://localhost:${port}/api`);
-  console.log(`   • Local Network: http://10.137.28.196:${port}/api`);
-  console.log(`Server started on http://${host}:${port}`);
-  console.log('Local: http://localhost:3000');
-  console.log('On Your Network: http://10.137.28.196:3000');
-  console.log('Upload test form available at: http://localhost:3000/upload-test.html');
+  // Create indexes after connection
+  try {
+    Activity.createIndexes(nativeDb);
+    console.log("✅ Database indexes created successfully!");
+  } catch (error) {
+    console.error("❌ Error creating indexes:", error);
+  }
+
+  // Start the server
+  const port = process.env.APP_PORT || 3000;
+  const host = '0.0.0.0'; // Listen on all network interfaces
+
+  app.listen(port, host, () => {
+    console.log(`\n🚀 Server is running!`);
+    console.log(`📱 API Endpoints:`);
+    console.log(`   • Local Development: http://localhost:${port}/api`);
+    console.log(`   • Android Emulator: http://10.0.2.2:${port}/api`);
+    console.log(`   • iOS Simulator: http://localhost:${port}/api`);
+    console.log(`   • Local Network: http://10.137.28.196:${port}/api`);
+    console.log(`Server started on http://${host}:${port}`);
+    console.log('Local: http://localhost:3000');
+    console.log('On Your Network: http://10.137.28.196:3000');
+    console.log('Upload test form available at: http://localhost:3000/upload-test.html');
+  });
+}).catch(error => {
+  console.error('Failed to connect to database:', error);
+  process.exit(1);
 });
