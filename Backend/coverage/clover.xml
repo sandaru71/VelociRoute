@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1742644794033" clover="3.2.0">
-  <project timestamp="1742644794033" name="All files">
-    <metrics statements="468" coveredstatements="181" conditionals="169" coveredconditionals="23" methods="40" coveredmethods="8" elements="677" coveredelements="212" complexity="0" loc="468" ncloc="468" packages="10" files="24" classes="24"/>
+<coverage generated="1742665781825" clover="3.2.0">
+  <project timestamp="1742665781826" name="All files">
+    <metrics statements="468" coveredstatements="182" conditionals="169" coveredconditionals="24" methods="40" coveredmethods="8" elements="677" coveredelements="214" complexity="0" loc="468" ncloc="468" packages="10" files="24" classes="24"/>
     <package name="Infrastructure">
       <metrics statements="35" coveredstatements="13" conditionals="0" coveredconditionals="0" methods="4" coveredmethods="0"/>
       <file name="cloudinary.js" path="C:\Users\AFLAL\Desktop\VelociRoute\VelociRoute\Backend\src\Infrastructure\cloudinary.js">
@@ -126,17 +126,17 @@
       </file>
     </package>
     <package name="Middleware">
-      <metrics statements="39" coveredstatements="16" conditionals="12" coveredconditionals="2" methods="2" coveredmethods="1"/>
+      <metrics statements="39" coveredstatements="17" conditionals="12" coveredconditionals="3" methods="2" coveredmethods="1"/>
       <file name="auth.js" path="C:\Users\AFLAL\Desktop\VelociRoute\VelociRoute\Backend\src\Middleware\auth.js">
-        <metrics statements="14" coveredstatements="13" conditionals="4" coveredconditionals="2" methods="1" coveredmethods="1"/>
+        <metrics statements="14" coveredstatements="14" conditionals="4" coveredconditionals="3" methods="1" coveredmethods="1"/>
         <line num="1" count="2" type="stmt"/>
         <line num="4" count="2" type="cond" truecount="1" falsecount="1"/>
         <line num="5" count="2" type="stmt"/>
         <line num="10" count="2" type="stmt"/>
-        <line num="11" count="3" type="stmt"/>
-        <line num="12" count="3" type="stmt"/>
-        <line num="14" count="3" type="cond" truecount="1" falsecount="1"/>
-        <line num="15" count="0" type="stmt"/>
+        <line num="11" count="5" type="stmt"/>
+        <line num="12" count="5" type="stmt"/>
+        <line num="14" count="5" type="cond" truecount="2" falsecount="0"/>
+        <line num="15" count="2" type="stmt"/>
         <line num="18" count="3" type="stmt"/>
         <line num="19" count="2" type="stmt"/>
         <line num="24" count="2" type="stmt"/>

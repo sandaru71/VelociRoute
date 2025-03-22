@@ -1,6 +1,6 @@
 const request = require('supertest');
 const express = require('express');
-const { MongoClient } = require('mongodb');
+const { setupTestDB, clearTestDB, closeTestDB } = require('../utils/testDB');
 require('../setup');
 
 describe('Activity Routes', () => {
@@ -8,7 +8,7 @@ describe('Activity Routes', () => {
   let db;
 
   beforeAll(async () => {
-    db = global.__MONGO_DB__;
+    db = await setupTestDB();
     app = express();
     app.use(express.json());
     app.locals.db = db;
@@ -16,6 +16,14 @@ describe('Activity Routes', () => {
     // Import routes
     const activityRoutes = require('../../src/Routes/activityRoutes');
     app.use('/api/activities', activityRoutes);
+  });
+
+  beforeEach(async () => {
+    await clearTestDB();
+  });
+
+  afterAll(async () => {
+    await closeTestDB();
   });
 
   describe('POST /api/activities/record', () => {

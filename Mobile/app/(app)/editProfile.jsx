@@ -344,7 +344,7 @@ const EditProfile = () => {
                 source={
                   formData.coverPhoto
                     ? { uri: formData.coverPhoto }
-                    : require('../../assets/Screenshot_20221026_142847_com.google.android.apps.photos.jpg')
+                    : { uri: 'https://via.placeholder.com/300' }
                 }
                 style={styles.coverPhoto}
                 onLoadStart={() => setImageLoading(prev => ({ ...prev, cover: true }))}
@@ -376,7 +376,7 @@ const EditProfile = () => {
                   source={
                     formData.profilePhoto
                       ? { uri: formData.profilePhoto }
-                      : require('../../assets/Screenshot_20221026_142847_com.google.android.apps.photos.jpg')
+                      : { uri: 'https://via.placeholder.com/300' }
                   }
                   style={styles.profilePhoto}
                   onLoadStart={() => setImageLoading(prev => ({ ...prev, profile: true }))}
