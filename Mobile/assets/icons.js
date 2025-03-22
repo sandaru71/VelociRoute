@@ -1,12 +1,12 @@
-import { AntDesign, Feather } from "@expo/vector-icons";
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+// icons.js
+import React from 'react';
+import { FontAwesome } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export const icons = {
-    index: (props)=> <AntDesign name="home" size={26} {...props} />,
-    planner: (props)=> <FontAwesome5 name="route" size={26} {...props} />,
-    record: (props)=> <MaterialCommunityIcons name="record-circle-outline" size={26} {...props} />,
-    feed: (props)=> <MaterialIcons name="explore" size={26} {...props} />,
-    profile: (props)=> <AntDesign name="user" size={26} {...props} />,
-}
+  index:    ({ color }) => <MaterialIcons name="home" size={24} color={color} />,
+  planner:  ({ color }) => <MaterialIcons name="event" size={24} color={color} />,
+  feed:     ({ color }) => <FontAwesome   name="rss" size={24} color={color} />,
+  record:   ({ color }) => <FontAwesome   name="video-camera" size={24} color={color} />,
+  profile:  ({ color }) => <FontAwesome   name="user" size={24} color={color} />,
+};

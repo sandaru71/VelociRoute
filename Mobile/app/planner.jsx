@@ -1,13 +1,14 @@
-import { View, Text } from 'react-native'
-import React from 'react'
-import ColorList from '@/components/ColorList'
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 
-const Planner = () => {
+export default function PlannerScreen() {
   return (
-    <View>
-      <ColorList color='#059669'/>
+    <View style={styles.container}>
+      <Text>Planner Screen</Text>
     </View>
-  )
+  );
 }
 
-export default Planner
+const styles = StyleSheet.create({
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+});
