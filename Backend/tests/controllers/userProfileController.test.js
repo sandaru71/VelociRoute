@@ -1,16 +1,26 @@
-const { MongoClient } = require('mongodb');
-require('../setup');
+const { setupTestDB, closeTestDB, mockRequest, mockResponse } = require('../utils/testUtils');
+const { createProfile, getProfile, updateProfile } = require('../../src/Controllers/userProfileController');
+
+jest.mock('cloudinary', () => ({
+  v2: {
+    uploader: {
+      upload: jest.fn().mockResolvedValue({ secure_url: 'https://example.com/image.jpg' })
+    }
+  }
+}));
 
 describe('UserProfileController', () => {
-  let db;
-
   beforeAll(async () => {
-    db = global.__MONGO_DB__;
+    await setupTestDB();
   });
 
-  describe('createUserProfile', () => {
+  afterAll(async () => {
+    await closeTestDB();
+  });
+
+  describe('createProfile', () => {
     it('should create a new user profile successfully', async () => {
-      const req = {
+      const req = mockRequest({
         body: {
           userId: '123',
           displayName: 'John Doe',
@@ -18,85 +28,70 @@ describe('UserProfileController', () => {
           bio: 'Cycling enthusiast',
           preferredActivities: ['cycling', 'running']
         },
-        files: {}, // Mock empty files
-        app: { locals: { db } }
-      };
+        file: { path: 'test/profile.jpg' }
+      });
 
-      const res = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn()
-      };
+      const res = mockResponse();
 
-      const { createUserProfile } = require('../../src/Controllers/userProfileController');
-      await createUserProfile(req, res);
+      await createProfile(req, res);
 
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          userId: '123',
-          displayName: 'John Doe',
-          email: 'john@example.com'
+          userId: req.body.userId,
+          displayName: req.body.displayName,
+          email: req.body.email,
+          profileImage: expect.any(String)
         })
       );
     });
 
-    it('should handle duplicate user profile creation', async () => {
-      // First, create a profile
-      await db.collection('userProfiles').insertOne({
-        userId: '123',
-        displayName: 'John Doe',
-        email: 'john@example.com'
+    it('should return 400 for missing required fields', async () => {
+      const req = mockRequest({
+        body: {
+          userId: '123'
+          // Missing other required fields
+        }
       });
 
-      const req = {
-        body: {
-          userId: '123',
-          displayName: 'John Doe Updated',
-          email: 'john@example.com'
-        },
-        files: {},
-        app: { locals: { db } }
-      };
+      const res = mockResponse();
 
-      const res = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn()
-      };
-
-      const { createUserProfile } = require('../../src/Controllers/userProfileController');
-      await createUserProfile(req, res);
+      await createProfile(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.any(String)
+        })
+      );
     });
   });
 
-  describe('getUserProfile', () => {
-    beforeEach(async () => {
-      await db.collection('userProfiles').insertOne({
-        userId: '123',
-        displayName: 'John Doe',
-        email: 'john@example.com',
-        bio: 'Cycling enthusiast',
-        preferredActivities: ['cycling', 'running'],
-        createdAt: new Date()
+  describe('getProfile', () => {
+    it('should get user profile successfully', async () => {
+      // First create a profile
+      const createReq = mockRequest({
+        body: {
+          userId: '123',
+          displayName: 'John Doe',
+          email: 'john@example.com'
+        }
       });
-    });
 
-    it('should get user profile by userId', async () => {
-      const req = {
-        params: { userId: '123' },
-        app: { locals: { db } }
-      };
+      const createRes = mockResponse();
+      await createProfile(createReq, createRes);
 
-      const res = {
-        json: jest.fn(),
-        status: jest.fn().mockReturnThis()
-      };
+      // Then get it
+      const getReq = mockRequest({
+        params: { userId: '123' }
+      });
 
-      const { getUserProfile } = require('../../src/Controllers/userProfileController');
-      await getUserProfile(req, res);
+      const getRes = mockResponse();
 
-      expect(res.json).toHaveBeenCalledWith(
+      await getProfile(getReq, getRes);
+
+      expect(getRes.status).toHaveBeenCalledWith(200);
+      expect(getRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: '123',
           displayName: 'John Doe',
@@ -105,57 +100,79 @@ describe('UserProfileController', () => {
       );
     });
 
-    it('should handle non-existent user profile', async () => {
-      const req = {
-        params: { userId: 'nonexistent' },
-        app: { locals: { db } }
-      };
+    it('should return 404 for non-existent profile', async () => {
+      const req = mockRequest({
+        params: { userId: 'nonexistent' }
+      });
 
-      const res = {
-        json: jest.fn(),
-        status: jest.fn().mockReturnThis()
-      };
+      const res = mockResponse();
 
-      const { getUserProfile } = require('../../src/Controllers/userProfileController');
-      await getUserProfile(req, res);
+      await getProfile(req, res);
 
       expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.any(String)
+        })
+      );
     });
   });
 
-  describe('updateUserProfile', () => {
-    beforeEach(async () => {
-      await db.collection('userProfiles').insertOne({
-        userId: '123',
-        displayName: 'John Doe',
-        email: 'john@example.com',
-        bio: 'Cycling enthusiast'
+  describe('updateProfile', () => {
+    it('should update profile successfully', async () => {
+      // First create a profile
+      const createReq = mockRequest({
+        body: {
+          userId: '123',
+          displayName: 'John Doe',
+          email: 'john@example.com'
+        }
       });
-    });
 
-    it('should update user profile successfully', async () => {
-      const req = {
+      const createRes = mockResponse();
+      await createProfile(createReq, createRes);
+
+      // Then update it
+      const updateReq = mockRequest({
         params: { userId: '123' },
         body: {
-          displayName: 'John Doe Updated',
-          bio: 'Running and cycling enthusiast'
+          displayName: 'John Smith',
+          bio: 'Updated bio'
         },
-        files: {},
-        app: { locals: { db } }
-      };
+        file: { path: 'test/new-profile.jpg' }
+      });
 
-      const res = {
-        json: jest.fn(),
-        status: jest.fn().mockReturnThis()
-      };
+      const updateRes = mockResponse();
 
-      const { updateUserProfile } = require('../../src/Controllers/userProfileController');
-      await updateUserProfile(req, res);
+      await updateProfile(updateReq, updateRes);
 
+      expect(updateRes.status).toHaveBeenCalledWith(200);
+      expect(updateRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: '123',
+          displayName: 'John Smith',
+          bio: 'Updated bio',
+          profileImage: expect.any(String)
+        })
+      );
+    });
+
+    it('should return 404 for non-existent profile', async () => {
+      const req = mockRequest({
+        params: { userId: 'nonexistent' },
+        body: {
+          displayName: 'New Name'
+        }
+      });
+
+      const res = mockResponse();
+
+      await updateProfile(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          displayName: 'John Doe Updated',
-          bio: 'Running and cycling enthusiast'
+          error: expect.any(String)
         })
       );
     });

@@ -11,7 +11,7 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-exports.createActivityPost = async (req, res) => {
+const createPost = async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -76,7 +76,7 @@ exports.createActivityPost = async (req, res) => {
             console.error('Error occurred when parsing routes or stats: ', parseError);
         }
 
-        const activityPost = new ActivityPost({
+        const post = new ActivityPost({
             userEmail,
             activityName,
             description,
@@ -90,7 +90,7 @@ exports.createActivityPost = async (req, res) => {
             comments: []
         });
     
-        const result = await activityPost.save(req.app.locals.db);
+        const result = await post.save(req.app.locals.db);
     
         res.status(201).json({
             success: true,
@@ -105,7 +105,7 @@ exports.createActivityPost = async (req, res) => {
     }
 };
 
-exports.getAllActivityPosts = async (req, res) => {
+const getPosts = async (req, res) => {
     try {
         // Get the MongoDB connection from app.locals
         const db = req.app.locals.db;
@@ -129,7 +129,7 @@ exports.getAllActivityPosts = async (req, res) => {
     }
 };
 
-exports.likePost = async (req, res) => {
+const likePost = async (req, res) => {
     try {
         const { postId } = req.params;
         
@@ -181,7 +181,7 @@ exports.likePost = async (req, res) => {
     }
 };
 
-exports.commentOnPost = async (req, res) => {
+const commentOnPost = async (req, res) => {
     try {
         const { postId } = req.params;
         const { text } = req.body;
@@ -241,4 +241,11 @@ exports.commentOnPost = async (req, res) => {
             error: 'Failed to add comment'
         });
     }
+};
+
+module.exports = {
+    createPost,
+    getPosts,
+    likePost,
+    commentOnPost
 };

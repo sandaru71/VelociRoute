@@ -16,7 +16,7 @@ jest.mock('../../src/Infrastructure/Models/Activity', () => {
     startTime: { type: Date },
     endTime: { type: Date }
   });
-  return mongoose.model('Activity', mockSchema);
+  return mongoose.models.Activity || mongoose.model('Activity', mockSchema);
 });
 
 jest.mock('../../src/Infrastructure/Models/ActivityPosts', () => {
@@ -34,7 +34,7 @@ jest.mock('../../src/Infrastructure/Models/ActivityPosts', () => {
     comments: [{ type: Object }],
     createdAt: { type: Date, default: Date.now }
   });
-  return mongoose.model('ActivityPosts', mockSchema);
+  return mongoose.models.ActivityPosts || mongoose.model('ActivityPosts', mockSchema);
 });
 
 jest.mock('../../src/Infrastructure/Models/PopularRoute', () => {
@@ -53,7 +53,7 @@ jest.mock('../../src/Infrastructure/Models/PopularRoute', () => {
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
   });
-  return mongoose.model('PopularRoute', mockSchema);
+  return mongoose.models.PopularRoute || mongoose.model('PopularRoute', mockSchema);
 });
 
 jest.mock('../../src/Infrastructure/Models/UserProfile', () => {
@@ -70,5 +70,5 @@ jest.mock('../../src/Infrastructure/Models/UserProfile', () => {
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
   });
-  return mongoose.model('UserProfile', mockSchema);
+  return mongoose.models.UserProfile || mongoose.model('UserProfile', mockSchema);
 });
