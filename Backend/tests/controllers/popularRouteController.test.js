@@ -1,46 +1,40 @@
-const { getPopularRoutes, createPopularRoute } = require('../src/Controllers/popularRouteController');
-const { MongoClient } = require('mongodb');
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { setupTestDB, closeTestDB, clearCollections, mockRequest, mockResponse } = require('../utils/testUtils');
+const { getPopularRoutes, createPopularRoute } = require('../../src/Controllers/popularRouteController');
 
-let mongoServer;
-let connection;
+// Mock cloudinary
+jest.mock('cloudinary', () => ({
+  v2: {
+    config: jest.fn(),
+    uploader: {
+      upload: jest.fn().mockResolvedValue({
+        secure_url: 'https://test-cloudinary-url.com/image.jpg'
+      }),
+      destroy: jest.fn().mockResolvedValue({ result: 'ok' })
+    }
+  }
+}));
+
 let db;
 
 beforeAll(async () => {
-  // Start MongoDB Memory Server
-  mongoServer = await MongoMemoryServer.create();
-  const mongoUri = mongoServer.getUri();
-  
-  // Create connection to in-memory database
-  connection = await MongoClient.connect(mongoUri);
-  db = connection.db();
+  const testDB = await setupTestDB();
+  db = testDB.db;
 });
 
 afterAll(async () => {
-  // Clean up
-  if (connection) await connection.close();
-  if (mongoServer) await mongoServer.stop();
+  await closeTestDB();
 });
 
 beforeEach(async () => {
-  // Clear the database before each test
-  if (db) {
-    await db.collection('routes').deleteMany({});
-    await db.collection('popularroutes').deleteMany({});
-  }
+  await clearCollections(db);
+  jest.clearAllMocks();
 });
 
 describe('PopularRouteController', () => {
   describe('getPopularRoutes', () => {
     it('should return empty array when no routes exist', async () => {
-      const req = {
-        query: {},
-        app: { locals: { db } }
-      };
-      const res = {
-        json: jest.fn(),
-        status: jest.fn().mockReturnThis()
-      };
+      const req = mockRequest();
+      const res = mockResponse();
 
       await getPopularRoutes(req, res);
       expect(res.json).toHaveBeenCalledWith([]);
@@ -48,20 +42,15 @@ describe('PopularRouteController', () => {
 
     it('should filter routes by activityType', async () => {
       // Insert test data
-      const testRoutes = [
-        { name: 'Route 1', activityType: 'cycling' },
-        { name: 'Route 2', activityType: 'running' }
-      ];
-      await db.collection('routes').insertMany(testRoutes);
+      await db.collection('routes').insertMany([
+        { name: 'Route 1', activityType: 'cycling', difficulty: 'medium', distance: 10, location: 'Test' },
+        { name: 'Route 2', activityType: 'running', difficulty: 'easy', distance: 5, location: 'Test' }
+      ]);
 
-      const req = {
-        query: { activityType: 'cycling' },
-        app: { locals: { db } }
-      };
-      const res = {
-        json: jest.fn(),
-        status: jest.fn().mockReturnThis()
-      };
+      const req = mockRequest({
+        query: { activityType: 'cycling' }
+      });
+      const res = mockResponse();
 
       await getPopularRoutes(req, res);
       expect(res.json).toHaveBeenCalledWith(
@@ -73,21 +62,17 @@ describe('PopularRouteController', () => {
     });
 
     it('should filter routes by distance range', async () => {
-      const testRoutes = [
-        { name: 'Short Route', distance: 5 },
-        { name: 'Medium Route', distance: 10 },
-        { name: 'Long Route', distance: 20 }
-      ];
-      await db.collection('routes').insertMany(testRoutes);
+      // Insert test data
+      await db.collection('routes').insertMany([
+        { name: 'Short Route', activityType: 'cycling', difficulty: 'easy', distance: 5, location: 'Test' },
+        { name: 'Medium Route', activityType: 'cycling', difficulty: 'medium', distance: 10, location: 'Test' },
+        { name: 'Long Route', activityType: 'cycling', difficulty: 'hard', distance: 20, location: 'Test' }
+      ]);
 
-      const req = {
-        query: { minDistance: '8', maxDistance: '15' },
-        app: { locals: { db } }
-      };
-      const res = {
-        json: jest.fn(),
-        status: jest.fn().mockReturnThis()
-      };
+      const req = mockRequest({
+        query: { minDistance: '8', maxDistance: '15' }
+      });
+      const res = mockResponse();
 
       await getPopularRoutes(req, res);
       expect(res.json).toHaveBeenCalledWith(
@@ -100,26 +85,22 @@ describe('PopularRouteController', () => {
   });
 
   describe('createPopularRoute', () => {
+    const validRouteData = {
+      name: 'Test Route',
+      description: 'A test route',
+      activityType: 'cycling',
+      difficulty: 'medium',
+      distance: '15.5',
+      elevation: '100',
+      averageTime: '60',
+      location: 'Test Location'
+    };
+
     it('should create a new route successfully', async () => {
-      const req = {
-        body: {
-          name: 'Test Route',
-          description: 'A test route',
-          activityType: 'Cycling',
-          difficulty: 'Medium',
-          distance: '15.5',
-          elevation: '100',
-          averageTime: '60',
-          location: 'Test Location'
-        },
-        files: {},
-        app: { locals: { db } }
-      };
-      
-      const res = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn()
-      };
+      const req = mockRequest({
+        body: validRouteData
+      });
+      const res = mockResponse();
 
       await createPopularRoute(req, res);
       
@@ -132,22 +113,21 @@ describe('PopularRouteController', () => {
           distance: 15.5
         })
       );
+
+      // Verify the route was actually created in the database
+      const createdRoute = await db.collection('routes').findOne({ name: 'Test Route' });
+      expect(createdRoute).toBeTruthy();
+      expect(createdRoute.activityType).toBe('cycling');
     });
 
     it('should handle missing required fields', async () => {
-      const req = {
+      const req = mockRequest({
         body: {
           name: 'Test Route'
           // Missing other required fields
-        },
-        files: {},
-        app: { locals: { db } }
-      };
-      
-      const res = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn()
-      };
+        }
+      });
+      const res = mockResponse();
 
       await createPopularRoute(req, res);
       
@@ -155,6 +135,26 @@ describe('PopularRouteController', () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.any(String)
+        })
+      );
+    });
+
+    it('should handle file uploads', async () => {
+      const req = mockRequest({
+        body: validRouteData,
+        files: [{
+          path: 'test/image.jpg'
+        }]
+      });
+      const res = mockResponse();
+
+      await createPopularRoute(req, res);
+      
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Test Route',
+          images: expect.arrayContaining(['https://test-cloudinary-url.com/image.jpg'])
         })
       );
     });
