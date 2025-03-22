@@ -44,7 +44,7 @@ const stories = [
   { id: 5, name: 'Manusha', image: maleCyclist },
 ];
 
-// Helper to parse GPX route and return an array of coordinates
+
 const parseGPX = async (gpxString) => {
   try {
     // Wrap parseString in a promise to allow async/await usage
