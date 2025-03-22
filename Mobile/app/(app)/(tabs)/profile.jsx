@@ -7,6 +7,8 @@ import { API_URL } from '../../../config';
 import { useRouter, useFocusEffect, Stack } from "expo-router";
 import { auth } from '../../../firebase/config';
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { Alert } from "react-native";
+import { signOut } from "firebase/auth";
 import axios from "axios";
 
 const Profile = () => {
@@ -84,6 +86,53 @@ const Profile = () => {
     router.push('editProfile');
   };
 
+  const deleteAccount = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        Alert.alert("Error", "No authenticated user found.");
+        return;
+      }
+  
+      // Show confirmation alert before deleting
+      Alert.alert(
+        "Confirm Deletion",
+        "Are you sure you want to delete your account? This action cannot be undone.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await user.delete();
+                Alert.alert("Success", "Your account has been deleted.");
+                
+                // Redirect to login screen
+                router.push("/login");
+              } catch (error) {
+                if (error.code === "auth/requires-recent-login") {
+                  Alert.alert(
+                    "Re-authentication Required",
+                    "Please log in again to delete your account."
+                  );
+                  await signOut(auth);
+                  router.push("/login"); // Redirect to login for re-authentication
+                } else {
+                  console.error("Error deleting account:", error);
+                  Alert.alert("Error", "Failed to delete account. Try again later.");
+                }
+              }
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error("Delete account error:", error);
+      Alert.alert("Error", "Something went wrong.");
+    }
+  };
+  
   if (isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
@@ -187,6 +236,15 @@ const Profile = () => {
             <MaterialIcons name="edit" size={20} color="#FFFFFF" />
             <Text style={{ fontSize: 16, color: '#FFFFFF', fontWeight: 'bold', marginLeft: 8 }}>Edit Profile</Text>
           </TouchableOpacity>
+
+          {/*Delete button */}
+          <TouchableOpacity
+            style={{backgroundColor: "red", padding: 12, borderRadius: 8, marginTop: 16, marginHorizontal: 16, alignItems: 'center' }}
+            onPress={deleteAccount}
+          >
+            <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "600" }}> Delete Account</Text>
+          </TouchableOpacity>
+
 
           {/* View My Posts Button */}
           <TouchableOpacity
