@@ -84,6 +84,15 @@ const Profile = () => {
     router.push('editProfile');
   };
 
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      router.replace('/(auth)/start');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
@@ -99,22 +108,17 @@ const Profile = () => {
     <>
     <Stack.Screen 
       options={{
-        headerLeft: () => (
-          <TouchableOpacity
-            style={{ marginLeft: 15 }}
-            onPress={() => router.push('/(app)/(tabs)/')}
-          >
-            <Ionicons name="arrow-back" size={24} color="black" />
-          </TouchableOpacity>
-        ),
+        headerTitle: "Profile",
         headerRight: () => (
-          <TouchableOpacity
-            style={{ marginRight: 15 }}
-            onPress={fetchProfileData}
-          >
-            <Ionicons name="refresh" size={24} color="black" />
-          </TouchableOpacity>
-        )
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginRight: 10 }}>
+            <TouchableOpacity onPress={fetchProfileData}>
+              <Ionicons name="reload" size={24} color="#000" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={24} color="#000" />
+            </TouchableOpacity>
+          </View>
+        ),
       }}
     />
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
