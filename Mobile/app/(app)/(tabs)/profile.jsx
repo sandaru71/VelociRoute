@@ -7,6 +7,8 @@ import { API_URL } from '../../../config';
 import { useRouter, useFocusEffect, Stack } from "expo-router";
 import { auth } from '../../../firebase/config';
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { Alert } from "react-native";
+import { signOut } from "firebase/auth";
 import axios from "axios";
 
 const Profile = () => {
@@ -84,6 +86,15 @@ const Profile = () => {
     router.push('editProfile');
   };
 
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      router.replace('/(auth)/start');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
@@ -99,22 +110,17 @@ const Profile = () => {
     <>
     <Stack.Screen 
       options={{
-        headerLeft: () => (
-          <TouchableOpacity
-            style={{ marginLeft: 15 }}
-            onPress={() => router.push('/(app)/(tabs)/')}
-          >
-            <Ionicons name="arrow-back" size={24} color="black" />
-          </TouchableOpacity>
-        ),
+        headerTitle: "Profile",
         headerRight: () => (
-          <TouchableOpacity
-            style={{ marginRight: 15 }}
-            onPress={fetchProfileData}
-          >
-            <Ionicons name="refresh" size={24} color="black" />
-          </TouchableOpacity>
-        )
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginRight: 10 }}>
+            <TouchableOpacity onPress={fetchProfileData}>
+              <Ionicons name="reload" size={24} color="#000" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={24} color="#000" />
+            </TouchableOpacity>
+          </View>
+        ),
       }}
     />
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
@@ -187,6 +193,15 @@ const Profile = () => {
             <MaterialIcons name="edit" size={20} color="#FFFFFF" />
             <Text style={{ fontSize: 16, color: '#FFFFFF', fontWeight: 'bold', marginLeft: 8 }}>Edit Profile</Text>
           </TouchableOpacity>
+
+          {/*Delete button */}
+          <TouchableOpacity
+            style={{backgroundColor: "red", padding: 12, borderRadius: 8, marginTop: 16, marginHorizontal: 16, alignItems: 'center' }}
+            onPress={deleteAccount}
+          >
+            <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "600" }}> Delete Account</Text>
+          </TouchableOpacity>
+
 
           {/* View My Posts Button */}
           <TouchableOpacity
