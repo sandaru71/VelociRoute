@@ -220,7 +220,10 @@ const Planner = () => {
         }
 
         // Store elevation profile data
-        const elevationProfile = data.results.map(point => point.elevation);
+        const elevationProfile = data.results.map((point, index) => ({
+          elevation: point.elevation,
+          distance: index * (coordinates.length / data.results.length)
+        }));
         setElevationData({ totalGain: Math.round(totalGain), profile: elevationProfile });
         return { totalGain: Math.round(totalGain), profile: elevationProfile };
       }

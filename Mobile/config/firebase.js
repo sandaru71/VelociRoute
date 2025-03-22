@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence, getAuth } from 'firebase/auth';
+import { initializeAuth, getReactNativePersistence, getAuth, connectAuthEmulator } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBKRFELzWxWpzNSXIVYFnPXKYEZVbhXKKE",
@@ -14,23 +15,41 @@ const firebaseConfig = {
 let app;
 let auth;
 
-// Add error handling for initialization
-try {
-  if (getApps().length === 0) {
-    console.log('Initializing new Firebase app...');
-    app = initializeApp(firebaseConfig);
-    auth = initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage)
-    });
-    console.log('Firebase app initialized successfully');
-  } else {
-    console.log('Using existing Firebase app...');
-    app = getApp();
-    auth = getAuth(app);
-    console.log('Got existing Firebase auth instance');
+const initializeFirebase = async () => {
+  try {
+    // Check network connectivity first
+    const netInfo = await NetInfo.fetch();
+    if (!netInfo.isConnected) {
+      throw new Error('No internet connection');
+    }
+
+    if (getApps().length === 0) {
+      console.log('Initializing new Firebase app...');
+      app = initializeApp(firebaseConfig);
+      auth = initializeAuth(app, {
+        persistence: getReactNativePersistence(AsyncStorage)
+      });
+      console.log('Firebase app initialized successfully');
+    } else {
+      console.log('Using existing Firebase app...');
+      app = getApp();
+      auth = getAuth(app);
+      console.log('Got existing Firebase auth instance');
+    }
+
+    // Set up offline persistence
+    await auth.setPersistence('local');
+    
+    return { auth, app };
+  } catch (error) {
+    console.error('Firebase initialization error:', error);
+    throw error;
   }
-} catch (error) {
-  console.error('Firebase initialization error:', error);
-}
+};
+
+// Initialize Firebase
+initializeFirebase().catch(error => {
+  console.error('Failed to initialize Firebase:', error);
+});
 
 export { auth, app };

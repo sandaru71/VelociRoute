@@ -12,6 +12,7 @@ import { TOMORROW_API_KEY } from '../config/keys';
 import { ActivityIndicator } from 'react-native';
 import { API_URL } from '../config';
 import { auth } from '../firebase/config';
+import NetInfo from '@react-native-community/netinfo';
 
 const RouteScreen = () => {
   const router = useRouter();
@@ -174,22 +175,37 @@ const RouteScreen = () => {
       setIsSaving(true);
       console.log('Starting route save process...');
 
+      // Check network connectivity
+      const netInfo = await NetInfo.fetch();
+      if (!netInfo.isConnected) {
+        throw new Error('No internet connection. Please check your network and try again.');
+      }
+
       // Get current user
       const user = auth.currentUser;
       if (!user) {
-        console.error('No user logged in');
-        setSnackbarMessage('Please log in to save routes');
-        setSnackbarVisible(true);
-        return;
+        throw new Error('Please log in to save routes');
       }
 
-      // Get fresh token
-      const token = await user.getIdToken(true);
-      console.log('Got fresh user token');
+      // Get fresh token with retry mechanism
+      let token;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          token = await user.getIdToken(/* forceRefresh */ attempt > 1);
+          console.log('Got fresh user token on attempt', attempt);
+          break;
+        } catch (tokenError) {
+          if (attempt === 3) {
+            throw new Error('Authentication failed. Please try logging in again.');
+          }
+          console.log(`Token refresh attempt ${attempt} failed, retrying...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
 
-      // Create GPX string
-      const gpxString = generateGPX(routeCoordinates, routeName || 'Untitled Route');
-      console.log('Generated GPX string');
+      if (!token) {
+        throw new Error('Failed to get authentication token');
+      }
 
       // Create form data
       const formData = new FormData();
@@ -199,28 +215,22 @@ const RouteScreen = () => {
       formData.append('avgSpeed', selectedActivity === 'cycling' ? '15 km/h' : '5 km/h');
       formData.append('elevationGain', elevationGain.toString());
 
-      // Create GPX file
-      const gpxBlob = new Blob([gpxString], { type: 'application/gpx+xml' });
+      // Prepare GPX file
+      const gpxString = generateGPX(routeCoordinates, routeName || 'Untitled Route');
       const base64Gpx = Buffer.from(gpxString).toString('base64');
-      const gpxUri = Platform.OS === 'android' ? 
-        `data:application/gpx+xml;base64,${base64Gpx}` :
-        'data:application/gpx+xml;base64,' + base64Gpx;
-
       formData.append('gpxData', {
-        uri: gpxUri,
+        uri: `data:application/gpx+xml;base64,${base64Gpx}`,
         name: `${(routeName || 'route').replace(/\s+/g, '_')}.gpx`,
         type: 'application/gpx+xml'
       });
 
       // Create elevation profile image
-      // Convert elevation data to a simple line chart
       const elevationData = elevationProfile.map(point => point.elevation);
       const maxElevation = Math.max(...elevationData);
       const minElevation = Math.min(...elevationData);
       const height = 200;
       const width = elevationData.length;
       
-      // Create a simple SVG line chart
       const points = elevationData.map((elevation, index) => {
         const x = (index / (elevationData.length - 1)) * width;
         const y = height - ((elevation - minElevation) / (maxElevation - minElevation)) * height;
@@ -234,12 +244,8 @@ const RouteScreen = () => {
       `;
 
       const base64Svg = Buffer.from(svgString).toString('base64');
-      const elevationUri = Platform.OS === 'android' ?
-        `data:image/svg+xml;base64,${base64Svg}` :
-        'data:image/svg+xml;base64,' + base64Svg;
-
       formData.append('elevationProfileImage', {
-        uri: elevationUri,
+        uri: `data:image/svg+xml;base64,${base64Svg}`,
         name: `${(routeName || 'route').replace(/\s+/g, '_')}_elevation.svg`,
         type: 'image/svg+xml'
       });
@@ -247,32 +253,58 @@ const RouteScreen = () => {
       console.log('Form data prepared');
       console.log('Sending request to:', `${API_URL}/api/saved-routes/save`);
 
-      const response = await fetch(`${API_URL}/api/saved-routes/save`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-          'Content-Type': 'multipart/form-data'
-        },
-        body: formData
-      });
+      // Make the request with timeout and retry
+      const fetchWithTimeout = async (attempt) => {
+        const timeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Request timed out')), 30000)
+        );
 
-      console.log('Response status:', response.status);
+        const response = await Promise.race([
+          fetch(`${API_URL}/api/saved-routes/save`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json'
+            },
+            body: formData
+          }),
+          timeout
+        ]);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Server error (attempt ${attempt}):`, errorText);
+          throw new Error(`Server error: ${response.status} ${errorText}`);
+        }
+
+        return response;
+      };
+
+      let response;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          response = await fetchWithTimeout(attempt);
+          break;
+        } catch (error) {
+          if (attempt === 3) throw error;
+          console.log(`Attempt ${attempt} failed, retrying...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+
       const result = await response.json();
       console.log('Save route response:', result);
 
       if (result.success) {
         setSnackbarMessage('Route saved successfully!');
       } else {
-        setSnackbarMessage(result.message || 'Failed to save route. Please try again.');
+        throw new Error(result.message || 'Failed to save route');
       }
-      setSnackbarVisible(true);
-
     } catch (error) {
       console.error('Error saving route:', error);
-      setSnackbarMessage('Error saving route. Please try again.');
-      setSnackbarVisible(true);
+      setSnackbarMessage(error.message || 'Error saving route. Please try again.');
     } finally {
+      setSnackbarVisible(true);
       setIsSaving(false);
     }
   };
@@ -429,7 +461,7 @@ const RouteScreen = () => {
                     `${((i * (routeDetails?.legs?.[0]?.distance?.value || 0)) / 5000).toFixed(1)}km`
                   ),
                   datasets: [{
-                    data: elevationProfile,
+                    data: elevationProfile.map(point => Number(point.elevation) || 0),
                     color: (opacity = 1) => `rgba(81, 150, 244, ${opacity})`,
                     strokeWidth: 2
                   }]
