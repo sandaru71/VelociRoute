@@ -34,7 +34,7 @@ import maleCyclist from '../assets/images/male-cyclist.png';
 import girlRunner from '../assets/images/girlRunner.png';
 import hiker from '../assets/images/hiker.png';
 import runner2 from '../assets/images/runner2.png';
-// import defaultAvatar from './assets/images/default-avatar.png';
+
 
 const stories = [
   { id: 1, name: 'Yonara', image: girlRunner },
