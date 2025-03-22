@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import TabBar from '../../../components/TabBar';
+import Profile from './profile';
 
 export default function TabsLayout() {
   return (
@@ -43,7 +44,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile"
+          title: "Profile",
+          headerShown: true
         }}
       />
     </Tabs>
