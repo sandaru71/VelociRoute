@@ -21,7 +21,7 @@ import axios from 'axios';
 import MapView, { Polyline, Marker } from 'react-native-maps';
 
 // Configure axios base URL and defaults
-const LOCAL_IP = '10.235.240.196'; // Your computer's local IP address
+const LOCAL_IP = '10.235.240.40'; // Your computer's local IP address
 
 const API_BASE_URL = Platform.select({
   android: __DEV__ ? `http://${LOCAL_IP}:3000/api` : 'https://your-production-api.com/api',

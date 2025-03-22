@@ -4,8 +4,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { MaterialIcons } from "@expo/vector-icons";
 import { API_URL } from '../../../config';
-import { useRouter, useFocusEffect } from "expo-router";
+import { useRouter, useFocusEffect, Stack } from "expo-router";
 import { auth } from '../../../firebase/config';
+import Ionicons from "@expo/vector-icons/Ionicons";
 import axios from "axios";
 
 const Profile = () => {
@@ -95,6 +96,27 @@ const Profile = () => {
   }
 
   return (
+    <>
+    <Stack.Screen 
+      options={{
+        headerLeft: () => (
+          <TouchableOpacity
+            style={{ marginLeft: 15 }}
+            onPress={() => router.push('/(app)/(tabs)/')}
+          >
+            <Ionicons name="arrow-back" size={24} color="black" />
+          </TouchableOpacity>
+        ),
+        headerRight: () => (
+          <TouchableOpacity
+            style={{ marginRight: 15 }}
+            onPress={fetchProfileData}
+          >
+            <Ionicons name="refresh" size={24} color="black" />
+          </TouchableOpacity>
+        )
+      }}
+    />
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <StatusBar backgroundColor="#808080" />
 
@@ -192,6 +214,7 @@ const Profile = () => {
         </View>
       </ScrollView>
     </SafeAreaView>
+    </>
   );
 };
 
