@@ -8,7 +8,6 @@ import { useRouter } from "expo-router";
 import { API_URL } from '../../config';
 import { Picker } from '@react-native-picker/picker';
 import Constants from 'expo-constants';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { auth } from '../../firebase/config';
 import axios from 'axios';
@@ -343,7 +342,7 @@ const EditProfile = () => {
                 source={
                   formData.coverPhoto
                     ? { uri: formData.coverPhoto }
-                    : require('../../assets/galle face green.png')
+                    : {uri: 'https://res.cloudinary.com/dq1hjlghb/image/upload/v1742610922/Default_cover_photo_j4tvqs.png'}
                 }
                 style={styles.coverPhoto}
                 onLoadStart={() => setImageLoading(prev => ({ ...prev, cover: true }))}
@@ -375,7 +374,7 @@ const EditProfile = () => {
                   source={
                     formData.profilePhoto
                       ? { uri: formData.profilePhoto }
-                      : require('../../assets/galle face green.png')
+                      : {uri: 'https://res.cloudinary.com/dq1hjlghb/image/upload/v1742609235/Default_Profile_picture_naanpb.jpg'}
                   }
                   style={styles.profilePhoto}
                   onLoadStart={() => setImageLoading(prev => ({ ...prev, profile: true }))}

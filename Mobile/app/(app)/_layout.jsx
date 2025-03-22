@@ -32,6 +32,28 @@ export default function AppLayout() {
             headerTintColor: '#000',
           }}
         />
+        <Stack.Screen
+          name="editProfile"
+          options={{
+            headerShown: true,
+            headerTitle: 'Edit Profile',
+            headerStyle: {
+              backgroundColor: '#fff',
+            },
+            headerTintColor: '#000',
+          }}
+        />
+        <Stack.Screen
+          name="savedActivities"
+          options={{
+            headerShown: true,
+            headerTitle: 'Saved Activities',
+            headerStyle: {
+              backgroundColor: '#fff',
+            },
+            headerTintColor: '#000',
+          }}
+        />
       </Stack>
     </PaperProvider>
   );

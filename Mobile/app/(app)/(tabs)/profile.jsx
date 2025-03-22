@@ -107,7 +107,7 @@ const Profile = () => {
             </View>
           )}
           <Image
-            source={profileData.coverPhoto ? { uri: profileData.coverPhoto } : require('../../../assets/galle face green.png')}
+            source={profileData.coverPhoto ? { uri: profileData.coverPhoto } : {uri: 'https://res.cloudinary.com/dq1hjlghb/image/upload/v1742610922/Default_cover_photo_j4tvqs.png'}}
             style={{ height: '100%', width: '100%', resizeMode: 'cover' }}
             onLoadStart={() => setImageLoading(prev => ({ ...prev, cover: true }))}
             onLoadEnd={() => setImageLoading(prev => ({ ...prev, cover: false }))}
@@ -124,7 +124,7 @@ const Profile = () => {
               </View>
             )}
             <Image
-              source={profileData.profilePhoto ? { uri: profileData.profilePhoto } : require('../../../assets/galle face green.png')}
+              source={profileData.profilePhoto ? { uri: profileData.profilePhoto } : {uri: 'https://res.cloudinary.com/dq1hjlghb/image/upload/v1742609235/Default_Profile_picture_naanpb.jpg'}}
               style={{ height: 155, width: 155, borderRadius: 77.5, borderColor: '#4A90E2', borderWidth: 3 }}
               onLoadStart={() => setImageLoading(prev => ({ ...prev, profile: true }))}
               onLoadEnd={() => setImageLoading(prev => ({ ...prev, profile: false }))}

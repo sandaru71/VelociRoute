@@ -1,15 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Modal, FlatList, StyleSheet, Image, Alert, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
 import { FontAwesome5, Feather } from '@expo/vector-icons';
-import Icon from 'react-native-vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import { API_URL } from '../../config';
 import { auth } from '../../firebase/config';
-import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import MapView, { Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import Record from './(tabs)/record';
 import Constants from 'expo-constants';
 
 const SaveActivityScreen = () => {
@@ -421,19 +418,6 @@ const SaveActivityScreen = () => {
 
   return (
     <>
-      {/* <Stack.Screen
-          options={{
-            headerLeft: () => (
-              <TouchableOpacity
-                style={{ marginLeft: 5, marginRight: 10 }}
-                onPress={() => router.back()}
-              >
-                <Ionicons name="arrow-back" size={24} color="black" />
-              </TouchableOpacity>
-            ),
-          }}
-        /> */}
-
       <ScrollView style={styles.container} contentContainerStyle={{paddingBottom: 50}} showsVerticalScrollIndicator={false}>
         
         {/* Map View */}
@@ -466,7 +450,7 @@ const SaveActivityScreen = () => {
                 style={styles.mapButton} 
                 onPress={fitToRoute}
               >
-                <Ionicons name="expand-outline" size={24} color="white" />
+                <FontAwesome5 name="compress" size={24} color="white" />
               </TouchableOpacity>
             </View>
           </View>
@@ -685,7 +669,7 @@ const SaveActivityScreen = () => {
 
         {/* Discard Button */}
         <TouchableOpacity
-          style={[styles.button, styles.discardButton]}
+          style={[styles.discardButton]}
           onPress={handleDiscardActivity}
         >
             <Text style={[styles.buttonText, styles.discardButtonText]}>Discard Activity</Text>
@@ -693,14 +677,14 @@ const SaveActivityScreen = () => {
 
         {/* Save button */}
         <TouchableOpacity
-          style={[styles.button, styles.saveButton]}
+          style={[styles.saveButton]}
           onPress={handleSaveActivity}
           disabled={isSaving || isPosting}
         >
           {isSaving ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Save Activity</Text>
+            <Text style={styles.saveButtonText}>Save Activity</Text>
           )}
         </TouchableOpacity>
 
@@ -795,7 +779,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   saveButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#FEBE15',
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
@@ -803,7 +787,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
   },
   discardButton: {
-    backgroundColor: '#FEBE15',
+    backgroundColor: '#000',
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
@@ -813,14 +797,14 @@ const styles = StyleSheet.create({
   discardButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'black',
+    color: 'white',
   },
   disabledButton: {
     opacity: 0.7,
   },
   saveButtonText: {
-    color: 'white',
-    fontSize: 18  ,
+    color: 'black',
+    fontSize: 18,
     fontWeight: 'bold',
   },
   postActivityButton: {
@@ -833,7 +817,7 @@ const styles = StyleSheet.create({
   },
   postActivityText: {
     fontSize: 18,
-    color: 'white',
+    color: 'black',
     fontWeight: 'bold',
   },
   modalBackground: {
@@ -903,8 +887,8 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#007AFF',
+    fontWeight: '800',
+    color: '#1E88E5',
   },
   mapContainer: {
     height: 200,
@@ -924,7 +908,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   mapButton: {
-    backgroundColor: '#0891b2',
+    backgroundColor: 'black',
+    opacity: 0.5,
     borderRadius: 8,
     padding: 8,
     marginBottom: 8,
@@ -933,17 +918,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-  },
-  button: {
-    flex: 1,
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  buttonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
   },
 });
 
