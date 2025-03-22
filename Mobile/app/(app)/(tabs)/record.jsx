@@ -42,6 +42,21 @@ export default function Record() {
     }
   };
 
+  const getElevationGain = async (newLat, newLng, lastLat, lastLng) => {
+    const [newElevation, lastElevation] = await Promise.all([
+      getElevationData(newLat, newLng),
+      getElevationData(lastLat, lastLng)
+    ]);
+  
+    // Update elevation if altitude changed
+    if (lastElevation !== null && newElevation !== null) {
+      const elevationChange = newElevation - lastElevation;
+      if (elevationChange > 0) {
+        setElevationGain(prev => prev + elevationChange);
+      }
+    }
+  }
+
   const startLocationTracking = async () => {
     try {
       const subscription = await Location.watchPositionAsync(
@@ -80,13 +95,7 @@ export default function Record() {
                 const speedInKmH = (location.coords.speed * 3.6) || 0; // Convert m/s to km/h
                 setCurrentSpeed(speedInKmH);
 
-                // Update elevation if altitude changed
-                if (lastLocation.altitude && newLocation.altitude) {
-                  const elevationChange = newLocation.altitude - lastLocation.altitude;
-                  if (elevationChange > 0) {
-                    setElevationGain(prev => prev + elevationChange);
-                  }
-                }
+                getElevationGain(latitude, longitude, lastLocation.latitude, lastLocation.longitude);
 
                 return [...prevPath, newLocation];
               }
