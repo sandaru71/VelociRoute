@@ -14,7 +14,6 @@ import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import axios from 'axios';
 import { parseString } from 'react-native-xml2js';
 
-<<<<<<< HEAD
 // Example local assets for "story" circles
 import girlRunner from '../assets/images/girlRunner.png';
 import hiker from '../assets/images/hiker.png';
@@ -24,7 +23,6 @@ import maleCyclist from '../assets/images/male-cyclist.png';
 
 // Your Google Maps API key – ensure native configuration is set up accordingly
 const GOOGLE_MAPS_API_KEY = 'AIzaSyDQttE3cSnfZPt_K2UB9HYg1UWhdncQuPs';
-=======
 // Import your API base URL from config
 const API_URL = 'http://192.168.18.4:3000/api';  // Using your local IP address and port
 
@@ -37,7 +35,6 @@ import girlRunner from '../assets/images/girlRunner.png';
 import hiker from '../assets/images/hiker.png';
 import runner2 from '../assets/images/runner2.png';
 // import defaultAvatar from './assets/images/default-avatar.png';
->>>>>>> 88677a46cfe6b31fc65727a61632357378f514d7
 
 const stories = [
   { id: 1, name: 'Yonara', image: girlRunner },
