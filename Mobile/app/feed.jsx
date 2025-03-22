@@ -58,7 +58,7 @@ const parseGPX = async (gpxString) => {
         }
       );
     });
-    // Access trackpoints
+    
     const trkpts = result.gpx?.trk?.trkseg?.trkpt;
     let coords = [];
     if (Array.isArray(trkpts)) {
