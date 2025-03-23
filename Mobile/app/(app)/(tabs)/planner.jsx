@@ -36,6 +36,8 @@ const MINIMIZED_HEIGHT = 80;
 const HALF_HEIGHT = SCREEN_HEIGHT * 0.5;
 const FULL_HEIGHT = SCREEN_HEIGHT * 0.9;
 
+const API_BASE_URL = 'http://192.168.18.32:5000';
+
 const Planner = () => {
   const router = useRouter();
   const [currentLocation, setCurrentLocation] = useState(null);

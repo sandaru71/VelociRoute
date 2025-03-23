@@ -6,6 +6,11 @@ const { GOOGLE_MAPS_API_KEY } = require('../config/keys');
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://10.235.240.196:8000';
 
+// Debug log the configuration
+console.log('Road Condition Service Configuration:');
+console.log('ML_SERVICE_URL:', ML_SERVICE_URL);
+console.log('GOOGLE_MAPS_API_KEY exists:', !!GOOGLE_MAPS_API_KEY);
+
 // Utility function to generate points along route using Turf.js
 const generatePointsAlongRoute = (coordinates, interval = 1000) => {
   try {
@@ -110,6 +115,8 @@ router.post('/analyze', async (req, res) => {
             kilometer: point.kilometer
           }))
         });
+
+        console.log('ML service response:', mlResponse.data);
 
         // Generate a human-readable summary
         const conditions = mlResponse.data.condition_summary;

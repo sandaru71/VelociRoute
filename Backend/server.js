@@ -2,9 +2,10 @@ const express = require("express");
 require("dotenv/config");
 const morgan = require("morgan");
 const bodyParser = require("body-parser");
-const connectDB = require('./src/Infrastructure/db');
+const connectDB = require('./src/Infrastructure/db'); // Ensure this is the correct import
 const cors = require('cors');
 const path = require('path');
+const os = require('os');
 const popularRoutes = require('./src/Routes/popularRoutes');
 const uploadRoutes = require('./src/Routes/uploadRoutes');
 const activityRoutes = require('./src/Routes/activityRoutes');
@@ -17,19 +18,20 @@ const app = express();
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
   credentials: true,
   optionsSuccessStatus: 200
 }));
 
+// Logging middleware
 app.use(morgan("dev"));
+
+// Body parsing middleware
 app.use(bodyParser.json({ limit: "5mb" }));
-app.use(
-  bodyParser.urlencoded({
-    limit: "5mb",
-    extended: true,
-  })
-);
+app.use(bodyParser.urlencoded({
+  limit: "5mb",
+  extended: true,
+}));
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -48,13 +50,12 @@ app.use((req, res, next) => {
 });
 
 // Connect to MongoDB and store connection in app.locals
-connectDB().then(async database => {
-  app.locals.db = database;
+connectDB().then(async () => {
   console.log("🚀 Database Ready!");
-  
-  // Create indexes after connection
+
+  // Ensure indexes are created
   try {
-    await Activity.createIndexes(database);
+    await Activity.init(); // Correct way to initialize indexes in Mongoose
     console.log("✅ Database indexes created successfully!");
   } catch (error) {
     console.error("❌ Error creating indexes:", error);
@@ -68,10 +69,11 @@ connectDB().then(async database => {
 app.use('/api/popular-routes', popularRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/activities', activityRoutes);
-app.use('/api/road-conditions', roadConditionRoutes);
+app.use('/road-conditions', roadConditionRoutes); // Changed to match frontend path
 
-app.get('/', (req, res) => {
-  res.send("MongoDB Node.js Driver is running!");
+// Add 404 handler
+app.use((req, res, next) => {
+  res.status(404).json({ error: 'Not Found', message: `Route ${req.url} not found` });
 });
 
 // Add error handling middleware
@@ -83,9 +85,22 @@ app.use((err, req, res, next) => {
 const port = process.env.APP_PORT || 3000;
 const host = '0.0.0.0'; // Listen on all network interfaces
 
+// Get local network IP address safely
+const getNetworkAddress = () => {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return 'localhost'; // Fallback if no network address is found
+};
+
 app.listen(port, host, () => {
-  console.log(`Server started on http://${host}:${port}`);
-  console.log('Local: http://localhost:3000');
-  console.log('On Your Network: http://192.168.8.112:3000');
-  console.log('Upload test form available at: http://localhost:3000/upload-test.html');
+  console.log(`\n🚀 Server is running!`);
+  console.log(`📱 API Endpoints:`);
+  console.log(`   • Local Development: http://localhost:${port}/api`);
+  console.log(`   • Network: http://${getNetworkAddress()}:${port}/api`);
 });
