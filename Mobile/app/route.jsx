@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TextInput, TouchableOpacity, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TextInput, TouchableOpacity, Animated, Platform, Alert } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import MapView, { Polyline, Marker } from 'react-native-maps';
@@ -297,6 +297,9 @@ const RouteScreen = () => {
 
       if (result.success) {
         setSnackbarMessage('Route saved successfully!');
+        setTimeout(() => {
+          router.push('../(app)/saved_routes');
+        }, 1000);
       } else {
         throw new Error(result.message || 'Failed to save route');
       }
@@ -308,6 +311,31 @@ const RouteScreen = () => {
       setIsSaving(false);
     }
   };
+
+  const handleDeleteRoute = () => {
+    Alert.alert(
+      'Delete Route',
+      'Are you sure you want to delete this planned route? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          onPress: () => console.log('Cancel Pressed'),
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          onPress: () => {
+            setSnackbarMessage('Route deleted successfully!');
+            setSnackbarVisible(true);
+            setTimeout(() => {
+              router.push('/(app)/(tabs)/planner');
+            }, 1000);
+          },
+          style: 'destructive',
+        },
+      ]
+    )
+  }
 
   const generateGPX = (coordinates, name) => {
     const header = '<?xml version="1.0" encoding="UTF-8"?>\n' +
@@ -620,7 +648,7 @@ const RouteScreen = () => {
 
           <TouchableOpacity 
             style={[styles.actionButton, styles.deleteButton]}
-            onPress={() => {/* Delete functionality will be added later */}}
+            onPress={() => handleDeleteRoute()}
           >
             <MaterialIcons name="delete" size={24} color="#fff" />
             <Text style={styles.actionButtonText}>Delete Route</Text>

@@ -14,6 +14,7 @@ import axios from 'axios';
 import { API_URL } from '../../config/';
 import { auth } from '../../firebase/config';
 import { FontAwesome5 } from "@expo/vector-icons";
+import { duration } from "moment";
 
 const { width } = Dimensions.get('window');
 
@@ -65,7 +66,30 @@ function SavedActivities() {
         return;
       }
 
-      setActivities(response.data);
+      const processedActivities = response.data.map(activity => {
+        console.log('Raw activity stats: ', activity.stats);
+
+        let stats = activity.stats;
+        if (typeof stats === 'string') {
+          try {
+            stats = JSON.parse(stats);
+          } catch (e) {
+            console.error('Failed to parse stats:', e);
+            stats = {};
+          }
+        }
+
+        return{
+          ...activity,
+          duration: stats?.duration || activity.duration,
+          distance: stats?.distance || activity.distance,
+          elevationGain: stats?.elevationGain || activity.elevationGain,
+          averageSpeed: stats?.averageSpeed || activity.averageSpeed
+        }
+      })
+
+      console.log('Processed activities: ', processedActivities);
+      setActivities(processedActivities);
     } catch (error) {
       console.error('Error fetching saved activities:', error);
       setActivities([]);
@@ -266,7 +290,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   detailText: {
-    ontSize: 14,
+    fontSize: 14,
     color: '#666',
   },
   imageContainer: {
@@ -297,7 +321,8 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: '#666',
-  },statsContainer: {
+  },
+  statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingVertical: 15,

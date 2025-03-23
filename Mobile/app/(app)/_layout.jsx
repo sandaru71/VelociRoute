@@ -54,6 +54,17 @@ export default function AppLayout() {
             headerTintColor: '#000',
           }}
         />
+        <Stack.Screen
+          name="saved_routes"
+          options={{
+            headerShown: true,
+            headerTitle: 'Planned Routes',
+            headerStyle: {
+              backgroundColor: '#fff',
+            },
+            headerTintColor: '#000',
+          }}
+        />
       </Stack>
     </PaperProvider>
   );

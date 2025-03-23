@@ -85,7 +85,7 @@ const Planner = () => {
 
         lastGestureDy.current = snapPoint;
         setIsScrollEnabled(snapPoint === SCREEN_HEIGHT - FULL_HEIGHT);
-        setModalVisible(true); // Keep modal visible even when minimized
+        setModalVisible(true); 
 
         Animated.spring(translateY, {
           toValue: snapPoint,
@@ -301,6 +301,7 @@ const Planner = () => {
   };
 
   const minimizeModal = () => {
+    setModalVisible(false);
     lastGestureDy.current = SCREEN_HEIGHT - MINIMIZED_HEIGHT;
     Animated.spring(translateY, {
       toValue: SCREEN_HEIGHT - MINIMIZED_HEIGHT,
@@ -381,11 +382,11 @@ const Planner = () => {
           </View>
           <View style={styles.minimizedMetrics}>
             <View style={styles.routeMetric}>
-              <MaterialIcons name="directions" size={20} color="#4A90E2" />
+              <MaterialIcons name="directions" size={20} color="black" />
               <Text style={styles.minimizedText}>{totalDistance.text}</Text>
             </View>
             <View style={styles.routeMetric}>
-              <MaterialIcons name="timer" size={20} color="#4A90E2" />
+              <MaterialIcons name="timer" size={20} color="black" />
               <Text style={styles.minimizedText}>{activityDuration}</Text>
             </View>
           </View>
@@ -400,7 +401,7 @@ const Planner = () => {
           <View style={styles.routeSummary}>
             {/* Distance */}
             <View style={styles.routeMetricExpanded}>
-              <MaterialIcons name="directions" size={24} color="#4A90E2" />
+              <MaterialIcons name="directions" size={24} color="black" />
               <View style={styles.metricTextContainer}>
                 <Text style={styles.metricLabel}>Distance</Text>
                 <Text style={styles.metricValue}>{totalDistance.text}</Text>
@@ -409,7 +410,7 @@ const Planner = () => {
 
             {/* Duration */}
             <View style={styles.routeMetricExpanded}>
-              <MaterialIcons name="timer" size={24} color="#4A90E2" />
+              <MaterialIcons name="timer" size={24} color="black" />
               <View style={styles.metricTextContainer}>
                 <Text style={styles.metricLabel}>Est. Time</Text>
                 <Text style={styles.metricValue}>{activityDuration}</Text>
@@ -418,7 +419,7 @@ const Planner = () => {
 
             {/* Average Speed */}
             <View style={styles.routeMetricExpanded}>
-              <MaterialIcons name="speed" size={24} color="#4A90E2" />
+              <MaterialIcons name="speed" size={24} color="black" />
               <View style={styles.metricTextContainer}>
                 <Text style={styles.metricLabel}>Avg Speed</Text>
                 <Text style={styles.metricValue}>{averageSpeed} km/h</Text>
@@ -427,7 +428,7 @@ const Planner = () => {
 
             {/* Elevation Gain */}
             <View style={styles.routeMetricExpanded}>
-              <MaterialIcons name="terrain" size={24} color="#4A90E2" />
+              <MaterialIcons name="terrain" size={24} color="black" />
               <View style={styles.metricTextContainer}>
                 <Text style={styles.metricLabel}>Elevation Gain</Text>
                 <Text style={styles.metricValue}>{elevationData.totalGain} m</Text>
@@ -443,7 +444,7 @@ const Planner = () => {
                 <MaterialIcons 
                   name={getDirectionIcon(step.maneuver)} 
                   size={20} 
-                  color="#4A90E2" 
+                  color="black" 
                 />
               </View>
               <View style={styles.stepTextContainer}>
@@ -570,6 +571,16 @@ const Planner = () => {
         )}
       </MapView>
 
+      {routeCoordinates.length > 0 && !modalVisible && (
+        <TouchableOpacity
+          style={styles.showDetailsButton}
+          onPress={showRouteDetails}
+        >
+          <MaterialIcons name="directions" size={24} color="#FEBE15" />
+          <Text style={styles.showDetailsButtonText}>Show Details</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Save Button */}
       <TouchableOpacity 
         style={styles.saveButton}
@@ -594,7 +605,7 @@ const Planner = () => {
       >
         <View style={styles.saveButtonContent}>
           <Text style={styles.saveButtonText}>Save</Text>
-          <Feather name="arrow-right-circle" size={20} color="#FFF" />
+          <Feather name="arrow-right-circle" size={20} color="black" />
         </View>
       </TouchableOpacity>
 
@@ -754,10 +765,31 @@ const Planner = () => {
               </View>
             ))}
 
-            <TouchableOpacity style={styles.addWaypointButton} onPress={addWaypoint}>
-              <MaterialIcons name="add-circle" size={24} color="#059669" />
-              <Text style={styles.addWaypointText}>Add waypoint</Text>
-            </TouchableOpacity>
+            <View style={styles.headerButtons}>
+              <TouchableOpacity 
+                style={styles.addWaypointButton} 
+                onPress={addWaypoint}
+              >
+                <MaterialIcons name="add-location" size={28} color="#FEBE15" />
+                <Text style={styles.addWaypointText}>Add waypoint</Text>
+              </TouchableOpacity>
+
+              {routeCoordinates.length > 0 && (
+                <TouchableOpacity 
+                  style={[styles.toggleDetailsButton, modalVisible && styles.toggleDetailsButtonActive]} 
+                  onPress={() => modalVisible ? minimizeModal() : showRouteDetails()}
+                >
+                  <MaterialIcons 
+                    name={modalVisible ? "expand-more" : "expand-less"} 
+                    size={24} 
+                    color="black" 
+                  />
+                  <Text style={styles.toggleDetailsText}>
+                    {modalVisible ? "Hide Details" : "Show Details"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         )}
       </View>
@@ -833,14 +865,32 @@ const styles = StyleSheet.create({
   addWaypointButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-    padding: 10,
+    padding: 8,
   },
-  addWaypointText: {
-    marginLeft: 5,
-    color: '#059669',
-    fontSize: 16,
+  toggleDetailsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#FEBE15',
+  },
+  toggleDetailsButtonActive: {
+    backgroundColor: '#FEBE15',
+  },
+  toggleDetailsText: {
+    marginLeft: 4,
+    color: 'black',
+    fontWeight: '600',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   errorContainer: {
     position: 'absolute',
@@ -1015,7 +1065,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     bottom: 120, // Increased from 100 to 120 to move button higher
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#FEBE15',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 25,
@@ -1032,7 +1082,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   saveButtonText: {
-    color: '#FFF',
+    color: 'black',
     fontSize: 16,
     fontWeight: '600',
     marginRight: 4,

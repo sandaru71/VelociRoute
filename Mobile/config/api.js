@@ -20,7 +20,7 @@ const getApiUrl = () => {
         apiUrl = 'http://localhost:3000';
     } else {
         // Default to localhost for web
-        apiUrl = 'http://localhost:3000';
+        apiUrl = 'http://10.235.240.196:3000';
     }
 
     console.log('Using API URL:', apiUrl);

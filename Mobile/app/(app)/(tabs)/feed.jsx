@@ -6,6 +6,8 @@ import { API_URL } from '../../../config';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { auth } from '../../../firebase/config';
 import { useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
 
 const activityIcons = {
   Running: 'running',
@@ -36,9 +38,14 @@ const Feed = () => {
   const [userProfiles, setUserProfiles] = useState([]);
   const [showUserPosts, setShowUserPosts] = useState(false);
   const { showUserPosts: showUserPostsParam } = useLocalSearchParams();
+  const router = useRouter();
 
   useEffect(() => {
-    setShowUserPosts(showUserPostsParam === 'true');
+    const shouldShowUserPosts = showUserPostsParam === 'true';
+    setShowUserPosts(shouldShowUserPosts);
+    if (shouldShowUserPosts) {
+      fetchPosts(auth.currentUser);
+    }
   }, [showUserPostsParam]);
 
   const fetchPosts = async (user = auth.currentUser) => {
@@ -56,7 +63,11 @@ const Feed = () => {
         return;
       }
 
-      const response = await axios.get(`${API_URL}/api/activity-posts`, {
+      const endpoint = showUserPosts 
+        ? `${API_URL}/api/activity-posts?userEmail=${encodeURIComponent(user.email)}`
+        : `${API_URL}/api/activity-posts`;
+
+      const response = await axios.get(endpoint, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -104,11 +115,6 @@ const Feed = () => {
             likeCount: likes.length
           };
         });
-
-        // Filter posts if showUserPosts is true
-        if (showUserPosts && user.email) {
-          postsWithProcessedData = postsWithProcessedData.filter(post => post.userEmail === user.email);
-        }
 
         setPosts(postsWithProcessedData);
       }
@@ -392,7 +398,7 @@ const Feed = () => {
 
   const formatElevation = (meters) => {
     if (!meters && meters !== 0) return 'N/A';
-    return `${Math.round(meters)}m`;
+    return `${Math.round(meters)} m`;
   };
 
   const getDisplayName = (email) => {
@@ -426,10 +432,20 @@ const Feed = () => {
     };
   }, []);
 
+  const toggleUserPosts = () => {
+    const newValue = !showUserPosts;
+    setShowUserPosts(newValue);
+    fetchPosts(auth.currentUser);
+    
+    // Update URL without full navigation
+    router.setParams({ showUserPosts: newValue.toString() });
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF4500" />
+        <ActivityIndicator size="large" color="#FEBE15" />
+        <Text style={styles.loadingText}>Loading posts...</Text>
       </View>
     );
   }
@@ -451,6 +467,19 @@ const Feed = () => {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Feed</Text>
+        <TouchableOpacity 
+          style={[styles.filterButton, showUserPosts && styles.filterButtonActive]} 
+          onPress={toggleUserPosts}
+        >
+          <MaterialIcons 
+            name="person" 
+            size={24} 
+            color={showUserPosts ? "#FEBE15" : "black"} 
+          />
+          <Text style={[styles.filterButtonText, showUserPosts && styles.filterButtonTextActive]}>
+            {showUserPosts ? "All Posts" : "My Posts"}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -620,7 +649,6 @@ const Feed = () => {
             <View style={styles.commentsSection}>
               {item.comments?.map((comment, index) => (
                 <View key={index} style={styles.commentContainer}>
-                  {/* <Text style={styles.commentUser}>{comment.userName || 'Anonymous'}</Text> */}
                   <Text style={styles.commentText}>{comment.text}</Text>
                 </View>
               ))}
@@ -639,7 +667,7 @@ const Feed = () => {
                 style={styles.commentButton}
                 onPress={() => handleComment(item._id)}
               >
-                <FontAwesome5 name="paper-plane" size={20} color="#FF4500" />
+                <FontAwesome5 name="paper-plane" size={20} color="#FEBE15" />
               </TouchableOpacity>
             </View>
           </View>
@@ -654,14 +682,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    backgroundColor: 'lightGrey',
-    padding: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginLeft: 10,
   },
   container: {
     flex: 1,
@@ -671,6 +703,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: 'black',
   },
   emptyContainer: {
     flex: 1,
@@ -868,6 +904,26 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+  },
+  filterButtonActive: {
+    backgroundColor: '#FFF3D3',
+  },
+  filterButtonText: {
+    marginLeft: 4,
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'black',
+  },
+  filterButtonTextActive: {
+    color: '#FEBE15',
   },
 });
 

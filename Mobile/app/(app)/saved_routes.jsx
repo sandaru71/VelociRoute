@@ -151,7 +151,8 @@ const SavedRoutes = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#f4511e" />
+        <ActivityIndicator size="large" color="#FEBE15" />
+        <Text style={styles.loadingText}>Loading page...</Text>
       </View>
     );
   }
@@ -218,14 +219,14 @@ const SavedRoutes = () => {
                   setShowDatePicker(true);
                 }}
               >
-                <FontAwesome5 name="calendar-alt" size={20} color="#666" />
-                <Text style={styles.dateText}>
+                <FontAwesome5 name="calendar-alt" size={20} color="#FEBE15" />
+                <Text style={[styles.dateText, { color: '#FEBE15' }]}>
                   {moment(selectedDates[route._id]).format('MMM DD, YYYY')}
                 </Text>
               </TouchableOpacity>
 
               {weatherLoading[route._id] ? (
-                <ActivityIndicator size="small" color="#f4511e" />
+                <ActivityIndicator size="small" color="#FEBE15" />
               ) : weatherData[route._id] ? (
                 <View style={styles.weatherInfo}>
                   <View style={styles.weatherItem}>
@@ -279,6 +280,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
   container: {
     flex: 1,
   },
@@ -330,11 +335,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
+    backgroundColor: '#FFF3D3',
   },
   dateText: {
     marginLeft: 10,
     fontSize: 16,
     color: '#666',
+    fontWeight: '600',
   },
   weatherInfo: {
     flexDirection: 'row',

@@ -20,16 +20,15 @@ import { MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import MapView, { Polyline, Marker } from 'react-native-maps';
 
-// Configure axios base URL and defaults
-const LOCAL_IP = '192.168.1.2'; // Your computer's local IP address
+const LOCAL_IP = '10.235.240.196'; 
 
 const API_BASE_URL = Platform.select({
   android: __DEV__ ? `http://${LOCAL_IP}:3000/api` : 'https://your-production-api.com/api',
   ios: __DEV__ ? `http://${LOCAL_IP}:3000/api` : 'https://your-production-api.com/api',
-  default: __DEV__ ? 'http://localhost:3000/api' : 'https://your-production-api.com/api'
+  default: __DEV__ ? 'http://10.235.240.196:3000/api' : 'https://your-production-api.com/api'
 });
 
-console.log('Using API URL:', API_BASE_URL); // Debug log
+console.log('Using API URL:', API_BASE_URL); 
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -41,7 +40,7 @@ const axiosInstance = axios.create({
   } 
 });
 
-// Add request interceptor for debugging
+// request interceptor for debugging
 axiosInstance.interceptors.request.use(
   (config) => {
     console.log('Request:', {
@@ -58,7 +57,7 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Add response interceptor for better error handling
+// response interceptor for better error handling
 axiosInstance.interceptors.response.use(
   (response) => {
     console.log('Response:', {
@@ -101,7 +100,7 @@ const parseGPX = (gpxContent) => {
       throw new Error('No coordinates found in GPX file');
     }
 
-    // Calculate center point for initial region
+    // Calculates center point for initial region
     const centerPoint = coordinates[Math.floor(coordinates.length / 2)];
     
     return {
@@ -262,7 +261,7 @@ const DashboardScreen = () => {
 
   useEffect(() => {
     fetchRoutes();
-  }, [selectedActivity, selectedDifficulty, distanceRange, location]);
+  }, [selectedActivity, selectedDifficulty, distanceRange, location, searchText]);
 
   const fetchRoutes = async () => {
     setLoading(true);
@@ -282,13 +281,22 @@ const DashboardScreen = () => {
           console.log('API Base URL:', API_BASE_URL);
           console.log('Fetching routes with params:', queryParams.toString());
           
-          // First try without any filters
-          const response = await axiosInstance.get('popular-routes');
+          // Use query parameters in the API call
+          const response = await axiosInstance.get(`popular-routes?${queryParams.toString()}`);
           console.log('Routes response:', response.data);
           
           if (response.data && Array.isArray(response.data)) {
             console.log('Routes fetched successfully:', response.data.length, 'routes');
-            setRoutes(response.data);
+            let filteredRoutes = response.data;
+
+            if (searchText.trim()) {
+              filteredRoutes = filteredRoutes.filter(route =>
+                route.name.toLowerCase().includes(searchText.toLowerCase()) ||
+                route.description.toLowerCase().includes(searchText.toLowerCase()) ||
+                route.location.toLowerCase().includes(searchText.toLowerCase())
+              );
+            }
+            setRoutes(filteredRoutes);
           } else {
             console.error('Unexpected response format:', response.data);
             setRoutes([]);
