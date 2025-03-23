@@ -99,8 +99,8 @@ const Profile = () => {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
-          <ActivityIndicator size="large" color="#4A90E2" />
-          <Text style={{ marginTop: 12, fontSize: 16, color: '#4A90E2' }}>Loading profile...</Text>
+          <ActivityIndicator size="large" color="#FEBE15" />
+          <Text style={{ marginTop: 12, fontSize: 16, color: '#FEBE15' }}>Loading profile...</Text>
         </View>
       </SafeAreaView>
     );
@@ -173,7 +173,7 @@ const Profile = () => {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <StatusBar backgroundColor="#808080" />
 
-      <ScrollView contentContainerStyle={{ padding: 0 }}>
+      <ScrollView contentContainerStyle={{ padding: 0, paddingBottom: 120 }}>
         {/* Cover Image */}
         <View style={{ width: '100%', height: 228 }}>
           {imageLoading.cover && (
@@ -191,7 +191,7 @@ const Profile = () => {
         </View>
 
         {/* Profile Section */}
-        <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 16 }}>
+        <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 16, marginBottom: 40 }}>
           <View style={{ position: 'relative', marginTop: -77.5 }}>
             {imageLoading.profile && (
               <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center', borderRadius: 77.5, zIndex: 1 }}>
@@ -200,7 +200,7 @@ const Profile = () => {
             )}
             <Image
               source={profileData.profilePhoto ? { uri: profileData.profilePhoto } : {uri: 'https://res.cloudinary.com/dq1hjlghb/image/upload/v1742609235/Default_Profile_picture_naanpb.jpg'}}
-              style={{ height: 155, width: 155, borderRadius: 77.5, borderColor: '#4A90E2', borderWidth: 3 }}
+              style={{ height: 155, width: 155, borderRadius: 77.5, borderColor: '#FEBE15', borderWidth: 3 }}
               onLoadStart={() => setImageLoading(prev => ({ ...prev, profile: true }))}
               onLoadEnd={() => setImageLoading(prev => ({ ...prev, profile: false }))}
               onError={() => setImageLoading(prev => ({ ...prev, profile: false }))}
@@ -211,67 +211,77 @@ const Profile = () => {
             {profileData.firstName} {profileData.lastName}
           </Text>
           
-          <Text style={{ color: '#4A90E2', fontSize: 16, marginBottom: 8 }}>
+          <Text style={{ color: '#666666', fontSize: 16, marginBottom: 8, fontWeight: 'bold' }}>
             {profileData.preferredActivity || 'Add your preferred activity'}
           </Text>
 
           {/* Location */}
           <View style={{ flexDirection: 'row', marginVertical: 8, alignItems: 'center' }}>
-            <MaterialIcons name="location-on" size={24} color="#4A90E2" />
-            <Text style={{ fontSize: 16, marginLeft: 8, color: '#666666' }}>
+            <MaterialIcons name="location-on" size={24} color="#FEBE15" />
+            <Text style={{ fontSize: 16, marginLeft: 8, color: '#666666', fontWeight: 'bold' }}>
               {profileData.location || 'Add your location'}
             </Text>
           </View>
 
-          {/* Stats Section */}
-          <View style={{ flexDirection: 'row', paddingVertical: 16, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#E1E1E1', marginVertical: 16, width: '100%', justifyContent: 'center' }}>
-            {/* Activities */}
-            <View style={{ alignItems: 'center', paddingHorizontal: 24 }}>
-              <Text style={{ fontSize: 24, color: '#4A90E2', fontWeight: 'bold' }}>5</Text>
-              <Text style={{ fontSize: 14, color: '#666666', marginTop: 4 }}>Activities</Text>
-            </View>
+          {/* Edit Profile and Delete Account Buttons Row */}
+          <View style={{ flexDirection: 'row', justifyContent: 'center', width: '100%', paddingHorizontal: 16, marginVertical: 16, gap: 16 }}>
+            {/* Edit Profile Button */}
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#FFFFFF',
+                paddingVertical: 12,
+                paddingHorizontal: 20,
+                borderRadius: 25,
+                borderColor: '#FEBE15',
+                borderWidth: 3,
+                elevation: 5,
+                flex: 1
+              }}
+              onPress={handleEditProfile}
+            >
+              <MaterialIcons name="edit" size={20} color="#000000" />
+              <Text style={{ fontSize: 16, color: '#000000', fontWeight: 'bold', marginLeft: 8, textAlign: 'center' }}>Edit Profile</Text>
+            </TouchableOpacity>
+
+            {/* Delete Account Button */}
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#FFFFFF',
+                paddingVertical: 12,
+                paddingHorizontal: 20,
+                borderRadius: 25,
+                borderColor: 'red',
+                borderWidth: 3,
+                elevation: 5,
+                flex: 1
+              }}
+              onPress={deleteAccount}
+            >
+              <MaterialIcons name="delete" size={20} color="#FF0000" />
+              <Text style={{ fontSize: 16, color: '#000000', fontWeight: 'bold', marginLeft: 8, textAlign: 'center' }}>Delete Account</Text>
+            </TouchableOpacity>
           </View>
-
-          {/* Edit Profile Button */}
-          <TouchableOpacity
-            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#4A90E2', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 25, marginVertical: 16 }}
-            onPress={handleEditProfile}
-          >
-            <MaterialIcons name="edit" size={20} color="#FFFFFF" />
-            <Text style={{ fontSize: 16, color: '#FFFFFF', fontWeight: 'bold', marginLeft: 8 }}>Edit Profile</Text>
-          </TouchableOpacity>
-
-          {/*Delete button */}
-          <TouchableOpacity
-            style={{backgroundColor: "red", padding: 12, borderRadius: 8, marginTop: 16, marginHorizontal: 16, alignItems: 'center' }}
-            onPress={deleteAccount}
-          >
-            <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "600" }}> Delete Account</Text>
-          </TouchableOpacity>
-
-
-          {/* View My Posts Button */}
-          <TouchableOpacity
-            style={{ backgroundColor: '#4A90E2', padding: 12, borderRadius: 8, marginTop: 16, marginHorizontal: 16, alignItems: 'center' }}
-            onPress={() => router.push({ pathname: '/(app)/(tabs)/feed', params: { showUserPosts: 'true' } })}
-          >
-            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>View My Posts</Text>
-          </TouchableOpacity>
 
           {/* View saved activities Button */}
           <TouchableOpacity
-            style={{ backgroundColor: '#4A90E2', padding: 12, borderRadius: 8, marginTop: 16, marginHorizontal: 16, alignItems: 'center' }}
+            style={{flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 25, marginVertical: 16,borderColor:'#FEBE15',borderWidth: 3, elevation: 5}}
             onPress={() => router.push('../savedActivities')}
           >
-            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>Saved Activities</Text>
+            <Text style={{ color: '#000000', fontSize: 16, fontWeight: 'bold', marginLeft: 8,textAlign: 'center' }}>Saved Activities</Text>
           </TouchableOpacity>
 
           {/* View Planned Routes Button */}
           <TouchableOpacity
-            style={{ backgroundColor: '#4A90E2', padding: 12, borderRadius: 8, marginTop: 16, marginHorizontal: 16, alignItems: 'center' }}
+            style={{flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 25, marginVertical: 16,borderColor:'#FEBE15',borderWidth: 3, elevation: 5}}
             onPress={() => router.push('../saved_routes')}
           >
-            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>Planned Routes</Text>
+            <Text style={{ color: '#000000', fontSize: 16, fontWeight: 'bold', marginLeft: 8,textAlign: 'center' }}>Planned Routes</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
