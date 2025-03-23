@@ -14,7 +14,7 @@ const getApiUrl = () => {
     let apiUrl;
     if (Platform.OS === 'android') {
         // Android Emulator uses 10.0.2.2 to access host machine's localhost
-        apiUrl = 'http://10.235.240.142:3000';
+        apiUrl = 'http://192.168.1.2:3000';
     } else if (Platform.OS === 'ios') {
         // iOS Simulator can use localhost directly
         apiUrl = 'http://localhost:3000';

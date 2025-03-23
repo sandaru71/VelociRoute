@@ -17,7 +17,7 @@
 
 // export const API_URL = get();
 
-export const API_URL = 'http://192.168.1.16:3000'; //android emulator
+export const API_URL = 'http://192.168.1.2:3000'; //android emulator
 // export const API_URL = 'http://localhost:3000'; //ios emulator
 // export const API_URL = 'http://10.235.240.196:3000'; //local network
 
