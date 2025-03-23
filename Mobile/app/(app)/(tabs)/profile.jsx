@@ -266,10 +266,10 @@ const Profile = () => {
             <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>Saved Activities</Text>
           </TouchableOpacity>
 
-          {/* View My Posts Button */}
+          {/* View Planned Routes Button */}
           <TouchableOpacity
             style={{ backgroundColor: '#4A90E2', padding: 12, borderRadius: 8, marginTop: 16, marginHorizontal: 16, alignItems: 'center' }}
-            onPress={() => router.push({ pathname: '/(app)/(tabs)/feed', params: { showUserPosts: 'true' } })}
+            onPress={() => router.push('../saved_routes')}
           >
             <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>Planned Routes</Text>
           </TouchableOpacity>

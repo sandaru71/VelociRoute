@@ -15,8 +15,11 @@ const upload = multer({
     { name: 'elevationProfileImage', maxCount: 1 }
 ]);
 
+// Get user's saved routes
+router.get('/user', authenticateToken, getUserRoutes);
+
 // Routes with error handling
-router.post('/save', (req, res, next) => {
+router.post('/save', authenticateToken, (req, res, next) => {
     console.log('Received save route request');
     upload(req, res, (err) => {
         if (err instanceof multer.MulterError) {
@@ -30,15 +33,15 @@ router.post('/save', (req, res, next) => {
             console.error('Unknown error:', err);
             return res.status(500).json({
                 success: false,
-                message: 'Unknown error occurred',
+                message: 'Server error',
                 error: err.message
             });
         }
-        authenticateToken(req, res, () => saveRoute(req, res));
+        saveRoute(req, res);
     });
 });
 
+// Delete route
 router.delete('/:routeId', authenticateToken, deleteRoute);
-router.get('/user', authenticateToken, getUserRoutes);
 
 module.exports = router;
