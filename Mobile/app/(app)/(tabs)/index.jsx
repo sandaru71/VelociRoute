@@ -22,9 +22,9 @@ import MapView, { Polyline, Marker } from 'react-native-maps';
 
 // Configure axios base URL and defaults
 const API_BASE_URL = Platform.select({
-  android: 'http://10.106.240.196:3000/api',
+  android: 'http://10.235.240.196:3000/api',
   ios: 'http://192.168.8.112:3000/api', // Your computer's IP address
-  default: 'http://10.106.240.196:3000/api'
+  default: 'http://10.235.240.196:3000/api'
 });
 
 console.log('Using API URL:', API_BASE_URL); // Debug log

@@ -20,6 +20,7 @@ import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplet
 import * as Location from 'expo-location';
 import { MaterialIcons, FontAwesome5, Feather } from '@expo/vector-icons';
 import polyline from '@mapbox/polyline';
+import config from '../../../config';
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyDvP_xQ39yqaHS74Je06nasmvEQ5ctSqK4';
 
@@ -513,47 +514,213 @@ const Planner = () => {
   }, []);
 
   const analyzeRoadConditions = async () => {
-    if (!routeCoordinates.length) return;
-    
+    console.log('analyzeRoadConditions function called. Starting analysis...');
+
+    if (!routeCoordinates.length) {
+      console.log('No route coordinates found.')
+      Alert.alert(
+        "No Route Selected",
+        "Please set a route before analyzing road conditions."
+      );
+      return;
+    }
+
+    if (!routeDetails) {
+      console.log('No route details found.')
+      Alert.alert(
+        "No Route Details",
+        "Please set a route before analyzing road conditions."
+      );
+      return;
+    }
+
+    console.log('Route validation passed, starting analysis...');
+    console.log('Route coordinates:', routeCoordinates);
+    console.log('Route details:', routeDetails);
+
     setIsAnalyzingRoad(true);
     try {
-      const response = await fetch('http://your-backend-url/road-conditions/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          route: {
-            coordinates: routeCoordinates
-          }
-        })
+      console.log('Starting road analysis...');
+
+      const totalDistanceMeters = routeDetails.legs.reduce((total, leg) => total + leg.distance.value, 0);
+      const totalDistanceKm = totalDistanceMeters / 1000;
+      console.log('Total route distance in km: ', totalDistanceKm);
+
+      const SAMPLING_INTERVAL_KM = 1; // 1 km intervals
+      const numPoints = Math.max(2, Math.ceil(totalDistanceKm / SAMPLING_INTERVAL_KM));
+      console.log(`Will analyze ${numPoints} points along the route (one every ${SAMPLING_INTERVAL_KM} km)`);
+
+      const selectedCoords = [];
+      let accumulatedDistance = 0;
+      let currentKilometer = 0;
+      let prevCoord = routeCoordinates[0];
+
+      selectedCoords.push({
+        coord: routeCoordinates[0],
+        distanceKm: 0
       });
 
-      const data = await response.json();
-      if (data.error) {
-        throw new Error(data.error);
+      for (let i=1; i < routeCoordinates.length; i++) {
+        const coord = routeCoordinates[i];
+        const segmentDistance = calculateHaversineDistance(
+          prevCoord.latitude,
+          prevCoord.longitude,
+          coord.latitude,
+          coord.longitude
+        );
+
+        accumulatedDistance += segmentDistance;
+
+        while (accumulatedDistance >= (currentKilometer + SAMPLING_INTERVAL_KM) && currentKilometer < totalDistanceKm) {
+          currentKilometer += SAMPLING_INTERVAL_KM;
+
+          const ratio = (currentKilometer - (accumulatedDistance - segmentDistance)) / segmentDistance;
+          const interpolatedCoord = {
+            latitude: prevCoord.latitude + (coord.latitude - prevCoord.latitude) * ratio,
+            longitude: prevCoord.longitude + (coord.longitude - prevCoord.longitude) * ratio
+          };
+          selectedCoords.push({
+            coord: interpolatedCoord,
+            distanceKm: currentKilometer
+          });
+        }
+        prevCoord = coord;
       }
-      
-      setRouteConditions(data);
-      // Show the modal with results
-      lastGestureDy.current = SCREEN_HEIGHT - FULL_HEIGHT;
-      setIsScrollEnabled(true);
-      setModalVisible(true);
-      Animated.spring(translateY, {
-        toValue: SCREEN_HEIGHT - FULL_HEIGHT,
-        useNativeDriver: true,
-        bounciness: 4,
-      }).start();
+
+      const lastPoint = routeCoordinates[routeCoordinates.length - 1];
+      if (totalDistanceKm - currentKilometer > 0.1) {
+        selectedCoords.push({
+          coord: lastPoint,
+          distanceKm: totalDistanceKm
+        });
+      }
+
+      console.log('Selected coordinates for analysis:', selectedCoords);
+
+      const images = await Promise.all(
+        selectedCoords.map(async({coord, distance}, index) => {
+          console.log(`Processing point ${index}: `, {
+            coordinates: coord,
+            distanceKm: distance
+          });
+
+          const imageUrl = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${coord.latitude},${coord.longitude}&key=${GOOGLE_MAPS_API_KEY}`;
+          return {
+            url: imageUrl,
+            kilometer: distance
+          };
+        })
+      );
+
+      console.log('Preparing request...');
+
+      const requestBody = {
+        route: {
+         coordinates: selectedCoords.map(({coord}) => ({
+            latitude: coord.latitude,
+            longitude: coord.longitude
+          }))
+        }
+      };
+
+      console.log('Request body:', JSON.stringify(requestBody, null, 2));
+
+      console.log('Sending request to backend...');
+      const apiUrl = `${config.API_URL}/api/road-conditions/analyze`;
+      console.log('API URL:', apiUrl);
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(requestBody)
+        });
+
+        console.log('Response received from backend');
+        console.log('Response status:', response.status);
+
+        const responseText = await response.text();
+        console.log('Raw response:', responseText);
+
+        if (!response.ok) {
+          throw new Error(`Backend error: ${response.status} - ${responseText}`);
+        }
+
+        let analysis;
+        try {
+          analysis = JSON.parse(responseText);
+          console.log('Parsed analysis:', analysis);
+        } catch (parseError) {
+          console.error('Failed to parse response:', parseError);
+          throw new Error('Invalid response from backend');
+        }
+
+        if (analysis.error) {
+          throw new Error(`Backend error: ${analysis.error}`);
+        }
+
+        setRouteConditions(analysis);
+        console.log('Analysis complete. Displaying message to user...');
+
+        const conditionCounts = {};
+        if (analysis.points && analysis.points.length > 0) {
+          analysis.points.forEach(point => {
+            if (point.conditions) {
+              console.log('Point Condition:', point.conditions);
+              const condition = point.conditions;
+              conditionCounts[condition] = (conditionCounts[condition] || 0) + 1;
+            }
+          });
+        } 
+        
+        const formattedConditions = Object.entries(conditionCounts).map(([condition, count]) => {
+          const formattedCondition = condition.split('_').map(word => word.charAt(0).toUpperCase + word.slice(1).toLowerCase()).join(' ');
+          
+          const total = Object.values(conditionCounts).reduce((a, b) => a + b, 0);
+          const percentage = ((count / total) * 100).toFixed(1);
+          return `${formattedCondition} - ${percentage}%`;
+        })
+        .join('\n');
+
+        Alert.alert(
+          "Road Analysis Completed",
+          `${analysis.message}\n\n${formattedConditions}`,
+          [{ text: "OK" }]
+        );
+      } catch (error) {
+        console.error('Error during ML service request:', error);
+        Alert.alert(
+          "Road Analysis Failed",
+          `Unable to analyze road conditions: ${error.message}. Please try again later.`,
+          [{ text: "OK" }]
+        );
+      } finally {
+        setIsAnalyzingRoad(false);
+      }
     } catch (error) {
+      console.error('Error in analyzeRoadConditions:', error);
       Alert.alert(
         "Road Analysis Failed",
         "Unable to analyze road conditions. Please try again later.",
         [{ text: "OK" }]
       );
-    } finally {
       setIsAnalyzingRoad(false);
     }
   };
+
+  const calculateHaversineDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
 
   const renderRoadConditions = () => {
     if (!routeConditions) return null;
@@ -836,6 +1003,8 @@ const Planner = () => {
           </View>
         )}
       </View>
+
+      {/* Analyze road button */}
       {routeCoordinates.length > 0 && (
         <TouchableOpacity
           style={[

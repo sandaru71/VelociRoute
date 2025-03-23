@@ -23,17 +23,22 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
-# Create API router with prefix
+# Create API router
 api_router = FastAPI(title="VelociRoute API")
 app.mount("/api", api_router)
 
-# Load the ResNet50 model
-print("Loading ResNet50 model...")
-model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V2)
+# Load the ResNet model and weights
+print("Loading ResNet model...")
+weights = models.ResNet50_Weights.DEFAULT
+model = models.resnet50(weights=weights)
 model.eval()
-print("Model loaded successfully")
+
+# Get class categories from the model weights
+categories = weights.meta["categories"]
+print(f"Loaded {len(categories)} categories")
 
 # Define image transformations
 transform = transforms.Compose([
@@ -43,16 +48,12 @@ transform = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-# Load ImageNet class labels
-with open(os.path.join(os.path.dirname(__file__), 'imagenet_classes.txt'), 'r') as f:
-    categories = [s.strip() for s in f.readlines()]
-
-# Define road condition classes
+# Define road condition classes and keywords
 ROAD_CONDITIONS = {
-    'smooth_asphalt': ['road', 'highway', 'freeway', 'path', 'street'],
-    'gravel': ['dirt_track', 'gravel', 'unpaved', 'dirt_road'],
-    'broken': ['broken', 'construction', 'damaged'],
-    'wet': ['wet', 'puddle', 'flooded', 'rain']
+    'smooth_asphalt': ['road', 'highway', 'street', 'pavement', 'asphalt', 'roadway', 'freeway', 'path'],
+    'gravel': ['gravel', 'dirt', 'unpaved', 'stone', 'rock', 'trail', 'track', 'soil'],
+    'broken': ['broken', 'damaged', 'cracked', 'pothole', 'rough', 'construction', 'rubble'],
+    'wet': ['wet', 'rain', 'water', 'puddle', 'slippery', 'flood', 'moist']
 }
 
 class ImageURL(BaseModel):
@@ -91,42 +92,38 @@ def preprocess_image(image_data: bytes) -> torch.Tensor:
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to process image: {str(e)}")
 
-def classify_road_condition(predictions: torch.Tensor) -> Dict:
+def classify_road_condition(predictions: torch.Tensor) -> RoadCondition:
     """Map ImageNet predictions to road conditions."""
     try:
         # Get probabilities
         probabilities = torch.nn.functional.softmax(predictions[0], dim=0)
         
-        # Get top 5 predictions
-        top_probs, top_indices = torch.topk(probabilities, k=5)
+        # Get top 10 predictions
+        top_k = 10
+        top_probs, top_indices = torch.topk(probabilities, k=top_k)
         
         # Initialize confidence scores
-        conditions = {
-            'smooth_asphalt': 0.0,
-            'gravel': 0.0,
-            'broken': 0.0,
-            'wet': 0.0
-        }
+        conditions = {condition: 0.0 for condition in ROAD_CONDITIONS.keys()}
         
         # Map predictions to road conditions
         for prob, idx in zip(top_probs, top_indices):
             prob_value = float(prob)
-            class_name = categories[idx]
+            class_name = categories[idx].lower()
             
             # Check each road condition category
+            matched = False
             for condition, keywords in ROAD_CONDITIONS.items():
-                if any(keyword in class_name.lower() for keyword in keywords):
+                if any(keyword in class_name for keyword in keywords):
                     conditions[condition] += prob_value
+                    matched = True
                     break
-            else:  # If no specific match, distribute based on index ranges
-                if idx < 150:  # Assuming first 150 classes are more related to roads
-                    conditions['smooth_asphalt'] += prob_value * 0.4
-                elif idx < 300:
-                    conditions['gravel'] += prob_value * 0.3
-                elif idx < 450:
-                    conditions['broken'] += prob_value * 0.2
-                else:
-                    conditions['wet'] += prob_value * 0.1
+            
+            # If no match, distribute probability based on class name similarity
+            if not matched:
+                conditions['smooth_asphalt'] += prob_value * 0.4
+                conditions['gravel'] += prob_value * 0.3
+                conditions['broken'] += prob_value * 0.2
+                conditions['wet'] += prob_value * 0.1
         
         # Normalize probabilities
         total = sum(conditions.values())
@@ -136,12 +133,13 @@ def classify_road_condition(predictions: torch.Tensor) -> Dict:
         # Get the most likely condition
         max_condition = max(conditions.items(), key=lambda x: x[1])
         
-        return {
-            'condition': max_condition[0],
-            'confidence': float(max_condition[1]),
-            'all_conditions': conditions
-        }
+        return RoadCondition(
+            condition=max_condition[0],
+            confidence=float(max_condition[1]),
+            all_conditions=conditions
+        )
     except Exception as e:
+        print(f"Classification error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Classification error: {str(e)}")
 
 @api_router.post("/classify-image", response_model=RoadCondition)
@@ -170,70 +168,80 @@ async def classify_single_image(image_url: ImageURL):
 @api_router.post("/classify-route", response_model=RouteAnalysis)
 async def classify_route(route_data: RouteImages):
     try:
+        print(f"Received request to classify route with {len(route_data.images)} images")
         results = []
-        for image_data in route_data.images:
+        
+        for i, image in enumerate(route_data.images):
+            print(f"Processing image {i+1}/{len(route_data.images)} at {image.kilometer}km")
             try:
-                # Download and classify each image
-                response = requests.get(image_data.url)
-                response.raise_for_status()
-                
-                # Preprocess image
-                image_tensor = preprocess_image(response.content)
-                
-                # Get predictions
+                # Download and process the image
+                response = requests.get(image.url)
+                if response.status_code != 200:
+                    print(f"Failed to download image {i+1}: HTTP {response.status_code}")
+                    results.append(RoadClassification(
+                        kilometer=image.kilometer,
+                        error=f"Failed to download image: HTTP {response.status_code}"
+                    ))
+                    continue
+
+                image_data = response.content
+                print(f"Successfully downloaded image {i+1}")
+
+                # Process the image
+                processed_image = preprocess_image(image_data)
                 with torch.no_grad():
-                    predictions = model(image_tensor)
+                    predictions = model(processed_image)
                 
-                # Classify road condition
                 classification = classify_road_condition(predictions)
+                print(f"Classified image {i+1} as {classification.condition}")
                 
                 results.append(RoadClassification(
-                    kilometer=image_data.kilometer,
-                    classification=RoadCondition(**classification)
+                    kilometer=image.kilometer,
+                    classification=classification
                 ))
             except Exception as e:
-                print(f"Error processing image at KM {image_data.kilometer}: {str(e)}")
+                print(f"Error processing image {i+1}: {str(e)}")
                 results.append(RoadClassification(
-                    kilometer=image_data.kilometer,
+                    kilometer=image.kilometer,
                     error=str(e)
                 ))
         
-        # Analyze overall route conditions
-        valid_results = [r for r in results if r.classification is not None]
-        if not valid_results:
-            raise HTTPException(status_code=400, detail="No valid images could be processed")
+        # Calculate summary statistics
+        total_points = len(results)
+        processed_points = sum(1 for r in results if r.classification is not None)
         
-        # Calculate condition percentages
-        condition_summary = {}
-        for result in valid_results:
-            conditions = result.classification.all_conditions
-            for condition, confidence in conditions.items():
-                condition_summary[condition] = condition_summary.get(condition, 0) + confidence
+        if processed_points == 0:
+            raise HTTPException(status_code=500, detail="No images could be processed successfully")
         
-        # Average the conditions
-        total_valid = len(valid_results)
-        condition_summary = {k: (v / total_valid) * 100 for k, v in condition_summary.items()}
+        # Calculate condition summary
+        condition_counts = {}
+        for result in results:
+            if result.classification:
+                condition = result.classification.condition
+                condition_counts[condition] = condition_counts.get(condition, 0) + 1
         
-        # Generate a human-readable summary
-        sorted_conditions = sorted(condition_summary.items(), key=lambda x: x[1], reverse=True)
-        summary_parts = []
-        for condition, percentage in sorted_conditions:
-            if percentage >= 5:  # Only include significant conditions (>5%)
-                summary_parts.append(f"{int(percentage)}% {condition.replace('_', ' ')}")
+        condition_summary = {
+            condition: count/processed_points 
+            for condition, count in condition_counts.items()
+        }
         
-        summary = "Route Analysis: " + ", ".join(summary_parts)
+        print(f"Analysis complete: {processed_points}/{total_points} points processed successfully")
+        print("Condition summary:", condition_summary)
         
         return RouteAnalysis(
-            summary=summary,
-            total_points=len(route_data.images),
-            processed_points=len(valid_results),
+            summary=f"Successfully analyzed {processed_points} out of {total_points} points along the route",
+            total_points=total_points,
+            processed_points=processed_points,
             condition_summary=condition_summary,
             point_classifications=results
         )
         
     except Exception as e:
+        print(f"Error in classify_route: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=3000)
+    # Change host to '0.0.0.0' to make it accessible on your local network
+    # Use the same port as configured in your mobile app's config
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
