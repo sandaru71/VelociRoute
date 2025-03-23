@@ -5,6 +5,7 @@ services:
     build: 
       context: .
       dockerfile: Dockerfile
+    image: sandaru71/velociroute-backend:latest
     container_name: velociroute-backend
     ports:
       - "3000:3000"
