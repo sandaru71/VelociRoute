@@ -50,12 +50,13 @@ app.use((req, res, next) => {
 });
 
 // Connect to MongoDB and store connection in app.locals
-connectDB().then(async () => {
+connectDB().then(async (db) => {
+  app.locals.db = db;
   console.log("🚀 Database Ready!");
 
   // Ensure indexes are created
   try {
-    await Activity.init(); // Correct way to initialize indexes in Mongoose
+    await Activity.createIndexes(app.locals.db); 
     console.log("✅ Database indexes created successfully!");
   } catch (error) {
     console.error("❌ Error creating indexes:", error);
@@ -67,9 +68,9 @@ connectDB().then(async () => {
 
 // Register routes
 app.use('/api/popular-routes', popularRoutes);
-app.use('/api/upload', uploadRoutes);
+app.use('/api/uploads', uploadRoutes);
 app.use('/api/activities', activityRoutes);
-app.use('/road-conditions', roadConditionRoutes); // Changed to match frontend path
+app.use('/api/road-conditions', roadConditionRoutes); // Changed to match frontend path
 
 // Add 404 handler
 app.use((req, res, next) => {

@@ -665,31 +665,28 @@ const Planner = () => {
         }
 
         setRouteConditions(analysis);
-        console.log('Analysis complete. Displaying message to user...');
+        console.log('Analysis complete. Structure check:');
+        console.log('Full analysis:', JSON.stringify(analysis, null, 2));
+        console.log('Condition summary:', analysis.condition_summary);
 
-        const conditionCounts = {};
-        if (analysis.points && analysis.points.length > 0) {
-          analysis.points.forEach(point => {
-            if (point.conditions) {
-              console.log('Point Condition:', point.conditions);
-              const condition = point.conditions;
-              conditionCounts[condition] = (conditionCounts[condition] || 0) + 1;
-            }
-          });
-        } 
-        
-        const formattedConditions = Object.entries(conditionCounts).map(([condition, count]) => {
-          const formattedCondition = condition.split('_').map(word => word.charAt(0).toUpperCase + word.slice(1).toLowerCase()).join(' ');
-          
-          const total = Object.values(conditionCounts).reduce((a, b) => a + b, 0);
-          const percentage = ((count / total) * 100).toFixed(1);
-          return `${formattedCondition} - ${percentage}%`;
-        })
-        .join('\n');
+        if (!analysis.condition_summary) {
+          throw new Error('No condition summary in the response');
+        }
+
+        const formattedConditions = Object.entries(analysis.condition_summary)
+          .sort(([, a], [, b]) => b - a)  // Sort by percentage in descending order
+          .map(([condition, percentage]) => {
+            const formattedCondition = condition
+              .split('_')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              .join(' ');
+            return `${formattedCondition} - ${Math.round(percentage * 100)}%`;
+          })
+          .join('\n');
 
         Alert.alert(
           "Road Analysis Completed",
-          `${analysis.message}\n\n${formattedConditions}`,
+          formattedConditions,
           [{ text: "OK" }]
         );
       } catch (error) {
@@ -730,7 +727,21 @@ const Planner = () => {
     return (
       <View style={styles.roadConditionsContainer}>
         <Text style={styles.sectionTitle}>Road Conditions</Text>
-        <Text style={styles.conditionSummary}>{routeConditions.summary}</Text>
+        <View style={styles.conditionSummaryContainer}>
+          {Object.entries(routeConditions.condition_summary)
+            .sort(([, a], [, b]) => b - a)
+            .map(([condition, percentage], index) => {
+              const formattedCondition = condition
+                .split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+              return (
+                <Text key={index} style={styles.conditionSummaryText}>
+                  {formattedCondition} - {Math.round(percentage * 100)}%
+                </Text>
+              );
+            })}
+        </View>
         
         {routeConditions.points.map((point, index) => (
           <View key={index} style={styles.conditionPoint}>
@@ -1367,11 +1378,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     color: '#333',
   },
-  conditionSummary: {
-    fontSize: 16,
-    color: '#666',
+  conditionSummaryContainer: {
+    backgroundColor: 'white',
+    padding: 12,
+    borderRadius: 8,
     marginBottom: 16,
-    lineHeight: 22,
+  },
+  conditionSummaryText: {
+    fontSize: 16,
+    marginVertical: 4,
+    color: '#333',
+    fontWeight: '500',
   },
   conditionPoint: {
     flexDirection: 'row',

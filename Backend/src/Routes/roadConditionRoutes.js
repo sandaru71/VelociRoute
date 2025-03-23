@@ -118,19 +118,18 @@ router.post('/analyze', async (req, res) => {
 
         console.log('ML service response:', mlResponse.data);
 
-        // Generate a human-readable summary
+        // Get a raw condition summary
         const conditions = mlResponse.data.condition_summary;
-        let summary = 'Route Analysis: ';
-        for (const [condition, percentage] of Object.entries(conditions)) {
-          if (percentage > 0) {
-            summary += `${Math.round(percentage)}% ${condition.replace('_', ' ')}, `;
-          }
-        }
-        summary = summary.slice(0, -2); // Remove trailing comma
+        // Generate a human-readable summary
+        const formattedConditions = Object.entries(conditions)
+          .filter(([_, percentage]) => percentage > 0)
+          .map(([condition, percentage]) => `${condition.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} - ${Math.round(percentage)}%`)
+          .join('\n');
 
         return res.json({
           message: 'Route analysis completed',
-          summary,
+          condition_summary: conditions,  
+          summary: formattedConditions,
           totalPoints: samplingPoints.length,
           availableImages: availablePoints.length,
           mlAnalysis: mlResponse.data,
