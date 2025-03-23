@@ -110,9 +110,15 @@ exports.getAllActivityPosts = async (req, res) => {
         // Get the MongoDB connection from app.locals
         const db = req.app.locals.db;
         
+        // Get userEmail from query params
+        const { userEmail } = req.query;
+        
+        // Build query based on userEmail
+        const query = userEmail ? { userEmail } : {};
+        
         // Use the routes_db database and posts collection
         const posts = await db.collection('posts')
-            .find()
+            .find(query)
             .sort({ createdAt: -1 })
             .toArray();
 

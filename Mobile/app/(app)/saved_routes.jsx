@@ -219,8 +219,8 @@ const SavedRoutes = () => {
                   setShowDatePicker(true);
                 }}
               >
-                <FontAwesome5 name="calendar-alt" size={20} color="#FEBE15" />
-                <Text style={[styles.dateText, { color: '#FEBE15' }]}>
+                <FontAwesome5 name="calendar-alt" size={20} color="#666" />
+                <Text style={styles.dateText}>
                   {moment(selectedDates[route._id]).format('MMM DD, YYYY')}
                 </Text>
               </TouchableOpacity>
@@ -335,7 +335,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
-    backgroundColor: '#FFF3D3',
   },
   dateText: {
     marginLeft: 10,

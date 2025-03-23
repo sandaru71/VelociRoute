@@ -43,10 +43,27 @@ const Feed = () => {
   useEffect(() => {
     const shouldShowUserPosts = showUserPostsParam === 'true';
     setShowUserPosts(shouldShowUserPosts);
-    if (shouldShowUserPosts) {
+    if (auth.currentUser) {
       fetchPosts(auth.currentUser);
     }
   }, [showUserPostsParam]);
+
+  const toggleUserPosts = async () => {
+    const newValue = !showUserPosts;
+    setShowUserPosts(newValue);
+    if (auth.currentUser) {
+      setLoading(true);
+      try {
+        await fetchPosts(auth.currentUser);
+      } catch (error) {
+        console.error('Error toggling posts:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    // Update URL without full navigation
+    router.setParams({ showUserPosts: newValue.toString() });
+  };
 
   const fetchPosts = async (user = auth.currentUser) => {
     if (!user) {
@@ -63,9 +80,13 @@ const Feed = () => {
         return;
       }
 
-      const endpoint = showUserPosts 
-        ? `${API_URL}/api/activity-posts?userEmail=${encodeURIComponent(user.email)}`
-        : `${API_URL}/api/activity-posts`;
+      let endpoint = `${API_URL}/api/activity-posts`;
+      if (showUserPosts) {
+        endpoint = `${endpoint}?userEmail=${encodeURIComponent(user.email)}`;
+      }
+
+      console.log('Fetching posts from:', endpoint);
+      console.log('Show user posts:', showUserPosts);
 
       const response = await axios.get(endpoint, {
         headers: {
@@ -75,46 +96,48 @@ const Feed = () => {
       });
 
       if (response.data.success) {
-        let postsWithProcessedData = response.data.data.map(post => {
-          // Process route data
-          let processedRoute = null;
-          if (post.route) {
-            processedRoute = parseGPX(post.route);
-          }
-
-          // Process stats data
-          let processedStats = {
-            duration: 0,
-            distance: 0,
-            elevationGain: 0,
-            averageSpeed: 0
-          };
-
-          try {
-            const stats = typeof post.stats === 'string' ? JSON.parse(post.stats) : post.stats;
-            if (stats) {
-              processedStats.duration = parseInt(stats.duration) || 0;
-              processedStats.distance = parseFloat(stats.distance) * 1000 || 0;
-              processedStats.elevationGain = parseFloat(stats.elevationGain) || 0;
-              processedStats.averageSpeed = (parseFloat(stats.averageSpeed) / 3.6) || 0;
+        let postsWithProcessedData = response.data.data
+          .filter(post => !showUserPosts || post.userEmail === user.email)
+          .map(post => {
+            // Process route data
+            let processedRoute = null;
+            if (post.route) {
+              processedRoute = parseGPX(post.route);
             }
-          } catch (error) {
-            console.error('Error processing stats for post:', post._id, error);
-          }
 
-          // Process likes data
-          const likes = Array.isArray(post.likes) ? post.likes : [];
-          const likedByCurrentUser = likes.includes(user.email);
+            // Process stats data
+            let processedStats = {
+              duration: 0,
+              distance: 0,
+              elevationGain: 0,
+              averageSpeed: 0
+            };
 
-          return {
-            ...post,
-            route: processedRoute,
-            ...processedStats,
-            likes,
-            likedByCurrentUser,
-            likeCount: likes.length
-          };
-        });
+            try {
+              const stats = typeof post.stats === 'string' ? JSON.parse(post.stats) : post.stats;
+              if (stats) {
+                processedStats.duration = parseInt(stats.duration) || 0;
+                processedStats.distance = parseFloat(stats.distance) * 1000 || 0;
+                processedStats.elevationGain = parseFloat(stats.elevationGain) || 0;
+                processedStats.averageSpeed = (parseFloat(stats.averageSpeed) / 3.6) || 0;
+              }
+            } catch (error) {
+              console.error('Error processing stats for post:', post._id, error);
+            }
+
+            // Process likes data
+            const likes = Array.isArray(post.likes) ? post.likes : [];
+            const likedByCurrentUser = likes.includes(user.email);
+
+            return {
+              ...post,
+              route: processedRoute,
+              ...processedStats,
+              likes,
+              likedByCurrentUser,
+              likeCount: likes.length
+            };
+          });
 
         setPosts(postsWithProcessedData);
       }
@@ -432,15 +455,6 @@ const Feed = () => {
     };
   }, []);
 
-  const toggleUserPosts = () => {
-    const newValue = !showUserPosts;
-    setShowUserPosts(newValue);
-    fetchPosts(auth.currentUser);
-    
-    // Update URL without full navigation
-    router.setParams({ showUserPosts: newValue.toString() });
-  };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -466,7 +480,22 @@ const Feed = () => {
     <SafeAreaView style={styles.safeArea}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Feed</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>Feed</Text>
+          <TouchableOpacity 
+            style={styles.reloadButton}
+            onPress={() => {
+              setLoading(true);
+              fetchPosts(auth.currentUser);
+            }}
+          >
+            <MaterialIcons 
+              name="refresh" 
+              size={24} 
+              color="#666"
+            />
+          </TouchableOpacity>
+        </View>
         <TouchableOpacity 
           style={[styles.filterButton, showUserPosts && styles.filterButtonActive]} 
           onPress={toggleUserPosts}
@@ -691,9 +720,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  reloadButton: {
+    padding: 8,
+    borderRadius: 20,
   },
   container: {
     flex: 1,

@@ -875,6 +875,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginVertical: 16,
     gap: 12,
+    marginBottom: 75,
   },
   actionButton: {
     flex: 1,
