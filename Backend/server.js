@@ -50,6 +50,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
 // Register routes
 app.use('/api/popular-routes', popularRoutes);
 app.use('/api/upload', uploadRoutes);
@@ -58,15 +67,14 @@ app.use('/api/activity-posts', activityPostsRoutes);
 app.use('/api/user', userProfileRoutes);
 app.use('/api/saved-routes', savedRoutes);
 
-// Basic route for testing
-app.get('/', (req, res) => {
-  res.send("MongoDB Node.js Driver is running!");
-});
-
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    message: 'Internal Server Error',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
 // Initialize database connection
