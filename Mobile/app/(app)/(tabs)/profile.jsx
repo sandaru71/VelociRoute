@@ -268,14 +268,6 @@ const Profile = () => {
             </TouchableOpacity>
           </View>
 
-          {/* View My Posts Button */}
-          <TouchableOpacity
-            style={{flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 25, marginVertical: 16,borderColor:'#FEBE15',borderWidth: 3, elevation: 5 }}
-            onPress={() => router.push({ pathname: '/(app)/(tabs)/feed', params: { showUserPosts: 'true' } })}
-          >
-            <Text style={{ color: '#000000', fontSize: 16, fontWeight: 'bold', marginLeft: 8,textAlign: 'center' }}>View My Posts</Text>
-          </TouchableOpacity>
-
           {/* View saved activities Button */}
           <TouchableOpacity
             style={{flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 25, marginVertical: 16,borderColor:'#FEBE15',borderWidth: 3, elevation: 5}}
