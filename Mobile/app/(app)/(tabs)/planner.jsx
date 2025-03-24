@@ -864,6 +864,27 @@ const Planner = () => {
         </View>
       </TouchableOpacity>
 
+      {/* Analyze Road Button */}
+      {routeCoordinates.length > 0 && (
+        <TouchableOpacity
+          style={[
+            styles.analyzeButton,
+            isAnalyzingRoad && styles.analyzeButtonDisabled
+          ]}
+          onPress={analyzeRoadConditions}
+          disabled={isAnalyzingRoad}
+        >
+          {isAnalyzingRoad ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <View style={styles.analyzeButtonContent}>
+              <MaterialIcons name="analytics" size={24} color="black" style={{ marginRight: 8 }} />
+              <Text style={styles.analyzeButtonText}>Analyze Road</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      )}
+
       {/* Zoom Controls */}
       <View style={styles.zoomControls}>
         <TouchableOpacity 
@@ -1029,26 +1050,7 @@ const Planner = () => {
                 <Text style={styles.addWaypointText}>Add waypoint</Text>
               </TouchableOpacity>
 
-              {/* Analyze road button */}
-              {routeCoordinates.length > 0 && (
-                      <TouchableOpacity
-                        style={[
-                          styles.analyzeButton,
-                          isAnalyzingRoad && styles.analyzeButtonDisabled
-                        ]}
-                        onPress={analyzeRoadConditions}
-                        disabled={isAnalyzingRoad}
-                      >
-                        {isAnalyzingRoad ? (
-                          <ActivityIndicator color="#fff" />
-                        ) : (
-                          <>
-                            <MaterialIcons name="analytics" size={24} color="#fff" />
-                            <Text style={styles.analyzeButtonText}>Analyze Road</Text>
-                          </>
-                        )}
-                      </TouchableOpacity>
-                    )}
+              {/* Toggle Details Button */}
               {routeCoordinates.length > 0 && (
                 <TouchableOpacity 
                   style={[styles.toggleDetailsButton, modalVisible && styles.toggleDetailsButtonActive]} 
@@ -1339,7 +1341,7 @@ const styles = StyleSheet.create({
   saveButton: {
     position: 'absolute',
     right: 20,
-    bottom: 120, // Increased from 100 to 120 to move button higher
+    bottom: 120,
     backgroundColor: '#FEBE15',
     paddingHorizontal: 20,
     paddingVertical: 12,
@@ -1361,6 +1363,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginRight: 4,
+  },
+  analyzeButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 180,
+    backgroundColor: '#FEBE15',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  analyzeButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  analyzeButtonText: {
+    color: 'black',
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 4,
+  },
+  analyzeButtonDisabled: {
+    backgroundColor: '#FEBE15',
   },
 });
 

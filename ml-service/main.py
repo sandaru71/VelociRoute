@@ -233,8 +233,9 @@ async def classify_route(route_data: RouteImages):
     # Calculate condition percentages
     total_processed = sum(condition_counts.values())
     condition_summary = {
-        condition: (count / total_processed * 100 if total_processed > 0 else 0)
+        condition: (count / total_processed if total_processed > 0 else 0)
         for condition, count in condition_counts.items()
+        if count > 0  # Only include conditions that were found
     }
     
     # Generate summary text

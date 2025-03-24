@@ -350,12 +350,6 @@ const RouteScreen = () => {
     return header + points + footer;
   };
 
-  const convertChartToImage = async () => {
-    // This is a placeholder - in a real implementation, you'd use something like
-    // react-native-view-shot to capture the chart as an image
-    return '';
-  };
-
   return (
     <View style={styles.container}>
       <Stack.Screen
