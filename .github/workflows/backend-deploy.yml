@@ -13,6 +13,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     
     steps:
     - uses: actions/checkout@v3
@@ -37,14 +40,18 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
     - name: Build and push Docker image
-      env:
-        DOCKER_IMAGE: sandaru71/velociroute-backend
-      run: |
-        cd Backend
-        docker build -t $DOCKER_IMAGE:${{ github.sha }} -t $DOCKER_IMAGE:latest .
-        docker push $DOCKER_IMAGE:${{ github.sha }}
-        docker push $DOCKER_IMAGE:latest
+      uses: docker/build-push-action@v4
+      with:
+        context: ./Backend
+        file: ./Backend/Dockerfile
+        push: true
+        tags: |
+          sandaru71/velociroute-backend:latest
+          sandaru71/velociroute-backend:${{ github.sha }}
     
     - name: Deploy to EC2
       uses: appleboy/ssh-action@master
@@ -53,7 +60,8 @@ jobs:
         username: ubuntu
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
+          mkdir -p ~/velociroute
           cd ~/velociroute
-          docker-compose pull
-          docker-compose up -d
-          docker system prune -af
+          docker pull sandaru71/velociroute-backend:latest
+          docker compose down || true
+          docker compose up -d
