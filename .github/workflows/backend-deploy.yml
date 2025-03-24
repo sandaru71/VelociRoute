@@ -1,0 +1,83 @@
+name: Deploy Backend to EC2
+
+on:
+  push:
+    branches: [ before-image-processing-model, setting-up-an-EC2-Instance ]
+    paths:
+      - 'Backend/**'
+  pull_request:
+    branches: [ before-image-processing-model, setting-up-an-EC2-Instance ]
+    paths:
+      - 'Backend/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: Backend/package-lock.json
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: eu-north-1
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./Backend
+        file: ./Backend/Dockerfile
+        push: true
+        tags: |
+          sandaru71/velociroute-backend:latest
+          sandaru71/velociroute-backend:${{ github.sha }}
+    
+    - name: Copy docker-compose.yml to EC2
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        source: "Backend/deploy/docker-compose.yml,Backend/.env"
+        target: "~/velociroute"
+        strip_components: 2
+    
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@master
+      env:
+        DOCKER_COMPOSE_FILE: ~/velociroute/docker-compose.yml
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        key_format: pkcs8
+        envs: DOCKER_COMPOSE_FILE
+        debug: true
+        timeout: 120s
+        command_timeout: 20m
+        script: |
+          cd ~/velociroute
+          docker pull sandaru71/velociroute-backend:latest
+          docker compose -f $DOCKER_COMPOSE_FILE down || true
+          docker compose -f $DOCKER_COMPOSE_FILE up -d
