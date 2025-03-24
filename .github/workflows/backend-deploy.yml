@@ -2,11 +2,11 @@ name: Deploy Backend to EC2
 
 on:
   push:
-    branches: [ setting-up-an-EC2-Instance ]
+    branches: [ before-image-processing-model, setting-up-an-EC2-Instance ]
     paths:
       - 'Backend/**'
   pull_request:
-    branches: [ setting-up-an-EC2-Instance ]
+    branches: [ before-image-processing-model, setting-up-an-EC2-Instance ]
     paths:
       - 'Backend/**'
 
