@@ -62,16 +62,22 @@ jobs:
         source: "Backend/docker-compose.yml,Backend/.env"
         target: "~/velociroute"
         strip_components: 1
+        key_format: pkcs8
     
     - name: Deploy to EC2
       uses: appleboy/ssh-action@master
       env:
         DOCKER_COMPOSE_FILE: ~/velociroute/docker-compose.yml
+        AWS_DEFAULT_REGION: eu-north-1
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_SSH_KEY }}
+        key_format: pkcs8
         envs: DOCKER_COMPOSE_FILE
+        timeout: 120s
+        command_timeout: 20m
+        debug: true
         script: |
           cd ~/velociroute
           docker pull sandaru71/velociroute-backend:latest
