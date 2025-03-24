@@ -9,8 +9,11 @@ import numpy as np
 from PIL import Image
 import io
 import requests
+import asyncio
+import aiohttp
 from dotenv import load_dotenv
 import os
+import logging
 
 load_dotenv()
 
@@ -19,7 +22,14 @@ app = FastAPI(title="VelociRoute Road Condition Classifier")
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://10.54.219.97:3000", "http://10.54.219.97:8000", "http://localhost:3000", "http://localhost:19006"],
+    allow_origins=[
+        "http://10.54.219.97:3000",
+        "http://10.54.219.97:8000",
+        "http://localhost:3000",
+        "http://localhost:19006",
+        "http://10.235.240.196:3000",
+        "http://10.235.240.196:8000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -133,13 +143,15 @@ def classify_road_condition(predictions: torch.Tensor) -> RoadCondition:
         # Get the most likely condition
         max_condition = max(conditions.items(), key=lambda x: x[1])
         
+        logging.info(f"Classified image as {max_condition[0]} with confidence {max_condition[1]}")
+        
         return RoadCondition(
             condition=max_condition[0],
             confidence=float(max_condition[1]),
             all_conditions=conditions
         )
     except Exception as e:
-        print(f"Classification error: {str(e)}")
+        logging.error(f"Classification error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Classification error: {str(e)}")
 
 @api_router.post("/classify-image", response_model=RoadCondition)
@@ -159,86 +171,85 @@ async def classify_single_image(image_url: ImageURL):
         # Classify road condition
         result = classify_road_condition(predictions)
         
+        logging.info(f"Classified single image as {result.condition} with confidence {result.confidence}")
+        
         return result
     except requests.RequestException as e:
+        logging.error(f"Failed to fetch image: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Failed to fetch image: {str(e)}")
     except Exception as e:
+        logging.error(str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.post("/classify-route", response_model=RouteAnalysis)
 async def classify_route(route_data: RouteImages):
-    try:
-        print(f"Received request to classify route with {len(route_data.images)} images")
-        results = []
-        
-        for i, image in enumerate(route_data.images):
-            print(f"Processing image {i+1}/{len(route_data.images)} at {image.kilometer}km")
-            try:
-                # Download and process the image
-                response = requests.get(image.url)
-                if response.status_code != 200:
-                    print(f"Failed to download image {i+1}: HTTP {response.status_code}")
-                    results.append(RoadClassification(
-                        kilometer=image.kilometer,
-                        error=f"Failed to download image: HTTP {response.status_code}"
-                    ))
-                    continue
-
-                image_data = response.content
-                print(f"Successfully downloaded image {i+1}")
-
-                # Process the image
-                processed_image = preprocess_image(image_data)
-                with torch.no_grad():
-                    predictions = model(processed_image)
-                
-                classification = classify_road_condition(predictions)
-                print(f"Classified image {i+1} as {classification.condition}")
-                
-                results.append(RoadClassification(
-                    kilometer=image.kilometer,
-                    classification=classification
-                ))
-            except Exception as e:
-                print(f"Error processing image {i+1}: {str(e)}")
-                results.append(RoadClassification(
-                    kilometer=image.kilometer,
-                    error=str(e)
-                ))
-        
-        # Calculate summary statistics
-        total_points = len(results)
-        processed_points = sum(1 for r in results if r.classification is not None)
-        
-        if processed_points == 0:
-            raise HTTPException(status_code=500, detail="No images could be processed successfully")
-        
-        # Calculate condition summary
-        condition_counts = {}
-        for result in results:
-            if result.classification:
-                condition = result.classification.condition
-                condition_counts[condition] = condition_counts.get(condition, 0) + 1
-        
-        condition_summary = {
-            condition: count/processed_points 
-            for condition, count in condition_counts.items()
-        }
-        
-        print(f"Analysis complete: {processed_points}/{total_points} points processed successfully")
-        print("Condition summary:", condition_summary)
-        
-        return RouteAnalysis(
-            summary=f"Successfully analyzed {processed_points} out of {total_points} points along the route",
-            total_points=total_points,
-            processed_points=processed_points,
-            condition_summary=condition_summary,
-            point_classifications=results
-        )
-        
-    except Exception as e:
-        print(f"Error in classify_route: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+    """Process multiple images along a route."""
+    logging.info(f"Starting route classification for {len(route_data.images)} images")
+    
+    classifications = []
+    total_points = len(route_data.images)
+    processed = 0
+    condition_counts = {condition: 0 for condition in ROAD_CONDITIONS.keys()}
+    
+    async def process_image(image):
+        try:
+            logging.info(f"Processing image at kilometer {image.kilometer}")
+            # Download and process image
+            async with aiohttp.ClientSession() as session:
+                async with session.get(image.url) as response:
+                    response.raise_for_status()
+                    image_data = await response.read()
+            
+            # Preprocess image
+            image_tensor = preprocess_image(image_data)
+            
+            # Get model predictions
+            with torch.no_grad():
+                predictions = model(image_tensor)
+            
+            # Classify road condition
+            classification = classify_road_condition(predictions)
+            
+            # Update condition counts
+            condition_counts[classification.condition] += 1
+            
+            return RoadClassification(
+                kilometer=image.kilometer,
+                classification=classification
+            )
+        except Exception as e:
+            logging.error(f"Error processing image at kilometer {image.kilometer}: {str(e)}")
+            return RoadClassification(
+                kilometer=image.kilometer,
+                error=str(e)
+            )
+    
+    tasks = [process_image(image) for image in route_data.images]
+    results = await asyncio.gather(*tasks)
+    
+    classifications.extend(results)
+    processed = len([result for result in results if result.classification is not None])
+    
+    # Calculate condition percentages
+    total_processed = sum(condition_counts.values())
+    condition_summary = {
+        condition: (count / total_processed * 100 if total_processed > 0 else 0)
+        for condition, count in condition_counts.items()
+    }
+    
+    # Generate summary text
+    summary = f"Analyzed {processed}/{total_points} points along the route."
+    
+    logging.info("Route analysis complete")
+    logging.info(f"Condition summary: {condition_summary}")
+    
+    return RouteAnalysis(
+        summary=summary,
+        total_points=total_points,
+        processed_points=processed,
+        condition_summary=condition_summary,
+        point_classifications=classifications
+    )
 
 if __name__ == "__main__":
     import uvicorn

@@ -121,7 +121,7 @@ def test_route():
     except Exception as e:
         print(f"Error: {str(e)}")
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     print("Testing ML Service connectivity...")
     try:
         # First test if the server is reachable

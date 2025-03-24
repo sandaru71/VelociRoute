@@ -12,6 +12,7 @@ const Activity = require('./src/Infrastructure/Models/Activity');
 const activityPostsRoutes = require('./src/Routes/activityPosts.js');
 const userProfileRoutes = require('./src/Routes/userProfileRoutes');
 const savedRoutes = require('./src/Routes/savedRoutes');
+const roadConditionRoutes = require('./src/Routes/roadConditionRoutes');
 
 const app = express();
 
@@ -57,6 +58,7 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/activity-posts', activityPostsRoutes);
 app.use('/api/user', userProfileRoutes);
 app.use('/api/saved-routes', savedRoutes);
+app.use('/api', roadConditionRoutes);
 
 // Basic route for testing
 app.get('/', (req, res) => {

@@ -10,6 +10,7 @@ import {
   Alert, 
   ScrollView, 
   Animated, 
+  ActivityIndicator,
   PanResponder 
 } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
@@ -49,6 +50,8 @@ const Planner = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [isScrollEnabled, setIsScrollEnabled] = useState(false);
   const [elevationData, setElevationData] = useState({ totalGain: 0, profile: [] });
+  const [routeConditions, setRouteConditions] = useState(null);
+  const [isAnalyzingRoad, setIsAnalyzingRoad] = useState(false);
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const lastGestureDy = useRef(0);
   const mapRef = useRef(null);

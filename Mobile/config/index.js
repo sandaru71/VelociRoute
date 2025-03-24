@@ -1,26 +1,25 @@
-// import { Platform } from 'react-native';
+import { Platform } from 'react-native';
 
-// // Configuration variables
-// const get = () => {
-//   if (Platform.OS === 'android') {
-//     // Android Emulator
-//     return 'http://10.0.2.2:3000';
-//   } else if (Platform.OS === 'ios') {
-//     // iOS Simulator
-//     return 'http://localhost:3000';
-//   } else {
-//     // Local Network Development (physical device)
-//     return 'http://10.197.231.196:3000';
-//   }
-// };
+const LOCAL_IP = '10.235.240.196'; // Update this with your computer's IP
 
+const getApiUrl = () => {
+  if (Platform.OS === 'android') {
+    return __DEV__ ? 'http://10.235.240.196:3000' : `http://${LOCAL_IP}:3000`;
+  }
+  return __DEV__ ? 'http://localhost:3000' : `http://${LOCAL_IP}:3000`;
+};
 
-// export const API_URL = get();
+const getMlServiceUrl = () => {
+  if (Platform.OS === 'android') {
+    return __DEV__ ? 'http://10.235.240.196:8000' : `http://${LOCAL_IP}:8000`;
+  }
+  return __DEV__ ? 'http://localhost:8000' : `http://${LOCAL_IP}:8000`;
+};
 
-// export const API_URL = 'http://192.168.1.2:3000'; //android emulator
-// export const API_URL = 'http://localhost:3000'; //ios emulator
-export const API_URL = 'http://10.235.240.196:3000'; //local network
+export const API_URL = getApiUrl();
+export const ML_SERVICE_URL = getMlServiceUrl();
 
 export default {
   API_URL,
+  ML_SERVICE_URL,
 };

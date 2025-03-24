@@ -15,7 +15,7 @@ const getRoadConditions = async (req, res) => {
         // Get Street View images for each point
         const imagePromises = route.points.map(async (point, index) => {
             const { lat, lng } = point;
-            const imageUrl = ${STREET_VIEW_API_URL}?size=640x640&location=${lat},${lng}&key=${MAPS_API_KEY};
+            const imageUrl = `${STREET_VIEW_API_URL}?size=640x640&location=${lat},${lng}&key=${MAPS_API_KEY}`;
             
             return {
                 url: imageUrl,
@@ -26,7 +26,7 @@ const getRoadConditions = async (req, res) => {
         const images = await Promise.all(imagePromises);
 
         // Send images to ML service for classification
-        const mlResponse = await axios.post(${ML_SERVICE_URL}/api/classify-route, {
+        const mlResponse = await axios.post(`${ML_SERVICE_URL}/api/classify-route`, {
             images
         });
 

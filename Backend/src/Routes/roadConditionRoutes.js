@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { default: axios } = require('axios');
 const turf = require('@turf/turf');
-const { GOOGLE_MAPS_API_KEY } = require('../config/keys');
+const { GOOGLE_MAPS_API_KEY } = require('../Config/keys');
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://10.235.240.196:8000';
 
@@ -41,14 +41,14 @@ const generatePointsAlongRoute = (coordinates, interval = 1000) => {
 const fetchStreetViewImage = async (latitude, longitude) => {
   try {
     // First check if Street View is available at this location
-    const metadataUrl = https://maps.googleapis.com/maps/api/streetview/metadata?location=${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY};
+    const metadataUrl = `https://maps.googleapis.com/maps/api/streetview/metadata?location=${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY}`;
     const metadataResponse = await axios.get(metadataUrl);
     
-    console.log(Checking Street View at ${latitude},${longitude}:, metadataResponse.data.status);
+    console.log(`Checking Street View at ${latitude},${longitude}:`, metadataResponse.data.status);
 
     if (metadataResponse.data.status === 'OK') {
       // Street View is available, construct the image URL
-      const imageUrl = https://maps.googleapis.com/maps/api/streetview?size=640x640&location=${latitude},${longitude}&heading=0&pitch=0&key=${GOOGLE_MAPS_API_KEY};
+      const imageUrl = `https://maps.googleapis.com/maps/api/streetview?size=640x640&location=${latitude},${longitude}&heading=0&pitch=0&key=${GOOGLE_MAPS_API_KEY}`;
       
       return {
         url: imageUrl,
@@ -72,7 +72,7 @@ const fetchStreetViewImage = async (latitude, longitude) => {
 };
 
 // Process route and get road conditions
-router.post('/analyze', async (req, res) => {
+router.post('/road-conditions/analyze', async (req, res) => {
   try {
     const { route } = req.body;
     
@@ -84,7 +84,7 @@ router.post('/analyze', async (req, res) => {
 
     console.log('Generating sampling points for route...');
     const samplingPoints = generatePointsAlongRoute(route.coordinates, 1000);
-    console.log(Generated ${samplingPoints.length} sampling points);
+    console.log(`Generated ${samplingPoints.length} sampling points`);
     
     // Fetch Street View images for each point
     console.log('Fetching Street View images...');
@@ -103,13 +103,13 @@ router.post('/analyze', async (req, res) => {
     const availablePoints = pointsWithImages.filter(point => point.streetView.available);
     const unavailablePoints = pointsWithImages.filter(point => !point.streetView.available);
 
-    console.log(Found ${availablePoints.length} points with Street View images);
-    console.log(${unavailablePoints.length} points without Street View images);
+    console.log(`Found ${availablePoints.length} points with Street View images`);
+    console.log(`${unavailablePoints.length} points without Street View images`);
 
     // Send available images to ML service for classification
     if (availablePoints.length > 0) {
       try {
-        const mlResponse = await axios.post(${ML_SERVICE_URL}/api/classify-route, {
+        const mlResponse = await axios.post(`${ML_SERVICE_URL}/api/classify-route`, {
           images: availablePoints.map(point => ({
             url: point.streetView.url,
             kilometer: point.kilometer
@@ -123,7 +123,7 @@ router.post('/analyze', async (req, res) => {
         // Generate a human-readable summary
         const formattedConditions = Object.entries(conditions)
           .filter(([_, percentage]) => percentage > 0)
-          .map(([condition, percentage]) => ${condition.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} - ${Math.round(percentage)}%)
+          .map(([condition, percentage]) => `${condition.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} - ${Math.round(percentage)}%`)
           .join('\n');
 
         return res.json({
