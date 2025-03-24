@@ -19,6 +19,7 @@ import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplet
 import * as Location from 'expo-location';
 import { MaterialIcons, FontAwesome5, Feather } from '@expo/vector-icons';
 import polyline from '@mapbox/polyline';
+import config from '../../../config';
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyDvP_xQ39yqaHS74Je06nasmvEQ5ctSqK4';
 
@@ -513,6 +514,257 @@ const Planner = () => {
     })();
   }, []);
 
+  const analyzeRoadConditions = async () => {
+    console.log('analyzeRoadConditions function called. Starting analysis...');
+
+    if (!routeCoordinates.length) {
+      console.log('No route coordinates found.')
+      Alert.alert(
+        "No Route Selected",
+        "Please set a route before analyzing road conditions."
+      );
+      return;
+    }
+
+    if (!routeDetails) {
+      console.log('No route details found.')
+      Alert.alert(
+        "No Route Details",
+        "Please set a route before analyzing road conditions."
+      );
+      return;
+    }
+
+    console.log('Route validation passed, starting analysis...');
+    console.log('Route coordinates:', routeCoordinates);
+    console.log('Route details:', routeDetails);
+
+    setIsAnalyzingRoad(true);
+    try {
+      console.log('Starting road analysis...');
+
+      const totalDistanceMeters = routeDetails.legs.reduce((total, leg) => total + leg.distance.value, 0);
+      const totalDistanceKm = totalDistanceMeters / 1000;
+      console.log('Total route distance in km: ', totalDistanceKm);
+
+      const SAMPLING_INTERVAL_KM = 1; // 1 km intervals
+      const numPoints = Math.max(2, Math.ceil(totalDistanceKm / SAMPLING_INTERVAL_KM));
+      console.log(`Will analyze ${numPoints} points along the route (one every ${SAMPLING_INTERVAL_KM} km)`);
+
+      const selectedCoords = [];
+      let accumulatedDistance = 0;
+      let currentKilometer = 0;
+      let prevCoord = routeCoordinates[0];
+
+      selectedCoords.push({
+        coord: routeCoordinates[0],
+        distanceKm: 0
+      });
+
+      for (let i=1; i < routeCoordinates.length; i++) {
+        const coord = routeCoordinates[i];
+        const segmentDistance = calculateHaversineDistance(
+          prevCoord.latitude,
+          prevCoord.longitude,
+          coord.latitude,
+          coord.longitude
+        );
+
+        accumulatedDistance += segmentDistance;
+
+        while (accumulatedDistance >= (currentKilometer + SAMPLING_INTERVAL_KM) && currentKilometer < totalDistanceKm) {
+          currentKilometer += SAMPLING_INTERVAL_KM;
+
+          const ratio = (currentKilometer - (accumulatedDistance - segmentDistance)) / segmentDistance;
+          const interpolatedCoord = {
+            latitude: prevCoord.latitude + (coord.latitude - prevCoord.latitude) * ratio,
+            longitude: prevCoord.longitude + (coord.longitude - prevCoord.longitude) * ratio
+          };
+          selectedCoords.push({
+            coord: interpolatedCoord,
+            distanceKm: currentKilometer
+          });
+        }
+        prevCoord = coord;
+      }
+
+      const lastPoint = routeCoordinates[routeCoordinates.length - 1];
+      if (totalDistanceKm - currentKilometer > 0.1) {
+        selectedCoords.push({
+          coord: lastPoint,
+          distanceKm: totalDistanceKm
+        });
+      }
+
+      console.log('Selected coordinates for analysis:', selectedCoords);
+
+      const images = await Promise.all(
+        selectedCoords.map(async({coord, distance}, index) => {
+          console.log(`Processing point ${index}: `, {
+            coordinates: coord,
+            distanceKm: distance
+          });
+
+          const imageUrl = `https://maps.googleapis.com/maps/api/streetview?size=400x400&location=${coord.latitude},${coord.longitude}&key=${GOOGLE_MAPS_API_KEY}`;
+          return {
+            url: imageUrl,
+            kilometer: distance
+          };
+        })
+      );
+
+      console.log('Preparing request...');
+
+      const requestBody = {
+        route: {
+         coordinates: selectedCoords.map(({coord}) => ({
+            latitude: coord.latitude,
+            longitude: coord.longitude
+          }))
+        }
+      };
+
+      console.log('Request body:', JSON.stringify(requestBody, null, 2));
+
+      console.log('Sending request to backend...');
+      const apiUrl = `${config.API_URL}/api/road-conditions/analyze`;
+      console.log('API URL:', apiUrl);
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(requestBody)
+        });
+
+        console.log('Response received from backend');
+        console.log('Response status:', response.status);
+
+        const responseText = await response.text();
+        console.log('Raw response:', responseText);
+
+        if (!response.ok) {
+          throw new Error(`Backend error: ${response.status} - ${responseText}`);
+        }
+
+        let analysis;
+        try {
+          analysis = JSON.parse(responseText);
+          console.log('Parsed analysis:', analysis);
+        } catch (parseError) {
+          console.error('Failed to parse response:', parseError);
+          throw new Error('Invalid response from backend');
+        }
+
+        if (analysis.error) {
+          throw new Error(`Backend error: ${analysis.error}`);
+        }
+
+        setRouteConditions(analysis);
+        console.log('Analysis complete. Structure check:');
+        console.log('Full analysis:', JSON.stringify(analysis, null, 2));
+        console.log('Condition summary:', analysis.condition_summary);
+
+        if (!analysis.condition_summary) {
+          throw new Error('No condition summary in the response');
+        }
+
+        const formattedConditions = Object.entries(analysis.condition_summary)
+          .sort(([, a], [, b]) => b - a)  // Sort by percentage in descending order
+          .map(([condition, percentage]) => {
+            const formattedCondition = condition
+              .split('_')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              .join(' ');
+            return `${formattedCondition} - ${Math.round(percentage * 100)}%`;
+          })
+          .join('\n');
+
+        Alert.alert(
+          "Road Analysis Completed",
+          formattedConditions,
+          [{ text: "OK" }]
+        );
+      } catch (error) {
+        console.error('Error during ML service request:', error);
+        Alert.alert(
+          "Road Analysis Failed",
+          `Unable to analyze road conditions: ${error.message}. Please try again later.`,
+          [{ text: "OK" }]
+        );
+      } finally {
+        setIsAnalyzingRoad(false);
+      }
+    } catch (error) {
+      console.error('Error in analyzeRoadConditions:', error);
+      Alert.alert(
+        "Road Analysis Failed",
+        `Unable to analyze road conditions: ${error.message}. Please try again later.`,
+        [{ text: "OK" }]
+      );
+      setIsAnalyzingRoad(false);
+    }
+  };
+
+  const calculateHaversineDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  const renderRoadConditions = () => {
+    if (!routeConditions) return null;
+
+    return (
+      <View style={styles.roadConditionsContainer}>
+        <Text style={styles.sectionTitle}>Road Conditions</Text>
+        <View style={styles.conditionSummaryContainer}>
+          {Object.entries(routeConditions.condition_summary)
+            .sort(([, a], [, b]) => b - a)
+            .map(([condition, percentage], index) => {
+              const formattedCondition = condition
+                .split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+              return (
+                <Text key={index} style={styles.conditionSummaryText}>
+                  {formattedCondition} - {Math.round(percentage * 100)}%
+                </Text>
+              );
+            })}
+        </View>
+        
+        {routeConditions.points.map((point, index) => (
+          <View key={index} style={styles.conditionPoint}>
+            <Text style={styles.kilometerText}>KM {point.kilometer}</Text>
+            {point.conditions && (
+              <View style={styles.conditionDetails}>
+                <Text style={styles.conditionText}>
+                  {point.conditions.condition} 
+                  ({Math.round(point.conditions.confidence * 100)}% confidence)
+                </Text>
+              </View>
+            )}
+          </View>
+        ))}
+        
+        {routeConditions.unavailablePoints.length > 0 && (
+          <Text style={styles.unavailableText}>
+            Note: Road condition data unavailable for {routeConditions.unavailablePoints.length} points along the route
+          </Text>
+        )}
+      </View>
+    );
+  };
+
   if (!currentLocation) {
     return (
       <View style={styles.loadingContainer}>
@@ -774,6 +1026,26 @@ const Planner = () => {
                 <Text style={styles.addWaypointText}>Add waypoint</Text>
               </TouchableOpacity>
 
+              {/* Analyze road button */}
+              {routeCoordinates.length > 0 && (
+                      <TouchableOpacity
+                        style={[
+                          styles.analyzeButton,
+                          isAnalyzingRoad && styles.analyzeButtonDisabled
+                        ]}
+                        onPress={analyzeRoadConditions}
+                        disabled={isAnalyzingRoad}
+                      >
+                        {isAnalyzingRoad ? (
+                          <ActivityIndicator color="#fff" />
+                        ) : (
+                          <>
+                            <MaterialIcons name="analytics" size={24} color="#fff" />
+                            <Text style={styles.analyzeButtonText}>Analyze Road</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    )}
               {routeCoordinates.length > 0 && (
                 <TouchableOpacity 
                   style={[styles.toggleDetailsButton, modalVisible && styles.toggleDetailsButtonActive]} 
