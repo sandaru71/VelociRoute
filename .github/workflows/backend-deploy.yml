@@ -53,15 +53,27 @@ jobs:
           sandaru71/velociroute-backend:latest
           sandaru71/velociroute-backend:${{ github.sha }}
     
-    - name: Deploy to EC2
-      uses: appleboy/ssh-action@master
+    - name: Copy docker-compose.yml to EC2
+      uses: appleboy/scp-action@master
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_SSH_KEY }}
+        source: "Backend/docker-compose.yml,Backend/.env"
+        target: "~/velociroute"
+        strip_components: 1
+    
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@master
+      env:
+        DOCKER_COMPOSE_FILE: ~/velociroute/docker-compose.yml
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        envs: DOCKER_COMPOSE_FILE
         script: |
-          mkdir -p ~/velociroute
           cd ~/velociroute
           docker pull sandaru71/velociroute-backend:latest
-          docker compose down || true
-          docker compose up -d
+          docker compose -f $DOCKER_COMPOSE_FILE down || true
+          docker compose -f $DOCKER_COMPOSE_FILE up -d
