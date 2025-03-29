@@ -594,7 +594,7 @@ const Planner = () => {
       const lastPoint = routeCoordinates[routeCoordinates.length - 1];
       if (totalDistanceKm - currentKilometer > 0.1) {
         selectedCoords.push({
-          coord: lastPoint,
+          coord: lastPoint, 
           distanceKm: totalDistanceKm
         });
       }

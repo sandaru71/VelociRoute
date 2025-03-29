@@ -1,0 +1,56 @@
+name: Deploy ML Service to EC2
+
+on:
+  push:
+    branches: [ before-image-processing-model, setting-up-an-EC2-Instance ]
+    paths:
+      - 'ml-service/**'
+  pull_request:
+    branches: [ before-image-processing-model, setting-up-an-EC2-Instance ]
+    paths:
+      - 'ml-service/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: eu-north-1
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./ml-service
+        file: ./ml-service/Dockerfile
+        push: true
+        tags: sandaru71/velociroute-ml:latest
+    
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          cd ~/velociroute
+          docker-compose -f Backend/deploy/docker-compose.yml pull ml-service
+          docker-compose -f Backend/deploy/docker-compose.yml up -d ml-service

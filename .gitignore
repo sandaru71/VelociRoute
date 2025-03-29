@@ -75,6 +75,11 @@ ml-service/checkpoints/
 *.ai
 *.eps
 
+# Security
+*.pem
+*.key
+*.crt
+
 # OS specific
 .DS_Store
 Thumbs.db
