@@ -46,6 +46,28 @@ jobs:
           sandaru71/velociroute-ml-service:latest
           sandaru71/velociroute-ml-service:${{ github.sha }}
     
+    - name: Create docker-compose content
+      run: |
+        echo 'version: "3.8"
+
+        services:
+          ml-service:
+            image: sandaru71/velociroute-ml-service:latest
+            container_name: velociroute-ml-service
+            ports:
+              - "8000:8000"
+            environment:
+              - MODEL_DEVICE=cpu
+              - BATCH_SIZE=1
+              - HOST=0.0.0.0
+              - PORT=8000
+            restart: unless-stopped
+            healthcheck:
+              test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+              interval: 30s
+              timeout: 10s
+              retries: 3' > ml-service-compose.yml
+
     - name: Deploy to EC2
       uses: appleboy/ssh-action@master
       with:
@@ -53,8 +75,28 @@ jobs:
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          mkdir -p ~/velociroute/ml-service/deploy
-          cp -f $GITHUB_WORKSPACE/ml-service/deploy/docker-compose.yml ~/velociroute/ml-service/deploy/
           cd ~/velociroute
+          cat > ml-service/deploy/docker-compose.yml << 'EOL'
+          version: "3.8"
+
+          services:
+            ml-service:
+              image: sandaru71/velociroute-ml-service:latest
+              container_name: velociroute-ml-service
+              ports:
+                - "8000:8000"
+              environment:
+                - MODEL_DEVICE=cpu
+                - BATCH_SIZE=1
+                - HOST=0.0.0.0
+                - PORT=8000
+              restart: unless-stopped
+              healthcheck:
+                test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+                interval: 30s
+                timeout: 10s
+                retries: 3
+          EOL
+          mkdir -p ml-service/deploy
           docker-compose -f ml-service/deploy/docker-compose.yml pull ml-service
           docker-compose -f ml-service/deploy/docker-compose.yml up -d ml-service
