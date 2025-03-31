@@ -43,23 +43,18 @@ jobs:
         file: ./ml-service/Dockerfile
         push: true
         tags: |
-          sandaru71/velociroute-ml:latest
-          sandaru71/velociroute-ml:${{ github.sha }}
+          sandaru71/velociroute-ml-service:latest
+          sandaru71/velociroute-ml-service:${{ github.sha }}
     
     - name: Deploy to EC2
       uses: appleboy/ssh-action@master
-      env:
-        DOCKER_COMPOSE_FILE: ~/velociroute/docker-compose.yml
       with:
         host: ${{ secrets.EC2_HOST }}
-        username: ubuntu
-        key: ${{ secrets.EC2_SSH_KEY }}
-        key_format: pkcs8
-        envs: DOCKER_COMPOSE_FILE
-        debug: true
-        timeout: 120s
-        command_timeout: 20m
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
+          mkdir -p ~/velociroute/ml-service/deploy
+          cp -f $GITHUB_WORKSPACE/ml-service/deploy/docker-compose.yml ~/velociroute/ml-service/deploy/
           cd ~/velociroute
-          sudo docker pull sandaru71/velociroute-ml:latest
-          sudo docker-compose -f Backend/deploy/docker-compose.yml up -d ml-service
+          docker-compose -f ml-service/deploy/docker-compose.yml pull ml-service
+          docker-compose -f ml-service/deploy/docker-compose.yml up -d ml-service
