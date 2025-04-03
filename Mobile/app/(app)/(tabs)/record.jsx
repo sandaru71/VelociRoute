@@ -6,6 +6,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { getDistance, getPreciseDistance } from 'geolib';
 import axios from 'axios';
+import { useSpotifyAuth } from '../../../config/spotifyAuth';
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyDvP_xQ39yqaHS74Je06nasmvEQ5ctSqK4';
 
@@ -14,6 +15,7 @@ export default function Record() {
   const [paused, setPaused] = useState(true);
   const [intervalId, setIntervalId] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
+  const {request, response, promptAsync} = useSpotifyAuth();
   const [errorMsg, setErrorMsg] = useState("");
   const [path, setPath] = useState([]);
   const [locationSubscription, setLocationSubscription] = useState(null);
@@ -26,6 +28,7 @@ export default function Record() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFollowingUser, setIsFollowingUser] = useState(true);
   const mapRef = useRef(null);
+  const [accessToken, setAccessToken] = useState(null);
 
   const getElevationData = async (latitude, longitude) => {
     try {
@@ -194,6 +197,13 @@ export default function Record() {
     setAverageSpeed(0);
   };
 
+  const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600)/60);
+    const secs = seconds % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2,'0')}`;
+  };
+
   const handleSaveActivity = () => {
     // Pause the activity before saving
     if (!paused) {
@@ -234,6 +244,33 @@ export default function Record() {
     }
   };
 
+  const handleSpotifyLogin = async () => {
+    try{
+      const result = await promptAsync();
+      if(result.type === 'success'){
+        const {accessToken} = result.params;
+        console.log('Logged into Spotify');
+      }
+    } catch (error) {
+      console.error('Error logging in to Spotify:', error);
+    }
+  };
+
+  const playSong = async (accessToken) => {
+    const trackUri = '';
+
+    await fetch('https://api.spotify.com/v1/me/player/play', {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        uris: [trackUri]
+      })
+    })
+  }
+
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -256,13 +293,19 @@ export default function Record() {
             </TouchableOpacity>
           ),
           headerRight: () => (
-            <TouchableOpacity 
-              style={[styles.saveButton, { opacity: path.length > 0 ? 1 : 0.5 }]}
-              disabled={path.length === 0}
-              onPress={handleSaveActivity}
-            > 
-              <Text style={styles.saveButtonText}>Save</Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity style={styles.spotifyLoginButton} onPress={handleSpotifyLogin}>
+                <Text style={styles.spotifyLoginText}>Login to Spotify</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.saveButton, { opacity: path.length > 0 ? 1 : 0.5 }]}
+                disabled={path.length === 0}
+                onPress={handleSaveActivity}
+              > 
+                <Text style={styles.saveButtonText}>Save</Text>
+              </TouchableOpacity>
+            </>
           )
         }}
       />
@@ -488,11 +531,15 @@ const styles = StyleSheet.create({
   locationButtonActive: {
     backgroundColor: '#007AFF',
   },
+  spotifyLoginButton: {
+    backgroundColor: '#FEBE15',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 15,
+  },
+  spotifyLoginText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
 });
-
-const formatTime = (seconds) => {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600)/60);
-  const secs = seconds % 60;
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2,'0')}`;
-};
