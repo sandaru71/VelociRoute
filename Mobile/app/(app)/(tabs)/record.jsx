@@ -6,6 +6,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { getDistance, getPreciseDistance } from 'geolib';
 import axios from 'axios';
+import SpotifyPlayer from '../../../components/SpotifyPlayer';
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyDvP_xQ39yqaHS74Je06nasmvEQ5ctSqK4';
 
@@ -25,6 +26,7 @@ export default function Record() {
   const [currentSpeed, setCurrentSpeed] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isFollowingUser, setIsFollowingUser] = useState(true);
+  const [showSpotifyPlayer, setShowSpotifyPlayer] = useState(false);
   const mapRef = useRef(null);
 
   const getElevationData = async (latitude, longitude) => {
@@ -365,6 +367,15 @@ export default function Record() {
             />
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity 
+          style={[styles.iconButton, { position: 'absolute', bottom: 80, right: 16 }]}
+          onPress={() => setShowSpotifyPlayer(true)}
+        >
+          <Ionicons name="musical-notes" size={24} color="#fff" />
+        </TouchableOpacity>
+
+        {showSpotifyPlayer && <SpotifyPlayer />}
       </View>
     </>
   );
@@ -487,6 +498,19 @@ const styles = StyleSheet.create({
   },
   locationButtonActive: {
     backgroundColor: '#007AFF',
+  },
+  iconButton: {
+    backgroundColor: '#1DB954',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
 });
 

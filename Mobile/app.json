@@ -1,74 +1,31 @@
 {
   "expo": {
-    "name": "Mobile",
-    "slug": "Mobile",
+    "name": "VelociRoute",
+    "slug": "velociroute",
+    "owner": "sandaru71",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true,
-      "config": {
-        "googleMapsApiKey": "AIzaSyB7alGuNMvdyAk8Tb0B2jG3KjnotL4fYqo"
-      },
-      "bundleIdentifier": "com.sandaru.dev.Mobile"
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "package": "com.sandaru.dev.Mobile",
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyB7alGuNMvdyAk8Tb0B2jG3KjnotL4fYqo"
-        }
-      },
-      "permissions": [
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
-      ],
-      "networkSecurityConfig": {
-        "cleartextTrafficPermitted": true,
-        "domainConfig": [
-          {
-            "domain": "api.cloudinary.com",
-            "cleartextTrafficPermitted": true
-          },
-          {
-            "domain": "res.cloudinary.com",
-            "cleartextTrafficPermitted": true
-          }
-        ]
-      }
-    },
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
-    },
+    "scheme": "exp",
+    "userInterfaceStyle": "light",
     "plugins": [
-      "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
-        }
-      ],
-      [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "Allow Mobile to use your location."
-        }
-      ]
+      "expo-router"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.velociroute"
+    },
+    "android": {
+      "package": "com.velociroute"
     }
   }
 }
