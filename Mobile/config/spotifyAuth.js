@@ -22,7 +22,7 @@ const config = {
         'playlist-read-collaborative'
     ],
     usePKCE: true,
-    redirectUri: 'exp://10.64.231.196:8081/--/(app)/(tabs)/record'
+    redirectUri: 'exp://10.64.248.196:8081/--/(app)/(tabs)/record'
 };
 
 console.log('Generated Redirect URI:', config.redirectUri);
@@ -30,7 +30,7 @@ console.log('Full Redirect URI:', config.redirectUri);
 console.log('Development URI:', makeRedirectUri({
     scheme: 'exp',
     path: '--/(app)/(tabs)/record',
-    host: '10.64.231.196:8081'
+    host: '10.64.248.196:8081'
 }));
 
 const checkPremium = async (access_token) => {
@@ -118,6 +118,8 @@ export const useSpotifyAuth = () => {
     const [authResponse, setAuthResponse] = useState(null);
     const [isAuthReady, setIsAuthReady] = useState(false);
     const [premiumStatus, setPremiumStatus] = useState(null);
+    const [authError, setAuthError] = useState(null);
+
     const [request, response, promptAsync] = useAuthRequest(
         {
             clientId: config.clientId,
@@ -130,23 +132,34 @@ export const useSpotifyAuth = () => {
 
     useEffect(() => {
         const handleAuthResponse = async () => {
+            setAuthError(null);
+
+            if(!response) return;
+            
             console.log('Response Changed:', {
                 type: response?.type,
                 hasCode: !!response?.params?.code,
                 hasError: !!response?.error,
                 hasVerifier: !!request?.codeVerifier
             });
+
+            if (response?.type === 'dismiss' || response?.type === 'cancel') {
+                console.log('Authentication was cancelled by user');
+                setAuthResponse(null);
+                return;
+            }
     
             if(response?.type === 'success' && response.params.code){
                 console.log('Auth code received:', response.params.code);
     
                 if(!request?.codeVerifier){
-                    console.error('No code verifier found');
+                    setAuthError('No code verifier found');
                     return;
                 }
 
                 try{
                     const tokenData = await exchangeCodeForToken(response.params.code, request.codeVerifier);
+
                     console.log('Token exchange result:', {
                         success: !!tokenData,
                         hasAccessToken: !!tokenData?.access_token,
@@ -160,14 +173,20 @@ export const useSpotifyAuth = () => {
                             type: 'success',
                             params: tokenData
                         });
+                        setAuthError(null);
                     }else{
-                        console.error('Token exchange failed. No access token in response.');
+                        setAuthError('Token exchange failed. No access token in response.');
+                        setAuthResponse(null);
                     }
                 }catch (error){
-                    console.error('Error in token exchange:', error);
+                    console.log('Token exchange failed.')
+                    setAuthError('Authentication failed.');
+                    setAuthResponse(null);
                 }
             }else if (response?.type === 'error') {
-                console.error('Auth error:', response.error);
+                console.log('Authentication was not successful.')
+                setAuthError('Authentication failed.');
+                setAuthResponse(null);
             }
         };
         handleAuthResponse();
@@ -231,6 +250,7 @@ export const useSpotifyAuth = () => {
         checkPremiumStatus: checkPremiumStatusWhenReady,
         logout,
         isLoggedin: response?.type === 'success',
-        premiumStatus
+        premiumStatus,
+        authError
     };
 };

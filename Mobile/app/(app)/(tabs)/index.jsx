@@ -20,7 +20,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import MapView, { Polyline, Marker } from 'react-native-maps';
 
-const LOCAL_IP = '10.64.231.196'; 
+const LOCAL_IP = '10.64.248.196'; 
 
 const API_BASE_URL = Platform.select({
   android: __DEV__ ? `http://${LOCAL_IP}:3000/api` : 'https://your-production-api.com/api',

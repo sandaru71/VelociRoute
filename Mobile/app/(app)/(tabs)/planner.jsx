@@ -11,16 +11,18 @@ import {
   ScrollView, 
   Animated, 
   ActivityIndicator,
-  PanResponder 
+  PanResponder,
+  Image
 } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
 import { Stack, useRouter } from 'expo-router';
-import MapView, { PROVIDER_GOOGLE, Marker, Polyline } from 'react-native-maps';
+import MapView, { PROVIDER_GOOGLE, Marker, Polyline, Callout } from 'react-native-maps';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import * as Location from 'expo-location';
 import { MaterialIcons, FontAwesome5, Feather } from '@expo/vector-icons';
 import polyline from '@mapbox/polyline';
 import config from '../../../config';
+import { getPreciseDistance } from 'geolib';
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyDvP_xQ39yqaHS74Je06nasmvEQ5ctSqK4';
 
@@ -55,8 +57,11 @@ const Planner = () => {
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const lastGestureDy = useRef(0);
   const mapRef = useRef(null);
+  const [scenicPlaces, setScenicPlaces] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showScenicPlaces, setShowScenicPlaces] = useState(false);
 
-  const panResponder = useRef(
+  const panResponder = useRef( 
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
@@ -288,9 +293,95 @@ const Planner = () => {
       // Calculate elevation gain after getting route
       const elevationResult = await calculateElevationGain(coordinates);
       setElevationData({ totalGain: elevationResult.totalGain, profile: elevationResult.profile });
+
+      //Find scenic places along the route.
+      await findScenicPlaces(coordinates);
+
+      setIsLoading(false);
     } catch (error) {
       console.error('Error fetching directions:', error);
       Alert.alert('Error', 'Failed to process route request');
+      setIsLoading(false);
+    }
+  };
+
+  const findScenicPlaces = async (routeCoordinates) => {
+    try{
+      console.log('Starting scenic places search...');
+      const placeTypes = ['tourist_attraction', 'park', 'natural_feature', 'campground', 'museum', 'zoo', 'amusement_park', 'art_gallery'];
+      
+      const sampledPoints = [];
+      const SAMPLING_INTERVAL = 2000;
+      let accumulatedDistance = 0;
+
+      for (let i = 0; i < routeCoordinates.length - 1; i++) {
+        const start = routeCoordinates[i];
+        const end = routeCoordinates[i + 1];
+
+        const segmentDistance = getPreciseDistance(
+          {latitude: start.latitude, longitude: start.longitude},
+          {latitude: end.latitude, longitude: end.longitude}
+        );
+
+        if (accumulatedDistance >= sampledPoints.length * SAMPLING_INTERVAL) {
+          sampledPoints.push(start);
+        }
+
+        accumulatedDistance += segmentDistance;
+      }
+
+      const lastPoint = routeCoordinates[routeCoordinates.length - 1];
+      if(sampledPoints.length === 0 || 
+        getPreciseDistance(sampledPoints[sampledPoints.length - 1], lastPoint) > SAMPLING_INTERVAL) {
+          sampledPoints.push(lastPoint);
+      }
+
+      console.log('Sampling points for places search: ', sampledPoints);
+
+      const foundPlaces = new Map();
+      
+      await Promise.all(sampledPoints.map(async (point) => {
+        try{
+          const response = await fetch(
+            `https://maps.googleapis.com/maps/api/place/nearbysearch/json?` +
+            `location=${point.latitude},${point.longitude}&` +
+            `radius=1500&` +
+            `type=${placeTypes.join('|')}&` +
+            `key=${GOOGLE_MAPS_API_KEY}`
+          );
+
+          const data = await response.json();
+
+          if(data.status === 'OK') {
+            data.results.forEach(place => {
+              if (!foundPlaces.has(place.place_id)) {
+                const photoReference = place.photos && place.photos[0] ? 
+                `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${GOOGLE_MAPS_API_KEY}` : 
+                null;
+
+                foundPlaces.set(place.place_id, {
+                  id: place.place_id,
+                  name: place.name,
+                  location: {
+                    latitude: place.geometry.location.lat,
+                    longitude: place.geometry.location.lng
+                  },
+                  types: place.types,
+                  photoUrl: photoReference
+                });
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching places:', error);
+        }
+      }));
+
+      const uniquePlaces = Array.from(foundPlaces.values());
+      console.log('Found Scenic Places:', uniquePlaces);
+      setScenicPlaces(uniquePlaces);
+    } catch (error) {
+      console.error('Error finding scenic places:', error);
     }
   };
 
@@ -805,6 +896,7 @@ const Planner = () => {
             coordinate={startLocation}
             pinColor="green"
             title="Start"
+            zIndex={3}
           />
         )}
         {endLocation && (
@@ -812,8 +904,25 @@ const Planner = () => {
             coordinate={endLocation}
             pinColor="red"
             title="End"
+            zIndex={3}
           />
         )}
+        {showScenicPlaces && scenicPlaces.map((place) => (
+          <Marker
+            key={place.id}
+            coordinate={place.location}
+            title={place.name || 'Unknown Place'}
+            pinColor='#192a56'
+            zIndex={1}
+          >
+            <View>
+              {place.photoUrl ? (
+                <Image source={{ uri: place.photoUrl }} style={styles.placeImage} />
+              ) : (null)}
+            </View>
+          </Marker>
+        ))}
+
         {waypoints.map((waypoint, index) => 
           waypoint.location && (
             <Marker
@@ -821,6 +930,7 @@ const Planner = () => {
               coordinate={waypoint.location}
               pinColor="blue"
               title={`Waypoint ${index + 1}`}
+              zIndex={3}
             />
           )
         )}
@@ -1042,6 +1152,7 @@ const Planner = () => {
             ))}
 
             <View style={styles.headerButtons}>
+              {/* Add Waypoint button */}
               <TouchableOpacity 
                 style={styles.addWaypointButton} 
                 onPress={addWaypoint}
@@ -1050,22 +1161,37 @@ const Planner = () => {
                 <Text style={styles.addWaypointText}>Add waypoint</Text>
               </TouchableOpacity>
 
-              {/* Toggle Details Button */}
-              {routeCoordinates.length > 0 && (
-                <TouchableOpacity 
-                  style={[styles.toggleDetailsButton, modalVisible && styles.toggleDetailsButtonActive]} 
-                  onPress={() => modalVisible ? minimizeModal() : showRouteDetails()}
-                >
-                  <MaterialIcons 
-                    name={modalVisible ? "expand-more" : "expand-less"} 
-                    size={24} 
-                    color="black" 
-                  />
-                  <Text style={styles.toggleDetailsText}>
-                    {modalVisible ? "Hide Details" : "Show Details"}
-                  </Text>
-                </TouchableOpacity>
-              )}
+              <View>
+                {/* Toggle Details Button */}
+                {routeCoordinates.length > 0 && (
+                  <TouchableOpacity 
+                    style={[styles.toggleDetailsButton, modalVisible && styles.toggleDetailsButtonActive]} 
+                    onPress={() => modalVisible ? minimizeModal() : showRouteDetails()}
+                  >
+                    <MaterialIcons 
+                      name={modalVisible ? "expand-more" : "expand-less"} 
+                      size={24} 
+                      color="black" 
+                    />
+                    <Text style={styles.toggleDetailsText}>
+                      {modalVisible ? "Hide Details" : "Show Details"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Show Scenic places button */}
+                {routeCoordinates.length > 0 && (
+                  <TouchableOpacity 
+                    style={[styles.toggleDetailsButton, {marginTop: 10}]}
+                    onPress={() => setShowScenicPlaces(!showScenicPlaces)}
+                  >
+                    <MaterialIcons name="place" size={24} color="black" /> 
+                    <Text style={styles.toggleDetailsText}>
+                      Scenic Places
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           </View>
         )}
@@ -1391,6 +1517,30 @@ const styles = StyleSheet.create({
   },
   analyzeButtonDisabled: {
     backgroundColor: '#FEBE15',
+  },
+  placeImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#FEBE15',
+    backgroundColor: 'white',
+  },
+  scenicPlacesButton: {
+    position: 'absolute',
+    top: 60,
+    right: 5,
+    backgroundColor: '#FEBE15',
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 20,
+  },
+  scenicPlacesButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 5,
   },
 });
 

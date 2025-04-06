@@ -16,7 +16,7 @@ export default function Record() {
   const [paused, setPaused] = useState(true);
   const [intervalId, setIntervalId] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
-  const {request, response, promptAsync, checkPremiumStatus, logout, isLoggedin, premiumStatus} = useSpotifyAuth();
+  const {response, promptAsync, checkPremiumStatus, logout, premiumStatus, authError} = useSpotifyAuth();
   const [errorMsg, setErrorMsg] = useState("");
   const [path, setPath] = useState([]);
   const [locationSubscription, setLocationSubscription] = useState(null);
@@ -42,6 +42,7 @@ export default function Record() {
   const [showDeviceAlert, setShowDeviceAlert] = useState(false);
   const [trackName, setTrackName] = useState([]);
   const [currentTrackName, setCurrentTrackName] = useState('');
+  const [showLoginRetryModal, setShowLoginRetryModal] = useState(false);
 
   const getElevationData = async (latitude, longitude) => {
     try {
@@ -331,6 +332,25 @@ export default function Record() {
     )
   }
 
+  const LoginRetryModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={showLoginRetryModal}
+      onRequestClose={() => setShowLoginRetryModal(false)}
+    >
+      <View style={styles.retryModalContainer}>
+        <View style={[styles.retryModalContent, {padding: 20}]}>
+          <Text style={styles.retryModalTitle}>Login Failed</Text>
+          <Text style={styles.retryModalText}>Unable to login to Spotify. Please try again.</Text>
+          <TouchableOpacity style={styles.retryModalCloseButton} onPress={() => setShowLoginRetryModal(false)}>
+            <Text style={styles.retryModalCloseButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  )
+
   useEffect(() => {
     if (response?.params?.access_token) {
       setAccessToken(response.params.access_token);
@@ -372,30 +392,46 @@ export default function Record() {
     }
   }, [premiumStatus]);
 
+  useEffect(() => {
+    if (authError && !['dismiss', 'cancel'].includes(response?.type)) {
+      setShowLoginRetryModal(true);
+    }
+  }, [authError, response?.type]);
+
   const handleSpotifyLogin = async () => {
     try{
+      setErrorMsg("");
+      setShowLoginRetryModal(false);
+
       console.log('Starting Spotify login...');
       const result = await promptAsync();
+
       console.log('Login result:', {
         type: result?.type,
         hasCode: !!result?.params?.code,
         error: result?.error
       });
 
-      if(result.type !== 'success'){
-        console.error('Login failed:', result.error);
+      if (result?.type === 'dismiss' || result?.type === 'cancel') {
+        console.log('Login attempt was cancelled by user');
+        return;
+      }
+
+      if(result?.type !== 'success'){
         setErrorMsg('Failed to login to Spotify');
+        setShowLoginRetryModal(true);
       }
     } catch (error) {
-      console.error('Error logging in to Spotify:', error);
+      console.log('Login Attempt Failed.')
       setErrorMsg('Failed to login to Spotify');
+      setShowLoginRetryModal(true);
     }
   };
 
   const handleSpotifyLogout = async () => {
     try {
       console.log('Logging out of Spotify...');
-      //if any music is playing, pauses the music first.
+      //if any music is playing, pauses the music before logging out.
       if (isPlaying) {
         try{
         await pauseSong();
@@ -423,6 +459,29 @@ export default function Record() {
     }
   };
 
+  const checkPlaybackState = async () => {
+    if (!accessToken || !isPremium) return null;
+
+    try {
+      const response = await fetch('https://api.spotify.com/v1/me/player', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+
+      if(!response.ok){
+        console.error('Error checking playback state', response.status);
+        return null;
+      }
+
+      const data = await response.json();
+      return data?.is_playing ?? null;
+    } catch (error){
+      console.error('Error checking playback state:', error);
+      return null;
+    }
+  };
+
   const playSong = async () => {
     if (!accessToken) {
       setErrorMsg('Please Login to Spotify.');
@@ -441,6 +500,13 @@ export default function Record() {
     }
 
     try{
+      const isCurrentlyPlaying = await checkPlaybackState();
+      if(isCurrentlyPlaying === true){
+        console.log('Music is already playing.');
+        setIsPlaying(true);
+        return;
+      }
+      
       const device = await getActiveDevice();
       if(!device){
         return;
@@ -506,7 +572,14 @@ export default function Record() {
   const pauseSong = async () => {
     if(!accessToken || !isPremium) return;
 
-    try{
+    try {
+      const isCurrentlyPlaying = await checkPlaybackState();
+      if (isCurrentlyPlaying === false){
+        console.log('Music is already paused.');
+        setIsPlaying(false);
+        return;
+      }
+
       const response = await fetch('https://api.spotify.com/v1/me/player/pause', {
         method: 'PUT',
         headers: {
@@ -530,6 +603,13 @@ export default function Record() {
     if(!accessToken || !isPremium) return;
 
     try{
+      const isCurrentlyPlaying = await checkPlaybackState();
+      if (isCurrentlyPlaying === true){
+        console.log('Music is already playing.');
+        setIsPlaying(true);
+        return;
+      }
+
       const device = await getActiveDevice();
       if(!device) return;
 
@@ -840,6 +920,8 @@ export default function Record() {
           isLoading={isLoadingPlaylists}
         />
       </View>
+
+      <LoginRetryModal />
     </>
   );
 }
@@ -906,7 +988,7 @@ const styles = StyleSheet.create({
   },
   controlsContainer: {
     position: 'absolute',
-    bottom: 65,
+    bottom: 70,
     left: 0,
     right: 0,
     flexDirection: 'row',
@@ -1107,4 +1189,45 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
+  retryModalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  retryModalContent: {
+    position: 'relative',
+    width: '90%',
+    maxHeight: '80%',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+  },
+  retryModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    marginTop: 5,
+  },
+  retryModalText: {
+    fontSize: 17,
+    marginBottom: 60,
+    color: '#333',
+  },
+  retryModalCloseButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: 'black',
+    padding: 10,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '25%',
+  },
+  retryModalCloseButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  }
 });
