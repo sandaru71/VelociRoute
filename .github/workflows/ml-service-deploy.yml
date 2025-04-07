@@ -94,16 +94,29 @@ jobs:
           EOL
 
           # Stop and remove existing containers if any
+          echo "Stopping existing containers..."
           docker-compose -f ~/velociroute/ml-service/deploy/docker-compose.yml down || true
           
           # Pull and start the ML service
           cd ~/velociroute/ml-service/deploy
+          echo "Pulling latest image..."
           docker-compose pull
+          echo "Starting service..."
           docker-compose up -d
 
+          # Show initial container status
+          echo "Initial container status:"
+          docker ps -a | grep ml-service
+          
           # Wait for service to be healthy
           echo "Waiting for ML service to be healthy..."
           for i in {1..30}; do
+            echo "Attempt $i/30: Checking container logs..."
+            docker-compose logs ml-service
+            
+            echo "Attempt $i/30: Checking container status..."
+            docker ps -a | grep ml-service
+            
             if curl -f http://localhost:8000/health; then
               echo "ML service is healthy"
               exit 0
@@ -112,7 +125,12 @@ jobs:
             sleep 10
           done
           
-          # If we get here, show docker logs for debugging
+          # If we get here, show final debugging information
+          echo "ML service failed to become healthy. Final debugging information:"
+          echo "1. Container status:"
+          docker ps -a | grep ml-service
+          echo "2. Container logs:"
           docker-compose logs ml-service
-          echo "ML service failed to become healthy"
+          echo "3. Resource usage:"
+          docker stats ml-service --no-stream
           exit 1

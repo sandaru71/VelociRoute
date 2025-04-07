@@ -19,5 +19,9 @@ COPY . .
 # Expose the port the app runs on
 EXPOSE 8000
 
+# Add debug script
+RUN echo '#!/bin/bash\nls -la\necho "Starting main.py..."\npython main.py' > /app/start.sh && \
+    chmod +x /app/start.sh
+
 # Command to run the application
-CMD ["python", "app.py"]
+CMD ["/app/start.sh"]
