@@ -1,8 +1,8 @@
-version: '3.8'
+version: "3.8"
 
 services:
   ml-service:
-    image: sandaru71/velociroute-ml-service:latest
+    image: velociroute-ml-service:test
     container_name: velociroute-ml-service
     ports:
       - "8000:8000"
@@ -12,21 +12,8 @@ services:
       - HOST=0.0.0.0
       - PORT=8000
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 1G
     networks:
       - velociroute-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
 networks:
   velociroute-network:

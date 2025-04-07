@@ -9,14 +9,15 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first to leverage Docker cache
-COPY requirements.txt .
+# Install aiohttp first
+RUN pip install --no-cache-dir aiohttp==3.9.0
 
-# Install Python dependencies with pip upgrade
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir aiohttp==3.9.0 && \
-    pip install --no-cache-dir -r requirements.txt && \
-    pip list | grep aiohttp
+# Copy requirements and install other dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Verify installations
+RUN pip list
 
 # Copy the rest of the application
 COPY . .
@@ -24,9 +25,5 @@ COPY . .
 # Expose the port the app runs on
 EXPOSE 8000
 
-# Add debug script
-RUN echo '#!/bin/bash\necho "Python packages installed:"\npip list\necho "\nChecking aiohttp:"\npip show aiohttp\necho "\nStarting main.py..."\npython main.py' > /app/start.sh && \
-    chmod +x /app/start.sh
-
 # Command to run the application
-CMD ["/app/start.sh"]
+CMD ["python", "main.py"]
