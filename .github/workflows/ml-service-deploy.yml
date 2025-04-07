@@ -2,11 +2,11 @@ name: Deploy ML Service to EC2
 
 on:
   push:
-    branches: [ before-image-processing-model, setting-up-an-EC2-Instance ]
+    branches: [ main ]
     paths:
       - 'ml-service/**'
   pull_request:
-    branches: [ before-image-processing-model, setting-up-an-EC2-Instance ]
+    branches: [ main ]
     paths:
       - 'ml-service/**'
 
@@ -72,14 +72,41 @@ jobs:
                 - HOST=0.0.0.0
                 - PORT=8000
               restart: unless-stopped
+              deploy:
+                resources:
+                  limits:
+                    cpus: '1'
+                    memory: 2G
+                  reservations:
+                    cpus: '0.5'
+                    memory: 1G
+              networks:
+                - velociroute-network
               healthcheck:
                 test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
                 interval: 30s
                 timeout: 10s
                 retries: 3
+
+          networks:
+            velociroute-network:
+              external: true
           EOL
 
           # Pull and start the ML service
           cd ~/velociroute/ml-service/deploy
           docker-compose pull
           docker-compose up -d
+
+          # Wait for service to be healthy
+          echo "Waiting for ML service to be healthy..."
+          for i in {1..30}; do
+            if curl -f http://localhost:8000/health; then
+              echo "ML service is healthy"
+              exit 0
+            fi
+            echo "Waiting for ML service to be ready... attempt $i/30"
+            sleep 10
+          done
+          echo "ML service failed to become healthy"
+          exit 1
