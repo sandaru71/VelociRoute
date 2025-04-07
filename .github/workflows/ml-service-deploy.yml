@@ -51,7 +51,7 @@ jobs:
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USERNAME }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           # Create directories if they don't exist
           mkdir -p ~/velociroute/ml-service/deploy
