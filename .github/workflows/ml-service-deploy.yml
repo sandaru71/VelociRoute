@@ -2,11 +2,11 @@ name: Deploy ML Service to EC2
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, before-image-processing-model, setting-up-an-EC2-Instance, ml-service-deploy ]
     paths:
       - 'ml-service/**'
   pull_request:
-    branches: [ main ]
+    branches: [ main, before-image-processing-model, setting-up-an-EC2-Instance, ml-service-deploy ]
     paths:
       - 'ml-service/**'
 
