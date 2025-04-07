@@ -7,6 +7,7 @@ This service provides road condition analysis using ResNet50 model for the Veloc
 - Image analysis endpoints
 - Health monitoring
 - Docker containerization
+- Automatic deployment
 
 ## Setup
 1. Install dependencies: `pip install -r requirements.txt`
