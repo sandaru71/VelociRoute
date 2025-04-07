@@ -34,6 +34,7 @@
     "dotenv": "^16.4.7",
     "expo": "~52.0.28",
     "expo-auth-session": "^6.0.3",
+    "expo-av": "^15.0.2",
     "expo-blur": "~14.0.3",
     "expo-constants": "~17.0.5",
     "expo-file-system": "~18.0.11",
@@ -73,6 +74,7 @@
     "react-native-web": "~0.19.13",
     "react-native-webview": "13.12.5",
     "react-native-xml2js": "^1.0.3",
+    "string_decoder": "^1.3.0",
     "togpx": "^0.5.4",
     "xml2js": "^0.6.2"
   },

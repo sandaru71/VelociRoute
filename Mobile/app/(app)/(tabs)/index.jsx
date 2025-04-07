@@ -23,7 +23,7 @@ import MapView, { Polyline, Marker } from 'react-native-maps';
 const LOCAL_IP = '10.235.240.196'; 
 
 const API_BASE_URL = Platform.select({
-  android: __DEV__ ? `http://${LOCAL_IP}:3000/api` : 'https://your-production-api.com/api',
+  android: __DEV__ ? `http://10.0.2.2:3000/api` : 'https://your-production-api.com/api',
   ios: __DEV__ ? `http://${LOCAL_IP}:3000/api` : 'https://your-production-api.com/api',
   default: __DEV__ ? 'http://10.235.240.196:3000/api' : 'https://your-production-api.com/api'
 });

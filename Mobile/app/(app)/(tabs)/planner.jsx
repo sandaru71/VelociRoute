@@ -10,8 +10,8 @@ import {
   Alert, 
   ScrollView, 
   Animated, 
-  ActivityIndicator,
-  PanResponder 
+  PanResponder,
+  ActivityIndicator 
 } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
 import { Stack, useRouter } from 'expo-router';
@@ -36,9 +36,12 @@ const MINIMIZED_HEIGHT = 80;
 const HALF_HEIGHT = SCREEN_HEIGHT * 0.5;
 const FULL_HEIGHT = SCREEN_HEIGHT * 0.9;
 
+const API_BASE_URL = 'http://192.168.18.32:5000';
+
 const Planner = () => {
   const router = useRouter();
-  const [currentLocation, setCurrentLocation] = useState(null);
+  // Set currentLocation to Colombo's coordinates by default
+  const [currentLocation, setCurrentLocation] = useState(DEFAULT_LOCATION);
   const [startLocation, setStartLocation] = useState(null);
   const [endLocation, setEndLocation] = useState(null);
   const [waypoints, setWaypoints] = useState([]);
@@ -89,7 +92,7 @@ const Planner = () => {
 
         lastGestureDy.current = snapPoint;
         setIsScrollEnabled(snapPoint === SCREEN_HEIGHT - FULL_HEIGHT);
-        setModalVisible(true); 
+        setModalVisible(true); // Keep modal visible even when minimized
 
         Animated.spring(translateY, {
           toValue: snapPoint,
@@ -224,10 +227,7 @@ const Planner = () => {
         }
 
         // Store elevation profile data
-        const elevationProfile = data.results.map((point, index) => ({
-          elevation: point.elevation,
-          distance: index * (coordinates.length / data.results.length)
-        }));
+        const elevationProfile = data.results.map(point => point.elevation);
         setElevationData({ totalGain: Math.round(totalGain), profile: elevationProfile });
         return { totalGain: Math.round(totalGain), profile: elevationProfile };
       }
@@ -305,7 +305,6 @@ const Planner = () => {
   };
 
   const minimizeModal = () => {
-    setModalVisible(false);
     lastGestureDy.current = SCREEN_HEIGHT - MINIMIZED_HEIGHT;
     Animated.spring(translateY, {
       toValue: SCREEN_HEIGHT - MINIMIZED_HEIGHT,
@@ -318,7 +317,7 @@ const Planner = () => {
     if (routeDetails) {
       showRouteDetails();
     }
-  }, [routeDetails, waypoints]); // Added waypoints dependency
+  }, [routeDetails, waypoints]);
 
   const calculateAverageSpeed = (activity) => {
     return activity === 'cycling' ? 15 : 5; // 15 km/h for cycling, 5 km/h for walking
@@ -328,11 +327,10 @@ const Planner = () => {
     const distanceInKm = distanceInMeters / 1000;
     let speedKmH;
     
-    // Average speeds
     if (activity === 'cycling') {
-      speedKmH = 15; // Average cycling speed
+      speedKmH = 15;
     } else {
-      speedKmH = 5; // Average walking speed
+      speedKmH = 5;
     }
 
     const hours = distanceInKm / speedKmH;
@@ -351,7 +349,6 @@ const Planner = () => {
   const RouteDetailsModal = () => {
     if (!routeDetails || !routeDetails.legs) return null;
 
-    // Calculate total distance and duration across all legs
     const totalDistance = {
       text: routeDetails.legs.reduce((total, leg) => total + leg.distance.value, 0),
       value: routeDetails.legs.reduce((total, leg) => total + leg.distance.value, 0)
@@ -386,11 +383,11 @@ const Planner = () => {
           </View>
           <View style={styles.minimizedMetrics}>
             <View style={styles.routeMetric}>
-              <MaterialIcons name="directions" size={20} color="black" />
+              <MaterialIcons name="directions" size={20} color="#4A90E2" />
               <Text style={styles.minimizedText}>{totalDistance.text}</Text>
             </View>
             <View style={styles.routeMetric}>
-              <MaterialIcons name="timer" size={20} color="black" />
+              <MaterialIcons name="timer" size={20} color="#4A90E2" />
               <Text style={styles.minimizedText}>{activityDuration}</Text>
             </View>
           </View>
@@ -403,36 +400,32 @@ const Planner = () => {
           showsVerticalScrollIndicator={true}
         >
           <View style={styles.routeSummary}>
-            {/* Distance */}
             <View style={styles.routeMetricExpanded}>
-              <MaterialIcons name="directions" size={24} color="black" />
+              <MaterialIcons name="directions" size={24} color="#4A90E2" />
               <View style={styles.metricTextContainer}>
                 <Text style={styles.metricLabel}>Distance</Text>
                 <Text style={styles.metricValue}>{totalDistance.text}</Text>
               </View>
             </View>
 
-            {/* Duration */}
             <View style={styles.routeMetricExpanded}>
-              <MaterialIcons name="timer" size={24} color="black" />
+              <MaterialIcons name="timer" size={24} color="#4A90E2" />
               <View style={styles.metricTextContainer}>
                 <Text style={styles.metricLabel}>Est. Time</Text>
                 <Text style={styles.metricValue}>{activityDuration}</Text>
               </View>
             </View>
 
-            {/* Average Speed */}
             <View style={styles.routeMetricExpanded}>
-              <MaterialIcons name="speed" size={24} color="black" />
+              <MaterialIcons name="speed" size={24} color="#4A90E2" />
               <View style={styles.metricTextContainer}>
                 <Text style={styles.metricLabel}>Avg Speed</Text>
                 <Text style={styles.metricValue}>{averageSpeed} km/h</Text>
               </View>
             </View>
 
-            {/* Elevation Gain */}
             <View style={styles.routeMetricExpanded}>
-              <MaterialIcons name="terrain" size={24} color="black" />
+              <MaterialIcons name="terrain" size={24} color="#4A90E2" />
               <View style={styles.metricTextContainer}>
                 <Text style={styles.metricLabel}>Elevation Gain</Text>
                 <Text style={styles.metricValue}>{elevationData.totalGain} m</Text>
@@ -448,7 +441,7 @@ const Planner = () => {
                 <MaterialIcons 
                   name={getDirectionIcon(step.maneuver)} 
                   size={20} 
-                  color="black" 
+                  color="#4A90E2" 
                 />
               </View>
               <View style={styles.stepTextContainer}>
@@ -521,7 +514,7 @@ const Planner = () => {
     console.log('analyzeRoadConditions function called. Starting analysis...');
 
     if (!routeCoordinates.length) {
-      console.log('No route coordinates found.')
+      console.log('No route coordinates found.');
       Alert.alert(
         "No Route Selected",
         "Please set a route before analyzing road conditions."
@@ -530,7 +523,7 @@ const Planner = () => {
     }
 
     if (!routeDetails) {
-      console.log('No route details found.')
+      console.log('No route details found.');
       Alert.alert(
         "No Route Details",
         "Please set a route before analyzing road conditions."
@@ -564,7 +557,7 @@ const Planner = () => {
         distanceKm: 0
       });
 
-      for (let i=1; i < routeCoordinates.length; i++) {
+      for (let i = 1; i < routeCoordinates.length; i++) {
         const coord = routeCoordinates[i];
         const segmentDistance = calculateHaversineDistance(
           prevCoord.latitude,
@@ -594,7 +587,7 @@ const Planner = () => {
       const lastPoint = routeCoordinates[routeCoordinates.length - 1];
       if (totalDistanceKm - currentKilometer > 0.1) {
         selectedCoords.push({
-          coord: lastPoint, 
+          coord: lastPoint,
           distanceKm: totalDistanceKm
         });
       }
@@ -676,7 +669,7 @@ const Planner = () => {
         }
 
         const formattedConditions = Object.entries(analysis.condition_summary)
-          .sort(([, a], [, b]) => b - a)  // Sort by percentage in descending order
+          .sort(([, a], [, b]) => b - a)
           .map(([condition, percentage]) => {
             const formattedCondition = condition
               .split('_')
@@ -705,7 +698,7 @@ const Planner = () => {
       console.error('Error in analyzeRoadConditions:', error);
       Alert.alert(
         "Road Analysis Failed",
-        `Unable to analyze road conditions: ${error.message}. Please try again later.`,
+        "Unable to analyze road conditions. Please try again later.",
         [{ text: "OK" }]
       );
       setIsAnalyzingRoad(false);
@@ -717,11 +710,11 @@ const Planner = () => {
     const dLat = (lat2 - lat1) * (Math.PI / 180);
     const dLon = (lon2 - lon1) * (Math.PI / 180);
     const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return R * c;
-  }
+  };
 
   const renderRoadConditions = () => {
     if (!routeConditions) return null;
@@ -768,14 +761,6 @@ const Planner = () => {
     );
   };
 
-  if (!currentLocation) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text>Loading map...</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <Stack.Screen
@@ -789,7 +774,7 @@ const Planner = () => {
         ref={mapRef}
         style={styles.map}
         provider={PROVIDER_GOOGLE}
-        initialRegion={currentLocation || DEFAULT_LOCATION}
+        initialRegion={currentLocation}
         showsUserLocation={true}
         showsMyLocationButton={false}
       >
@@ -826,17 +811,6 @@ const Planner = () => {
         )}
       </MapView>
 
-      {routeCoordinates.length > 0 && !modalVisible && (
-        <TouchableOpacity
-          style={styles.showDetailsButton}
-          onPress={showRouteDetails}
-        >
-          <MaterialIcons name="directions" size={24} color="#FEBE15" />
-          <Text style={styles.showDetailsButtonText}>Show Details</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Save Button */}
       <TouchableOpacity 
         style={styles.saveButton}
         onPress={() => {
@@ -845,7 +819,6 @@ const Planner = () => {
             return;
           }
           
-          // Pass route data to the route screen
           router.push({
             pathname: '../../../route',
             params: {
@@ -853,39 +826,18 @@ const Planner = () => {
               routeDetails: JSON.stringify(routeDetails),
               elevationProfile: JSON.stringify(elevationData.profile || []),
               elevationGain: elevationData.totalGain || 0,
-              selectedActivity: selectedActivity
+              selectedActivity: selectedActivity,
+              routeConditions: routeConditions ? JSON.stringify(routeConditions) : null
             }
           });
         }}
       >
         <View style={styles.saveButtonContent}>
           <Text style={styles.saveButtonText}>Save</Text>
-          <Feather name="arrow-right-circle" size={20} color="black" />
+          <Feather name="arrow-right-circle" size={20} color="#FFF" />
         </View>
       </TouchableOpacity>
 
-      {/* Analyze Road Button */}
-      {routeCoordinates.length > 0 && (
-        <TouchableOpacity
-          style={[
-            styles.analyzeButton,
-            isAnalyzingRoad && styles.analyzeButtonDisabled
-          ]}
-          onPress={analyzeRoadConditions}
-          disabled={isAnalyzingRoad}
-        >
-          {isAnalyzingRoad ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <View style={styles.analyzeButtonContent}>
-              <MaterialIcons name="analytics" size={24} color="black" style={{ marginRight: 8 }} />
-              <Text style={styles.analyzeButtonText}>Analyze Road</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      )}
-
-      {/* Zoom Controls */}
       <View style={styles.zoomControls}>
         <TouchableOpacity 
           style={styles.zoomButton} 
@@ -1041,36 +993,61 @@ const Planner = () => {
               </View>
             ))}
 
-            <View style={styles.headerButtons}>
-              <TouchableOpacity 
-                style={styles.addWaypointButton} 
-                onPress={addWaypoint}
-              >
-                <MaterialIcons name="add-location" size={28} color="#FEBE15" />
-                <Text style={styles.addWaypointText}>Add waypoint</Text>
-              </TouchableOpacity>
-
-              {/* Toggle Details Button */}
-              {routeCoordinates.length > 0 && (
-                <TouchableOpacity 
-                  style={[styles.toggleDetailsButton, modalVisible && styles.toggleDetailsButtonActive]} 
-                  onPress={() => modalVisible ? minimizeModal() : showRouteDetails()}
-                >
-                  <MaterialIcons 
-                    name={modalVisible ? "expand-more" : "expand-less"} 
-                    size={24} 
-                    color="black" 
-                  />
-                  <Text style={styles.toggleDetailsText}>
-                    {modalVisible ? "Hide Details" : "Show Details"}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
+            <TouchableOpacity style={styles.addWaypointButton} onPress={addWaypoint}>
+              <MaterialIcons name="add-circle" size={24} color="#059669" />
+              <Text style={styles.addWaypointText}>Add waypoint</Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
-      {modalVisible && <RouteDetailsModal />}
+
+      {routeCoordinates.length > 0 && (
+        <TouchableOpacity
+          style={[
+            styles.analyzeButton,
+            isAnalyzingRoad && styles.analyzeButtonDisabled
+          ]}
+          onPress={analyzeRoadConditions}
+          disabled={isAnalyzingRoad}
+        >
+          {isAnalyzingRoad ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <MaterialIcons name="analytics" size={24} color="#fff" />
+              <Text style={styles.analyzeButtonText}>Analyze Road</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
+      {modalVisible && (
+        <Animated.View
+          style={[
+            styles.bottomSheet,
+            {
+              transform: [{ translateY }],
+            },
+          ]}
+          {...panResponder.panHandlers}
+        >
+          <View style={styles.bottomSheetHeader}>
+            <View style={styles.bottomSheetHandle} />
+          </View>
+          
+          <ScrollView
+            style={styles.bottomSheetContent}
+            scrollEnabled={isScrollEnabled}
+            showsVerticalScrollIndicator={false}
+          >
+            {routeDetails && (
+              <>
+                <RouteDetailsModal />
+                {renderRoadConditions()}
+              </>
+            )}
+          </ScrollView>
+        </Animated.View>
+      )}
     </View>
   );
 };
@@ -1142,32 +1119,14 @@ const styles = StyleSheet.create({
   addWaypointButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 8,
+    justifyContent: 'center',
+    marginTop: 10,
+    padding: 10,
   },
-  toggleDetailsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#FEBE15',
-  },
-  toggleDetailsButtonActive: {
-    backgroundColor: '#FEBE15',
-  },
-  toggleDetailsText: {
-    marginLeft: 4,
-    color: 'black',
-    fontWeight: '600',
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  addWaypointText: {
+    marginLeft: 5,
+    color: '#059669',
+    fontSize: 16,
   },
   errorContainer: {
     position: 'absolute',
@@ -1342,7 +1301,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     bottom: 120,
-    backgroundColor: '#FEBE15',
+    backgroundColor: '#4A90E2',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 25,
@@ -1359,38 +1318,83 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   saveButtonText: {
-    color: 'black',
+    color: '#FFF',
     fontSize: 16,
     fontWeight: '600',
     marginRight: 4,
   },
   analyzeButton: {
     position: 'absolute',
-    right: 20,
+    right: 16,
     bottom: 180,
-    backgroundColor: '#FEBE15',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-    elevation: 5,
+    backgroundColor: '#4CAF50',
+    borderRadius: 8,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-  },
-  analyzeButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  analyzeButtonText: {
-    color: 'black',
-    fontSize: 16,
-    fontWeight: '600',
-    marginRight: 4,
+    elevation: 5,
   },
   analyzeButtonDisabled: {
-    backgroundColor: '#FEBE15',
+    opacity: 0.7,
+  },
+  analyzeButtonText: {
+    color: '#fff',
+    marginLeft: 8,
+    fontWeight: '600',
+  },
+  roadConditionsContainer: {
+    padding: 16,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: '#333',
+  },
+  conditionSummaryContainer: {
+    backgroundColor: 'white',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  conditionSummaryText: {
+    fontSize: 16,
+    marginVertical: 4,
+    color: '#333',
+    fontWeight: '500',
+  },
+  conditionPoint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  kilometerText: {
+    width: 60,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+  },
+  conditionDetails: {
+    flex: 1,
+  },
+  conditionText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  unavailableText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
   },
 });
 

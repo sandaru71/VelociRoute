@@ -1,31 +1,61 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import { getDistance, getPreciseDistance } from 'geolib';
+import { getDistance } from 'geolib';
 import axios from 'axios';
+import { Audio } from 'expo-av';
+// Adjust the import path below if needed based on your project folder structure.
+import songFile from '../../../assets/music/song.mp3';
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyDvP_xQ39yqaHS74Je06nasmvEQ5ctSqK4';
+
+// Default location: Colombo, Sri Lanka
+const DEFAULT_LOCATION = {
+  latitude: 6.9271,
+  longitude: 79.8612,
+};
 
 export default function Record() {
   const [time, setTime] = useState(0);
   const [paused, setPaused] = useState(true);
   const [intervalId, setIntervalId] = useState(null);
-  const [currentLocation, setCurrentLocation] = useState(null);
+  const [currentLocation, setCurrentLocation] = useState(DEFAULT_LOCATION);
   const [errorMsg, setErrorMsg] = useState("");
   const [path, setPath] = useState([]);
   const [locationSubscription, setLocationSubscription] = useState(null);
-  const router = useRouter();
-  const params = useLocalSearchParams();
+  const navigation = useNavigation();
   const [totalDistance, setTotalDistance] = useState(0);
   const [elevationGain, setElevationGain] = useState(0);
   const [averageSpeed, setAverageSpeed] = useState(0);
   const [currentSpeed, setCurrentSpeed] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [isFollowingUser, setIsFollowingUser] = useState(true);
   const mapRef = useRef(null);
+  
+  // Audio state for controlling music
+  const [sound, setSound] = useState(null);
+
+  // Load the sound when the component mounts and set it to loop
+  useEffect(() => {
+    async function loadSound() {
+      try {
+        const { sound } = await Audio.Sound.createAsync(songFile);
+        await sound.setIsLoopingAsync(true); // Enable looping when the song ends
+        setSound(sound);
+      } catch (error) {
+        console.error('Error loading sound:', error);
+      }
+    }
+    loadSound();
+
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
+  }, []);
 
   const getElevationData = async (latitude, longitude) => {
     try {
@@ -42,184 +72,178 @@ export default function Record() {
     }
   };
 
-  const getElevationGain = async (newLat, newLng, lastLat, lastLng) => {
-    const [newElevation, lastElevation] = await Promise.all([
-      getElevationData(newLat, newLng),
-      getElevationData(lastLat, lastLng)
-    ]);
-  
-    // Update elevation if altitude changed
-    if (lastElevation !== null && newElevation !== null) {
-      const elevationChange = newElevation - lastElevation;
-      if (elevationChange > 0) {
-        setElevationGain(prev => prev + elevationChange);
-      }
-    }
-  }
-
-  const startLocationTracking = async () => {
+  const getUserLocation = async () => {
     try {
-      const subscription = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.BestForNavigation,
-          timeInterval: 1000,
-          distanceInterval: 1,
-        },
-        (location) => {
-          const { latitude, longitude, altitude } = location.coords;
-          const newLocation = { latitude, longitude, altitude };
-          
-          setCurrentLocation(newLocation);
-          
-          if (!paused) {
-            setPath(prevPath => {
-              if (prevPath.length === 0) {
-                return [newLocation];
-              }
-
-              const lastLocation = prevPath[prevPath.length - 1];
-              const distanceFromLast = getPreciseDistance(
-                { latitude: lastLocation.latitude, longitude: lastLocation.longitude },
-                { latitude: newLocation.latitude, longitude: newLocation.longitude }
-              );
-
-              // Only add new point if we've moved at least 1 meter
-              if (distanceFromLast >= 1) {
-                // Update total distance
-                setTotalDistance(prevDistance => {
-                  const newDistance = prevDistance + (distanceFromLast / 1000); // Convert to km
-                  return newDistance;
-                });
-
-                // Calculate current speed (km/h)
-                const speedInKmH = (location.coords.speed * 3.6) || 0; // Convert m/s to km/h
-                setCurrentSpeed(speedInKmH);
-
-                getElevationGain(latitude, longitude, lastLocation.latitude, lastLocation.longitude);
-
-                return [...prevPath, newLocation];
-              }
-              return prevPath;
-            });
-          }
-        }
-      );
-      setLocationSubscription(subscription);
+      setIsLoading(true);
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setErrorMsg('Permission to access location was not granted.');
+        return;
+      }
+      let location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.BestForNavigation,
+      });
+      if (location?.coords) {
+        const { latitude, longitude } = location.coords;
+        setCurrentLocation({ latitude, longitude });
+      }
     } catch (error) {
-      setErrorMsg('Failed to start location tracking');
-      console.error(error);
+      console.error("Error fetching location:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setErrorMsg('Permission to access location was denied');
-        return;
+  const startLocationWatch = async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      setErrorMsg('Permission to access location was not granted.');
+      return;
+    }
+    const subscription = await Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: 1000,
+        distanceInterval: 0.1,
+      },
+      (location) => {
+        const { latitude, longitude, speed } = location.coords;
+        setCurrentLocation({ latitude, longitude });
+        const currentSpeedKmh = speed ? speed * 3.6 : 0;
+        setCurrentSpeed(currentSpeedKmh);
       }
+    );
+    setLocationSubscription(subscription);
+  };
 
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.BestForNavigation
-      });
-      
-      setCurrentLocation({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        altitude: location.coords.altitude
-      });
-    })();
-  }, []);
+  const startTracking = async () => {
+    if (!currentLocation) return;
+    const { latitude, longitude } = currentLocation;
+    const initialElevation = await getElevationData(latitude, longitude);
+    setPath([{ latitude, longitude, elevation: initialElevation }]);
+    const subscription = await Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: 1000,
+        distanceInterval: 0.1,
+      },
+      async (location) => {
+        const { latitude, longitude, speed } = location.coords;
+        if (!paused) {
+          const elevation = await getElevationData(latitude, longitude);
+          setPath((prevPath) => {
+            const lastPoint = prevPath[prevPath.length - 1];
+            const distance = getDistance(
+              { latitude: lastPoint.latitude, longitude: lastPoint.longitude },
+              { latitude, longitude }
+            );
+            setTotalDistance((prevDistance) => prevDistance + distance);
+            if (elevation !== null && lastPoint.elevation !== null) {
+              const elevationDiff = elevation - lastPoint.elevation;
+              if (elevationDiff > 0) {
+                setElevationGain((prev) => prev + elevationDiff);
+              }
+            }
+            return [...prevPath, { latitude, longitude, elevation }];
+          });
+        }
+      }
+    );
+    return subscription;
+  };
 
-  useEffect(() => {
-    if (!paused) {
-      startLocationTracking();
-    } else if (locationSubscription) {
+  const stopTracking = () => {
+    if (locationSubscription) {
       locationSubscription.remove();
       setLocationSubscription(null);
     }
+  };
 
-    return () => {
-      if (locationSubscription) {
-        locationSubscription.remove();
-      }
-    };
-  }, [paused]);
-
-  useEffect(() => {
-    // Calculate average speed whenever time or distance changes
-    if (time > 0) {
-      const avgSpeed = (totalDistance / (time / 3600)); // km/h
-      setAverageSpeed(avgSpeed);
-    }
-  }, [time, totalDistance]);
-
-  useEffect(() => {
-    // Check if we need to reset the tracking data
-    if (params.reset === 'true') {
-      resetTimer();
-    }
-  }, [params.reset]);
-
-  const toggleTimer = () => {
+  // Toggle the timer and control the music play/pause accordingly
+  const toggleTimer = async () => {
     if (paused) {
-      // Starting the timer
+      // When starting, play the song
+      if (sound) {
+        await sound.playAsync();
+      }
+      // Reset counters and start tracking
+      setPath([]);
+      setTotalDistance(0);
+      setElevationGain(0);
+      setAverageSpeed(0);
       const newIntervalId = setInterval(() => {
         setTime((prevTime) => {
-          return prevTime + 1;
+          const newTime = prevTime + 1;
+          if (newTime > 0 && totalDistance > 0) {
+            setAverageSpeed((totalDistance / newTime) * 3.6);
+          }
+          return newTime;
         });
       }, 1000);
       setIntervalId(newIntervalId);
+      startTracking().then(setLocationSubscription);
     } else {
-      // Pausing the timer
+      // When pausing, pause the song
+      if (sound) {
+        await sound.pauseAsync();
+      }
       clearInterval(intervalId);
       setIntervalId(null);
+      if (locationSubscription) {
+        locationSubscription.remove();
+        setLocationSubscription(null);
+      }
     }
     setPaused(!paused);
   };
 
   const resetTimer = () => {
-    if (!paused) {
-      // Stop the timer if it's running
-      clearInterval(intervalId);
-      setIntervalId(null);
-      setPaused(true);
-    }
-    // Reset all tracking data
+    clearInterval(intervalId);
     setTime(0);
+    setPaused(true);
+    setIntervalId(null);
+    stopTracking();
     setPath([]);
     setTotalDistance(0);
     setElevationGain(0);
-    setCurrentSpeed(0);
     setAverageSpeed(0);
+    setCurrentSpeed(0);
+    // Reset to default Colombo location when resetting
+    setCurrentLocation(DEFAULT_LOCATION);
   };
 
   const handleSaveActivity = () => {
-    // Pause the activity before saving
-    if (!paused) {
-      toggleTimer();
-    }
-    
     console.log('Saving activity...');
-    const stats = {
-      duration: time,
-      distance: totalDistance.toFixed(2),
-      averageSpeed: averageSpeed.toFixed(2),
-      elevationGain: elevationGain.toFixed(0)
-    };
-
-    router.push({
-      pathname: "/(app)/post",
-      params: {
-        routeData: JSON.stringify(path),
-        stats: JSON.stringify(stats)
+    const activityData = {
+      routeData: {
+        path: path,
+        startLocation: path[0],
+        endLocation: path[path.length - 1]
+      },
+      stats: {
+        totalDistance: totalDistance,
+        elevationGain: elevationGain,
+        averageSpeed: averageSpeed,
+        duration: time
       }
+    };
+    navigation.navigate('post', {
+      routeData: JSON.stringify(activityData.routeData),
+      stats: JSON.stringify(activityData.stats)
     });
   };
 
-  const onRegionChangeComplete = () => {
-    // When user manually moves the map, stop following
-    setIsFollowingUser(false);
+  // Zoom functionality: Adjust the map's zoom level based on the direction
+  const handleZoom = (direction) => {
+    if (!mapRef.current) return;
+    mapRef.current.getCamera().then((camera) => {
+      if (direction === 'in') {
+        camera.zoom = (camera.zoom || 15) + 1;
+      } else {
+        camera.zoom = (camera.zoom || 15) - 1;
+      }
+      mapRef.current.animateCamera(camera, { duration: 300 });
+    });
   };
 
   const zoomToCurrentLocation = () => {
@@ -227,12 +251,42 @@ export default function Record() {
       mapRef.current.animateToRegion({
         latitude: currentLocation.latitude,
         longitude: currentLocation.longitude,
-        latitudeDelta: 0.015,
-        longitudeDelta: 0.0121,
+        latitudeDelta: 0.005,
+        longitudeDelta: 0.005,
       }, 1000);
-      setIsFollowingUser(true);
     }
   };
+
+  useEffect(() => {
+    getUserLocation();
+    startLocationWatch();
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      if (locationSubscription) locationSubscription.remove();
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          style={{ marginLeft: 15 }}
+          onPress={() => navigation.navigate('index')}
+        >
+          <Ionicons name="arrow-back" size={24} color="black" />
+        </TouchableOpacity>
+      ),
+      headerRight: () => (
+        <TouchableOpacity 
+          style={[styles.saveButton, { opacity: path.length > 0 ? 1 : 0.5 }]}
+          disabled={path.length === 0}
+          onPress={handleSaveActivity}
+        > 
+          <Text style={styles.saveButtonText}>Save</Text>
+        </TouchableOpacity>
+      )
+    });
+  }, [navigation, path]);
 
   if (isLoading) {
     return (
@@ -244,129 +298,94 @@ export default function Record() {
   }
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerLeft: () => (
-            <TouchableOpacity
-              style={{ marginLeft: 15 }}
-              onPress={() => router.push('/(app)/(tabs)/')}
-            >
-              <Ionicons name="arrow-back" size={24} color="black" />
-            </TouchableOpacity>
-          ),
-          headerRight: () => (
-            <TouchableOpacity 
-              style={[styles.saveButton, { opacity: path.length > 0 ? 1 : 0.5 }]}
-              disabled={path.length === 0}
-              onPress={handleSaveActivity}
-            > 
-              <Text style={styles.saveButtonText}>Save</Text>
-            </TouchableOpacity>
-          )
+    <View style={styles.container}>
+      {/* Map displays the initialRegion (Colombo) and user location */}
+      <MapView
+        ref={mapRef}
+        provider={PROVIDER_GOOGLE}
+        style={styles.map}
+        showsUserLocation={true}
+        followsUserLocation={true}
+        initialRegion={{
+          latitude: DEFAULT_LOCATION.latitude,
+          longitude: DEFAULT_LOCATION.longitude,
+          latitudeDelta: 0.015,
+          longitudeDelta: 0.0121,
         }}
-      />
-      <View style={styles.container}>
-        <MapView
-          ref={mapRef}
-          provider={PROVIDER_GOOGLE}
-          style={styles.map}
-          showsUserLocation={true}
-          followsUserLocation={isFollowingUser}
-          onRegionChangeComplete={onRegionChangeComplete}
-          region={
-            currentLocation && isFollowingUser
-              ? {
-                  latitude: currentLocation.latitude,
-                  longitude: currentLocation.longitude,
-                  latitudeDelta: 0.015,
-                  longitudeDelta: 0.0121,
-                }
-              : undefined
-          }
-        >
-          {path.length > 0 && (
-            <Polyline
-              coordinates={path}
-              strokeColor="#007AFF"
-              strokeWidth={6}
-              zIndex={1}
-            />
-          )}
-        </MapView>
-
-        <TouchableOpacity 
-          style={[
-            styles.locationButton,
-            !isFollowingUser && styles.locationButtonActive
-          ]}
-          onPress={zoomToCurrentLocation}
-        >
-          <MaterialCommunityIcons 
-            name="crosshairs-gps" 
-            size={24} 
-            color={isFollowingUser ? "#007AFF" : "#FFFFFF"} 
+      >
+        {path.length > 0 && (
+          <Polyline
+            coordinates={path}
+            strokeColor={paused ? "#007AFF80" : "#007AFF"}
+            strokeWidth={6}
+            lineDashPattern={paused ? [5, 5] : null}
           />
+        )}
+      </MapView>
+
+      {/* Zoom Controls */}
+      <View style={styles.zoomControls}>
+        <TouchableOpacity style={styles.zoomButton} onPress={() => handleZoom('in')}>
+          <MaterialIcons name="add" size={24} color="black" />
         </TouchableOpacity>
+        <TouchableOpacity style={styles.zoomButton} onPress={() => handleZoom('out')}>
+          <MaterialIcons name="remove" size={24} color="black" />
+        </TouchableOpacity>
+      </View>
 
-        <View style={styles.statsOverlay}>
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <MaterialCommunityIcons name="clock-outline" size={24} color="#FEBE15" />
-              <Text style={styles.statValue}>{formatTime(time)}</Text>
-              <Text style={styles.statLabel}>Duration</Text>
-            </View>
-            
-            <View style={styles.statCard}>
-              <MaterialCommunityIcons name="map-marker-distance" size={24} color="#FEBE15" />
-              <Text style={styles.statValue}>{totalDistance.toFixed(2)}</Text>
-              <Text style={styles.statLabel}>Distance (km)</Text>
-            </View>
+      <TouchableOpacity 
+        style={styles.locationButton}
+        onPress={zoomToCurrentLocation}
+      >
+        <MaterialCommunityIcons name="crosshairs-gps" size={24} color="#007AFF" />
+      </TouchableOpacity>
+
+      <View style={styles.statsOverlay}>
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <MaterialCommunityIcons name="clock-outline" size={24} color="#FEBE15" />
+            <Text style={styles.statValue}>{formatTime(time)}</Text>
+            <Text style={styles.statLabel}>Duration</Text>
           </View>
-
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <MaterialCommunityIcons name="speedometer" size={24} color="#FEBE15" />
-              <Text style={styles.statValue}>
-                {paused ? 
-                  `${averageSpeed.toFixed(1)}` :
-                  `${currentSpeed.toFixed(1)}`
-                }
-              </Text>
-              <Text style={styles.statLabel}>
-                {paused ? 'Average Speed (km/h)' : 'Current Speed (km/h)'}
-              </Text>
-            </View>
-
-            <View style={styles.statCard}>
-              <MaterialCommunityIcons name="trending-up" size={24} color="#FEBE15" />
-              <Text style={styles.statValue}>{elevationGain.toFixed(0)}</Text>
-              <Text style={styles.statLabel}>Elevation Gain (m)</Text>
-            </View>
+          <View style={styles.statCard}>
+            <MaterialCommunityIcons name="map-marker-distance" size={24} color="#FEBE15" />
+            <Text style={styles.statValue}>{(totalDistance / 1000).toFixed(2)}</Text>
+            <Text style={styles.statLabel}>Distance (km)</Text>
           </View>
         </View>
-
-        <View style={styles.controlsContainer}>
-          <TouchableOpacity 
-            style={[styles.controlButton, styles.resetButton]} 
-            onPress={resetTimer}
-          >
-            <MaterialCommunityIcons name="refresh" size={30} color="#FF3B30" />
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.controlButton, styles.startButton]} 
-            onPress={toggleTimer}
-          >
-            <MaterialCommunityIcons 
-              name={paused ? "play" : "pause"} 
-              size={40} 
-              color="#fff" 
-            />
-          </TouchableOpacity>
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <MaterialCommunityIcons name="speedometer" size={24} color="#FEBE15" />
+            <Text style={styles.statValue}>{currentSpeed.toFixed(1)}</Text>
+            <Text style={styles.statLabel}>Current Speed (km/h)</Text>
+          </View>
+          <View style={styles.statCard}>
+            <MaterialCommunityIcons name="trending-up" size={24} color="#FEBE15" />
+            <Text style={styles.statValue}>{elevationGain.toFixed(0)}</Text>
+            <Text style={styles.statLabel}>Elevation Gain (m)</Text>
+          </View>
         </View>
       </View>
-    </>
+
+      <View style={styles.controlsContainer}>
+        <TouchableOpacity 
+          style={[styles.controlButton, styles.resetButton]} 
+          onPress={resetTimer}
+        >
+          <MaterialCommunityIcons name="refresh" size={30} color="#FF3B30" />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.controlButton, styles.startButton]} 
+          onPress={toggleTimer}
+        >
+          <MaterialCommunityIcons 
+            name={paused ? "play" : "pause"} 
+            size={40} 
+            color="#fff" 
+          />
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
@@ -387,6 +406,42 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: 'black',
+  },
+  zoomControls: {
+    position: 'absolute',
+    top: 100,
+    right: 16,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  zoomButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  locationButton: {
+    position: 'absolute',
+    right: 16,
+    bottom: 25,
+    backgroundColor: 'white',
+    borderRadius: 30,
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   statsOverlay: {
     position: 'absolute',
@@ -472,27 +527,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
-  locationButton: {
-    position: 'absolute',
-    right: 20,
-    bottom: 40,
-    backgroundColor: 'white',
-    borderRadius: 30,
-    padding: 10,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  locationButtonActive: {
-    backgroundColor: '#007AFF',
-  },
 });
 
 const formatTime = (seconds) => {
   const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600)/60);
+  const minutes = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2,'0')}`;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 };
