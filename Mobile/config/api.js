@@ -12,17 +12,12 @@ const getApiUrl = () => {
 
     // Otherwise use platform-specific defaults
     let apiUrl;
-    if (Platform.OS === 'android') {
-        // Android Emulator uses 10.0.2.2 to access host machine's localhost
-        apiUrl = 'http://10.235.240.40:3000'; // For Android Emulator
-        // If using physical device, uncomment and use your machine's IP address:
-        // apiUrl = 'http://YOUR_MACHINE_IP:3000';
-    } else if (Platform.OS === 'ios') {
-        // iOS Simulator can use localhost directly
-        apiUrl = 'http://localhost:3000';
+    if (Platform.OS === 'android' || Platform.OS === 'ios') {
+        // Use the PC's IP address for both Android and iOS
+        apiUrl = 'http://192.168.8.112:3000';
     } else {
-        // Default to localhost for web
-        apiUrl = 'http://10.235.240.196:3000';
+        // Default to the same IP for web
+        apiUrl = 'http://192.168.8.112:3000';
     }
 
     console.log('Using API URL:', apiUrl);
@@ -40,4 +35,11 @@ export const CLOUDINARY_CONFIG = {
     cloud_name: Constants.expoConfig?.extra?.CLOUDINARY_CLOUD_NAME || 'dq1hjlghb',
     upload_preset: Constants.expoConfig?.extra?.CLOUDINARY_UPLOAD_PRESET || 'ml_default',
     api_key: Constants.expoConfig?.extra?.CLOUDINARY_API_KEY
+};
+
+// Export Spotify configuration
+export const SPOTIFY_CONFIG = {
+    clientId: Constants.expoConfig?.extra?.SPOTIFY_CLIENT_ID,
+    clientSecret: Constants.expoConfig?.extra?.SPOTIFY_CLIENT_SECRET,
+    redirectUri: Constants.expoConfig?.extra?.SPOTIFY_REDIRECT_URI || 'exp://192.168.8.112:19000'
 };

@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "velociroute",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -39,6 +39,14 @@
           },
           {
             "domain": "res.cloudinary.com",
+            "cleartextTrafficPermitted": true
+          },
+          {
+            "domain": "api.spotify.com",
+            "cleartextTrafficPermitted": true
+          },
+          {
+            "domain": "accounts.spotify.com",
             "cleartextTrafficPermitted": true
           }
         ]

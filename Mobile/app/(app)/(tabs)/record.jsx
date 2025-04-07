@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
+import SpotifyPlayer from '../../../components/SpotifyPlayer';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -14,6 +15,12 @@ export default function Record() {
   const [paused, setPaused] = useState(true);
   const [intervalId, setIntervalId] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
+  const [currentRegion, setCurrentRegion] = useState({
+    latitude: 0,
+    longitude: 0,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
   const [errorMsg, setErrorMsg] = useState("");
   const [path, setPath] = useState([]);
   const [locationSubscription, setLocationSubscription] = useState(null);
@@ -70,6 +77,12 @@ export default function Record() {
           const newLocation = { latitude, longitude, altitude };
           
           setCurrentLocation(newLocation);
+          setCurrentRegion({
+            latitude,
+            longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
+          });
           
           if (!paused) {
             setPath(prevPath => {
@@ -217,8 +230,8 @@ export default function Record() {
     });
   };
 
-  const onRegionChangeComplete = () => {
-    // When user manually moves the map, stop following
+  const onRegionChangeComplete = (region) => {
+    setCurrentRegion(region);
     setIsFollowingUser(false);
   };
 
@@ -236,7 +249,10 @@ export default function Record() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={styles.container}>
+        <ScrollView style={styles.spotifyContainer}>
+          <SpotifyPlayer />
+        </ScrollView>
         <ActivityIndicator size="large" color="black" />
         <Text style={styles.loadingText}>Getting your location...</Text>
       </View>
@@ -260,119 +276,106 @@ export default function Record() {
               style={[styles.saveButton, { opacity: path.length > 0 ? 1 : 0.5 }]}
               disabled={path.length === 0}
               onPress={handleSaveActivity}
-            > 
+            >
               <Text style={styles.saveButtonText}>Save</Text>
             </TouchableOpacity>
           )
         }}
       />
       <View style={styles.container}>
+        {/* Map View */}
         <MapView
           ref={mapRef}
-          provider={PROVIDER_GOOGLE}
           style={styles.map}
+          provider={PROVIDER_GOOGLE}
           showsUserLocation={true}
           followsUserLocation={isFollowingUser}
+          region={currentRegion}
           onRegionChangeComplete={onRegionChangeComplete}
-          region={
-            currentLocation && isFollowingUser
-              ? {
-                  latitude: currentLocation.latitude,
-                  longitude: currentLocation.longitude,
-                  latitudeDelta: 0.015,
-                  longitudeDelta: 0.0121,
-                }
-              : undefined
-          }
         >
           {path.length > 0 && (
             <Polyline
               coordinates={path}
-              strokeColor="#007AFF"
-              strokeWidth={6}
-              zIndex={1}
+              strokeColor="#FEBE15"
+              strokeWidth={3}
             />
           )}
         </MapView>
 
-        <TouchableOpacity 
-          style={[
-            styles.locationButton,
-            !isFollowingUser && styles.locationButtonActive
-          ]}
-          onPress={zoomToCurrentLocation}
-        >
-          <MaterialCommunityIcons 
-            name="crosshairs-gps" 
-            size={24} 
-            color={isFollowingUser ? "#007AFF" : "#FFFFFF"} 
-          />
-        </TouchableOpacity>
+        {/* Spotify Player */}
+        <View style={styles.spotifyContainer}>
+          <SpotifyPlayer />
+        </View>
 
-        <View style={styles.statsOverlay}>
+        {/* Stats Cards */}
+        <View style={styles.statsContainer}>
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
               <MaterialCommunityIcons name="clock-outline" size={24} color="#FEBE15" />
               <Text style={styles.statValue}>{formatTime(time)}</Text>
               <Text style={styles.statLabel}>Duration</Text>
             </View>
-            
             <View style={styles.statCard}>
               <MaterialCommunityIcons name="map-marker-distance" size={24} color="#FEBE15" />
               <Text style={styles.statValue}>{totalDistance.toFixed(2)}</Text>
               <Text style={styles.statLabel}>Distance (km)</Text>
             </View>
           </View>
-
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
               <MaterialCommunityIcons name="speedometer" size={24} color="#FEBE15" />
-              <Text style={styles.statValue}>
-                {paused ? 
-                  `${averageSpeed.toFixed(1)}` :
-                  `${currentSpeed.toFixed(1)}`
-                }
-              </Text>
-              <Text style={styles.statLabel}>
-                {paused ? 'Average Speed (km/h)' : 'Current Speed (km/h)'}
-              </Text>
+              <Text style={styles.statValue}>{averageSpeed.toFixed(1)}</Text>
+              <Text style={styles.statLabel}>Avg Speed (km/h)</Text>
             </View>
-
             <View style={styles.statCard}>
-              <MaterialCommunityIcons name="trending-up" size={24} color="#FEBE15" />
+              <MaterialCommunityIcons name="elevation-rise" size={24} color="#FEBE15" />
               <Text style={styles.statValue}>{elevationGain.toFixed(0)}</Text>
               <Text style={styles.statLabel}>Elevation Gain (m)</Text>
             </View>
           </View>
         </View>
 
+        {/* Control Buttons */}
         <View style={styles.controlsContainer}>
           <TouchableOpacity 
-            style={[styles.controlButton, styles.resetButton]} 
+            style={styles.resetButton} 
             onPress={resetTimer}
           >
-            <MaterialCommunityIcons name="refresh" size={30} color="#FF3B30" />
+            <MaterialCommunityIcons name="refresh" size={24} color="#FF3B30" />
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.controlButton, styles.startButton]} 
+            style={styles.playPauseButton} 
             onPress={toggleTimer}
           >
             <MaterialCommunityIcons 
               name={paused ? "play" : "pause"} 
-              size={40} 
-              color="#fff" 
+              size={32} 
+              color="white" 
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.locationButton} 
+            onPress={zoomToCurrentLocation}
+          >
+            <MaterialCommunityIcons 
+              name="crosshairs-gps" 
+              size={24} 
+              color="#007AFF" 
             />
           </TouchableOpacity>
         </View>
       </View>
     </>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFillObject,
+    flex: 1,
+    backgroundColor: '#fff',
   },
   map: {
     ...StyleSheet.absoluteFillObject,
@@ -388,9 +391,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'black',
   },
-  statsOverlay: {
+  spotifyContainer: {
     position: 'absolute',
-    top: 20,
+    top: 10,
+    right: 10,
+    width: 50,
+    height: 50,
+    zIndex: 2,
+    backgroundColor: '#fff',
+    borderRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statsContainer: {
+    position: 'absolute',
+    bottom: 100,
     left: 10,
     right: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
@@ -406,24 +426,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 10,
+    width: '100%',
   },
   statCard: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: 15,
     backgroundColor: '#fff',
-    padding: 10,
     borderRadius: 10,
-    marginHorizontal: 5,
+    margin: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
-    shadowRadius: 1.41,
-    elevation: 2,
+    shadowRadius: 2,
+    elevation: 3,
   },
   statValue: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#333',
     marginVertical: 5,
   },
   statLabel: {
@@ -432,17 +454,20 @@ const styles = StyleSheet.create({
   },
   controlsContainer: {
     position: 'absolute',
-    bottom: 25,
+    bottom: 30,
     left: 0,
     right: 0,
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-around',
     alignItems: 'center',
+    paddingHorizontal: 40,
+    zIndex: 2,
   },
-  controlButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  playPauseButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#FEBE15',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -451,15 +476,31 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  startButton: {
-    backgroundColor: '#FEBE15',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginHorizontal: 20,
-  },
   resetButton: {
     backgroundColor: '#fff',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  locationButton: {
+    backgroundColor: '#fff',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   saveButton: {
     backgroundColor: '#FEBE15',
@@ -471,22 +512,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-  },
-  locationButton: {
-    position: 'absolute',
-    right: 20,
-    bottom: 40,
-    backgroundColor: 'white',
-    borderRadius: 30,
-    padding: 10,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  locationButtonActive: {
-    backgroundColor: '#007AFF',
   },
 });
 
