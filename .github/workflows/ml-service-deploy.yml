@@ -69,18 +69,8 @@ jobs:
                 - HOST=0.0.0.0
                 - PORT=8000
               restart: unless-stopped
-              deploy:
-                resources:
-                  limits:
-                    cpus: '1'
-                    memory: 2G
               networks:
                 - velociroute-network
-              healthcheck:
-                test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-                interval: 30s
-                timeout: 10s
-                retries: 3
 
           networks:
             velociroute-network:
@@ -103,7 +93,7 @@ jobs:
           docker ps -a | grep ml-service
           
           # Wait for service to be healthy
-          echo "Waiting for ML service to be healthy..."
+          echo "Waiting for ML service to be ready..."
           for i in {1..30}; do
             echo "Attempt $i/30: Checking container logs..."
             docker-compose logs ml-service
@@ -111,7 +101,7 @@ jobs:
             echo "Attempt $i/30: Checking container status..."
             docker ps -a | grep ml-service
             
-            if curl -f http://localhost:8000/health; then
+            if curl -f http://localhost:8000/api/classify-image; then
               echo "ML service is healthy"
               exit 0
             fi
