@@ -11,7 +11,10 @@ RUN apt-get update && apt-get install -y \
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+# Install Python dependencies with pip upgrade
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application
 COPY . .
@@ -20,7 +23,7 @@ COPY . .
 EXPOSE 8000
 
 # Add debug script
-RUN echo '#!/bin/bash\nls -la\necho "Starting main.py..."\npython main.py' > /app/start.sh && \
+RUN echo '#!/bin/bash\necho "Python packages installed:"\npip list\necho "\nStarting main.py..."\npython main.py' > /app/start.sh && \
     chmod +x /app/start.sh
 
 # Command to run the application
