@@ -56,6 +56,9 @@ jobs:
           # Create directories if they don't exist
           mkdir -p ~/velociroute/ml-service/deploy
           
+          # Create Docker network if it doesn't exist
+          docker network create velociroute-network || true
+          
           # Create docker-compose.yml for ML service
           cat > ~/velociroute/ml-service/deploy/docker-compose.yml << 'EOL'
           version: "3.8"
@@ -77,9 +80,6 @@ jobs:
                   limits:
                     cpus: '1'
                     memory: 2G
-                  reservations:
-                    cpus: '0.5'
-                    memory: 1G
               networks:
                 - velociroute-network
               healthcheck:
@@ -93,6 +93,9 @@ jobs:
               external: true
           EOL
 
+          # Stop and remove existing containers if any
+          docker-compose -f ~/velociroute/ml-service/deploy/docker-compose.yml down || true
+          
           # Pull and start the ML service
           cd ~/velociroute/ml-service/deploy
           docker-compose pull
@@ -108,5 +111,8 @@ jobs:
             echo "Waiting for ML service to be ready... attempt $i/30"
             sleep 10
           done
+          
+          # If we get here, show docker logs for debugging
+          docker-compose logs ml-service
           echo "ML service failed to become healthy"
           exit 1
