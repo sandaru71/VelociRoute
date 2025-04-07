@@ -14,7 +14,9 @@ COPY requirements.txt .
 
 # Install Python dependencies with pip upgrade
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir aiohttp==3.9.0 && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip list | grep aiohttp
 
 # Copy the rest of the application
 COPY . .
@@ -23,7 +25,7 @@ COPY . .
 EXPOSE 8000
 
 # Add debug script
-RUN echo '#!/bin/bash\necho "Python packages installed:"\npip list\necho "\nStarting main.py..."\npython main.py' > /app/start.sh && \
+RUN echo '#!/bin/bash\necho "Python packages installed:"\npip list\necho "\nChecking aiohttp:"\npip show aiohttp\necho "\nStarting main.py..."\npython main.py' > /app/start.sh && \
     chmod +x /app/start.sh
 
 # Command to run the application
