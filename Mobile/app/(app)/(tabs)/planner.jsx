@@ -52,6 +52,8 @@ const Planner = () => {
   const [elevationData, setElevationData] = useState({ totalGain: 0, profile: [] });
   const [routeConditions, setRouteConditions] = useState(null);
   const [isAnalyzingRoad, setIsAnalyzingRoad] = useState(false);
+  const [scenicPlaces, setScenicPlaces] = useState([]);
+  const [isLoadingScenic, setIsLoadingScenic] = useState(false);
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const lastGestureDy = useRef(0);
   const mapRef = useRef(null);
@@ -517,6 +519,82 @@ const Planner = () => {
     })();
   }, []);
 
+  const fetchScenicPlaces = async () => {
+    if (!routeCoordinates.length) {
+      Alert.alert('No Route', 'Please create a route first to find scenic places.');
+      return;
+    }
+
+    setIsLoadingScenic(true);
+    try {
+      // Sample points every 1km along the route
+      const sampledPoints = [];
+      let accumulatedDistance = 0;
+      let lastPoint = routeCoordinates[0];
+      sampledPoints.push(lastPoint);
+
+      for (let i = 1; i < routeCoordinates.length; i++) {
+        const currentPoint = routeCoordinates[i];
+        const segmentDistance = calculateHaversineDistance(
+          lastPoint.latitude,
+          lastPoint.longitude,
+          currentPoint.latitude,
+          currentPoint.longitude
+        );
+        
+        accumulatedDistance += segmentDistance;
+        
+        // If we've covered 1km or more, add this point and reset accumulator
+        if (accumulatedDistance >= 1000) { // 1000 meters = 1km
+          sampledPoints.push(currentPoint);
+          accumulatedDistance = 0;
+          lastPoint = currentPoint;
+        }
+      }
+
+      // Add the last point if it wasn't added and is significantly far from the last sampled point
+      const lastRoutePoint = routeCoordinates[routeCoordinates.length - 1];
+      const distanceToLast = calculateHaversineDistance(
+        lastPoint.latitude,
+        lastPoint.longitude,
+        lastRoutePoint.latitude,
+        lastRoutePoint.longitude
+      );
+      if (distanceToLast > 500 && lastPoint !== lastRoutePoint) {
+        sampledPoints.push(lastRoutePoint);
+      }
+
+      const places = [];
+      for (const point of sampledPoints) {
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${point.latitude},${point.longitude}&radius=500&type=tourist_attraction|park|natural_feature&key=${GOOGLE_MAPS_API_KEY}`
+        );
+        const data = await response.json();
+        if (data.results) {
+          places.push(...data.results.map(place => ({
+            id: place.place_id,
+            name: place.name,
+            location: {
+              latitude: place.geometry.location.lat,
+              longitude: place.geometry.location.lng
+            },
+            rating: place.rating,
+            types: place.types
+          })));
+        }
+      }
+
+      // Remove duplicates based on place_id
+      const uniquePlaces = Array.from(new Map(places.map(place => [place.id, place])).values());
+      setScenicPlaces(uniquePlaces);
+    } catch (error) {
+      console.error('Error fetching scenic places:', error);
+      Alert.alert('Error', 'Failed to fetch scenic places. Please try again.');
+    } finally {
+      setIsLoadingScenic(false);
+    }
+  };
+
   const analyzeRoadConditions = async () => {
     console.log('analyzeRoadConditions function called. Starting analysis...');
 
@@ -720,7 +798,7 @@ const Planner = () => {
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
     Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
+    return R * c * 1000; // Convert to meters
   }
 
   const renderRoadConditions = () => {
@@ -794,11 +872,23 @@ const Planner = () => {
         showsMyLocationButton={false}
       >
         {routeCoordinates.length > 0 && (
-          <Polyline
-            coordinates={routeCoordinates}
-            strokeColor="#4A90E2"
-            strokeWidth={3}
-          />
+          <>
+            <Polyline
+              coordinates={routeCoordinates}
+              strokeColor="#4A90E2"
+              strokeWidth={3}
+            />
+            {scenicPlaces.map((place) => (
+              <Marker
+                key={place.id}
+                coordinate={place.location}
+                title={place.name}
+                description={`Rating: ${place.rating || 'N/A'}`}
+              >
+                <MaterialIcons name="place" size={24} color="#FF5722" />
+              </Marker>
+            ))}
+          </>
         )}
         {startLocation && (
           <Marker
@@ -863,6 +953,22 @@ const Planner = () => {
           <Feather name="arrow-right-circle" size={20} color="black" />
         </View>
       </TouchableOpacity>
+
+      {/* Scenic Places Button */}
+      {routeCoordinates.length > 0 && (
+        <TouchableOpacity
+          style={[styles.scenicButton, isLoadingScenic && styles.buttonDisabled]}
+          onPress={fetchScenicPlaces}
+          disabled={isLoadingScenic}
+        >
+          <View style={styles.analyzeButtonContent}>
+            <MaterialIcons name="landscape" size={24} color="black" style={{ marginRight: 8 }} />
+            <Text style={styles.analyzeButtonText}>
+              {isLoadingScenic ? 'Loading...' : 'Show Scenic Places'}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      )}
 
       {/* Analyze Road Button */}
       {routeCoordinates.length > 0 && (
@@ -1364,6 +1470,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginRight: 4,
   },
+  scenicButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 240,
+    backgroundColor: '#4A90E2',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
   analyzeButton: {
     position: 'absolute',
     right: 20,
@@ -1388,6 +1508,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginRight: 4,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   analyzeButtonDisabled: {
     backgroundColor: '#FEBE15',

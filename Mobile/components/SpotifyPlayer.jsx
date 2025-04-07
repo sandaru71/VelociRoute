@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, TextInput, Animated, Dimensions, Modal, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Slider from '@react-native-community/slider';
 
 const { height } = Dimensions.get('window');
 const CLIENT_ID = 'ac34709e9a3a4b6cb22db15478db926f';
@@ -29,7 +30,10 @@ export default function SpotifyPlayer() {
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState(null);
   const [showWebView, setShowWebView] = useState(false);
+  const [playbackPosition, setPlaybackPosition] = useState(0);
+  const [playbackDuration, setPlaybackDuration] = useState(0);
   const slideAnim = new Animated.Value(0);
+  const playbackTimer = useRef(null);
 
   useEffect(() => {
     checkAuthStatus();
@@ -136,10 +140,139 @@ export default function SpotifyPlayer() {
     }
   };
 
-  const selectTrack = (track) => {
-    setCurrentTrack(track);
-    setSearchQuery('');
-    setSearchResults([]);
+  const selectTrack = async (track) => {
+    try {
+      const token = await AsyncStorage.getItem('spotify_token');
+      if (!token) {
+        setError('Not authenticated');
+        return;
+      }
+
+      // First, get available devices
+      const devicesResponse = await fetch('https://api.spotify.com/v1/me/player/devices', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!devicesResponse.ok) {
+        throw new Error('Failed to get devices');
+      }
+
+      const devicesData = await devicesResponse.json();
+      const availableDevice = devicesData.devices.find(d => d.is_active) || devicesData.devices[0];
+
+      if (!availableDevice) {
+        setError('No Spotify device found. Please open Spotify on any device.');
+        return;
+      }
+
+      setCurrentTrack(track);
+      setSearchQuery('');
+      setSearchResults([]);
+
+      // Transfer playback to the device and play the track
+      const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${availableDevice.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          uris: [track.uri]
+        })
+      });
+
+      if (response.ok) {
+        setIsPlaying(true);
+        // Start polling for playback state
+        if (playbackTimer.current) {
+          clearInterval(playbackTimer.current);
+        }
+        playbackTimer.current = setInterval(async () => {
+          try {
+            const stateResponse = await fetch('https://api.spotify.com/v1/me/player', {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            
+            if (stateResponse.status === 200) {
+              const data = await stateResponse.json();
+              setPlaybackPosition(data.progress_ms || 0);
+              setPlaybackDuration(data.item?.duration_ms || 0);
+              setIsPlaying(!data.is_paused);
+            }
+          } catch (error) {
+            console.warn('Error updating playback state:', error);
+          }
+        }, 1000);
+      } else {
+        throw new Error('Failed to play track');
+      }
+    } catch (err) {
+      console.warn('Failed to play track:', err);
+      setError('Failed to play track. Make sure Spotify is active on a device.');
+    }
+  };
+
+  const togglePlayback = async () => {
+    try {
+      const token = await AsyncStorage.getItem('spotify_token');
+      if (!token) {
+        setError('Not authenticated');
+        return;
+      }
+
+      const endpoint = isPlaying ? 'pause' : 'play';
+      const response = await fetch(`https://api.spotify.com/v1/me/player/${endpoint}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        setIsPlaying(!isPlaying);
+      } else {
+        throw new Error('Failed to toggle playback');
+      }
+    } catch (err) {
+      console.warn('Failed to toggle playback:', err);
+      setError('Failed to control playback');
+    }
+  };
+
+  const seekToPosition = async (position) => {
+    try {
+      const token = await AsyncStorage.getItem('spotify_token');
+      if (!token) {
+        setError('Not authenticated');
+        return;
+      }
+
+      const response = await fetch(`https://api.spotify.com/v1/me/player/seek?position_ms=${Math.floor(position)}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        setPlaybackPosition(position);
+      } else {
+        throw new Error('Failed to seek');
+      }
+    } catch (err) {
+      console.warn('Failed to seek:', err);
+    }
+  };
+
+  const formatTime = (ms) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
   const renderSearchResults = () => {
@@ -279,15 +412,31 @@ export default function SpotifyPlayer() {
 
         {currentTrack && (
           <View style={styles.controls}>
-            <TouchableOpacity onPress={() => {}}>
-              <Ionicons name="play-skip-back" size={24} color="#1DB954" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setIsPlaying(!isPlaying)}>
-              <Ionicons name={isPlaying ? 'pause' : 'play'} size={32} color="#1DB954" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => {}}>
-              <Ionicons name="play-skip-forward" size={24} color="#1DB954" />
-            </TouchableOpacity>
+            <View style={styles.progressContainer}>
+              <Text style={styles.timeText}>{formatTime(playbackPosition)}</Text>
+              <Slider
+                style={styles.progressBar}
+                minimumValue={0}
+                maximumValue={playbackDuration}
+                value={playbackPosition}
+                onSlidingComplete={seekToPosition}
+                minimumTrackTintColor="#1DB954"
+                maximumTrackTintColor="#404040"
+                thumbTintColor="#1DB954"
+              />
+              <Text style={styles.timeText}>{formatTime(playbackDuration)}</Text>
+            </View>
+            <View style={styles.playbackControls}>
+              <TouchableOpacity onPress={() => {}}>
+                <Ionicons name="play-skip-back" size={24} color="#1DB954" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={togglePlayback}>
+                <Ionicons name={isPlaying ? 'pause' : 'play'} size={32} color="#1DB954" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => {}}>
+                <Ionicons name="play-skip-forward" size={24} color="#1DB954" />
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </Animated.View>
@@ -456,12 +605,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   controls: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
     padding: 15,
     borderTopWidth: 1,
     borderTopColor: '#404040',
     backgroundColor: '#282828',
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  progressBar: {
+    flex: 1,
+    marginHorizontal: 10,
+  },
+  timeText: {
+    color: '#b3b3b3',
+    fontSize: 12,
+    width: 40,
+    textAlign: 'center',
+  },
+  playbackControls: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
   },
 });
