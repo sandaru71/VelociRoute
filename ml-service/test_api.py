@@ -3,7 +3,7 @@ import json
 import os
 
 # Update this to match your ML service URL
-ML_SERVICE_URL = "http://10.235.240.196:8000"
+ML_SERVICE_URL = "http://10.24.217.196:8000"
 
 def test_single_image():
     print("Testing single image classification...")

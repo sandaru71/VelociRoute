@@ -1,17 +1,17 @@
 import { Platform } from 'react-native';
 
-const LOCAL_IP = '10.64.248.196'; //update with computer's local IP
+const LOCAL_IP = '10.24.217.196'; //update with computer's local IP
 
 const getApiUrl = () => {
   if (Platform.OS === 'android') {
-    return __DEV__ ? 'http://10.235.240.196:3000' : `http://${LOCAL_IP}:3000`;
+    return __DEV__ ? 'http://10.24.217.196:3000' : `http://${LOCAL_IP}:3000`;
   }
   return __DEV__ ? 'http://localhost:3000' : `http://${LOCAL_IP}:3000`;
 };
 
 const getMlServiceUrl = () => {
   if (Platform.OS === 'android') {
-    return __DEV__ ? 'http://10.235.240.196:8000' : `http://${LOCAL_IP}:8000`;
+    return __DEV__ ? 'http://10.24.217.196:8000' : `http://${LOCAL_IP}:8000`;
   }
   return __DEV__ ? 'http://localhost:8000' : `http://${LOCAL_IP}:8000`;
 };

@@ -9,7 +9,7 @@ module.exports = {
     extra: {
       CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || 'dq1hjlghb',
       CLOUDINARY_UPLOAD_PRESET: process.env.CLOUDINARY_UPLOAD_PRESET || 'ml_default',
-      API_URL: process.env.API_URL || 'http://10.64.248.196:3000',
+      API_URL: process.env.API_URL || 'http://10.24.217.196:3000',
     },
   },
 };

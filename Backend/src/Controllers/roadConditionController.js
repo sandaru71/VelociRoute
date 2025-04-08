@@ -1,7 +1,7 @@
 const axios = require('axios');
 require('dotenv').config();
 
-const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://10.235.240.196:8000';
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://10.24.217.196:8000';
 const MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 const STREET_VIEW_API_URL = 'https://maps.googleapis.com/maps/api/streetview';
 

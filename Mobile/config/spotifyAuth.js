@@ -22,7 +22,7 @@ const config = {
         'playlist-read-collaborative'
     ],
     usePKCE: true,
-    redirectUri: 'exp://10.64.248.196:8081/--/(app)/(tabs)/record'
+    redirectUri: 'exp://10.24.217.196:8081/--/(app)/(tabs)/record'
 };
 
 console.log('Generated Redirect URI:', config.redirectUri);
@@ -30,7 +30,7 @@ console.log('Full Redirect URI:', config.redirectUri);
 console.log('Development URI:', makeRedirectUri({
     scheme: 'exp',
     path: '--/(app)/(tabs)/record',
-    host: '10.64.248.196:8081'
+    host: '10.24.217.196:8081'
 }));
 
 const checkPremium = async (access_token) => {

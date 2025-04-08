@@ -4,7 +4,7 @@ const { default: axios } = require('axios');
 const turf = require('@turf/turf');
 const { GOOGLE_MAPS_API_KEY } = require('../Config/keys');
 
-const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://10.235.240.196:8000';
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://10.24.217.196:8000';
 
 // Debug log the configuration
 console.log('Road Condition Service Configuration:');
