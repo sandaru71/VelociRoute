@@ -14,15 +14,13 @@ const getApiUrl = () => {
     let apiUrl;
     if (Platform.OS === 'android') {
         // Android Emulator uses 10.0.2.2 to access host machine's localhost
-        apiUrl = 'http://10.235.240.40:3000'; // For Android Emulator
-        // If using physical device, uncomment and use your machine's IP address:
-        // apiUrl = 'http://YOUR_MACHINE_IP:3000';
+        apiUrl = 'http://13.60.171.2:3000'; // EC2 instance public IP
     } else if (Platform.OS === 'ios') {
         // iOS Simulator can use localhost directly
-        apiUrl = 'http://localhost:3000';
+        apiUrl = 'http://13.60.171.2:3000'; // EC2 instance public IP
     } else {
         // Default to localhost for web
-        apiUrl = 'http://10.235.240.196:3000';
+        apiUrl = 'http://13.60.171.2:3000'; // EC2 instance public IP
     }
 
     console.log('Using API URL:', apiUrl);

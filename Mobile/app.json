@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Mobile",
-    "slug": "Mobile",
+    "name": "VelociRoute",
+    "slug": "velociroute",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "velociroute",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -13,14 +13,14 @@
       "config": {
         "googleMapsApiKey": "AIzaSyB7alGuNMvdyAk8Tb0B2jG3KjnotL4fYqo"
       },
-      "bundleIdentifier": "com.sandaru.dev.Mobile"
+      "bundleIdentifier": "com.sandaru.dev.velociroute"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.sandaru.dev.Mobile",
+      "package": "com.sandaru.dev.velociroute",
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyB7alGuNMvdyAk8Tb0B2jG3KjnotL4fYqo"
@@ -28,8 +28,11 @@
       },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "INTERNET"
       ],
+      "versionCode": 1,
       "networkSecurityConfig": {
         "cleartextTrafficPermitted": true,
         "domainConfig": [
@@ -39,6 +42,10 @@
           },
           {
             "domain": "res.cloudinary.com",
+            "cleartextTrafficPermitted": true
+          },
+          {
+            "domain": "13.60.171.2",
             "cleartextTrafficPermitted": true
           }
         ]
@@ -63,12 +70,21 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow Mobile to use your location."
+          "locationAlwaysAndWhenInUsePermission": "Allow VelociRoute to use your location for route planning and road condition analysis."
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "c24e7b82-5423-4943-b58c-7964f959aed5"
+      }
+    },
+    "owner": "sandaru71"
   }
 }

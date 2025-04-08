@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   ml-service:
-    image: velociroute-ml-service:test
+    image: sandaru71/velociroute-ml-service:latest
     container_name: velociroute-ml-service
     ports:
       - "8000:8000"

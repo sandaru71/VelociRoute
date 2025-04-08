@@ -1,4 +1,4 @@
-package com.sandaru.dev.Mobile
+package com.sandaru.dev.velociroute
 
 import android.os.Build
 import android.os.Bundle
